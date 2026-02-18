@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jon Toews — Creative Director</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg: #0a0a0a;
+            --text: #f5f5f5;
+            --muted: #888;
+            --accent: #ff1f71;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            opacity: 0.28;
+            z-index: 0;
+        }
+
+        .hero::before {
+            content: '';
+            position: fixed;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(255,31,113,0.12) 0%, transparent 70%);
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .hero {
+            position: relative;
+            z-index: 2;
+            text-align: center;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        h1 {
+            font-size: clamp(3rem, 8vw, 6rem);
+            font-weight: 800;
+            letter-spacing: -3px;
+            line-height: 1.05;
+        }
+
+        h1 span {
+            display: block;
+            color: #ff1f71;
+        }
+
+        .blurb {
+            font-size: 1.25rem;
+            color: #bbb;
+            max-width: 500px;
+            font-weight: 400;
+            line-height: 1.6;
+        }
+
+        .links {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .email-link {
+            display: inline-block;
+            padding: 0.9rem 2.5rem;
+            background: var(--accent);
+            color: white;
+            text-decoration: none;
+            border-radius: 100px;
+            font-weight: 600;
+            font-size: 1rem;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .email-link:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(255,31,113,0.3);
+        }
+
+        .portfolio-link {
+            display: inline-block;
+            padding: 0.9rem 2.5rem;
+            background: transparent;
+            color: var(--text);
+            text-decoration: none;
+            border-radius: 100px;
+            font-weight: 600;
+            font-size: 1rem;
+            border: 1px solid #333;
+            transition: transform 0.3s, border-color 0.3s;
+        }
+
+        .portfolio-link:hover {
+            transform: translateY(-2px);
+            border-color: #666;
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="truchet-canvas"></canvas>
+
+    <div class="hero">
+        <h1>
+            <span>Jon Toews</span>
+            Creative Director
+        </h1>
+        <p class="blurb">Award-winning creative direction spanning digital experiences, brand systems, film, short fiction, music, and emerging technology.</p>
+        <div class="links">
+            <a href="/portfolio" class="portfolio-link">View Portfolio</a>
+            <a href="mailto:jontoews@gmail.com" class="email-link">jontoews@gmail.com</a>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            const canvas = document.getElementById('truchet-canvas');
+            const ctx = canvas.getContext('2d');
+            const TILE = 80;
+            let cols, rows, tiles;
+            let lastTime = 0;
+
+            const COLORS = ['#ff1f71', '#c026d3', '#7858ff', '#06b6d4', '#ffffff'];
+
+            function resize() {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+                cols = Math.ceil(canvas.width / TILE) + 1;
+                rows = Math.ceil(canvas.height / TILE) + 1;
+                initTiles();
+            }
+
+            function initTiles() {
+                tiles = [];
+                for (let r = 0; r < rows; r++) {
+                    tiles[r] = [];
+                    for (let c = 0; c < cols; c++) {
+                        const colorIdx = Math.floor(Math.random() * COLORS.length);
+                        const nextColorIdx = (colorIdx + 1 + Math.floor(Math.random() * (COLORS.length - 1))) % COLORS.length;
+                        // Each tile has a "wave phase" based on position for a ripple effect
+                        const phase = (r + c) * 0.3;
+                        tiles[r][c] = {
+                            phase,
+                            colorIdx,
+                            nextColorIdx,
+                            colorProgress: Math.random(),
+                            colorSpeed: 0.0002 + Math.random() * 0.0003,
+                        };
+                    }
+                }
+            }
+
+            function lerpColor(a, b, t) {
+                const ah = parseInt(a.slice(1), 16);
+                const bh = parseInt(b.slice(1), 16);
+                const ar = (ah >> 16) & 0xff, ag = (ah >> 8) & 0xff, ab = ah & 0xff;
+                const br = (bh >> 16) & 0xff, bg = (bh >> 8) & 0xff, bb = bh & 0xff;
+                const rr = Math.round(ar + (br - ar) * t);
+                const rg = Math.round(ag + (bg - ag) * t);
+                const rb = Math.round(ab + (bb - ab) * t);
+                return `rgb(${rr},${rg},${rb})`;
+            }
+
+            // Draw a "+" cross tile variant - straight lines through the center
+            function drawTileCross(x, y, angle, color, lw) {
+                ctx.save();
+                ctx.translate(x + TILE / 2, y + TILE / 2);
+                ctx.rotate(angle);
+                ctx.strokeStyle = color;
+                ctx.lineWidth = lw;
+                ctx.lineCap = 'round';
+                // Two diagonal arcs like classic truchet but rotated
+                ctx.beginPath();
+                ctx.arc(-TILE / 2, TILE / 2, TILE / 2, -Math.PI / 2, 0);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.arc(TILE / 2, -TILE / 2, TILE / 2, Math.PI / 2, Math.PI);
+                ctx.stroke();
+                ctx.restore();
+            }
+
+            function drawTileArc(x, y, angle, color, lw) {
+                ctx.save();
+                ctx.translate(x + TILE / 2, y + TILE / 2);
+                ctx.rotate(angle);
+                ctx.strokeStyle = color;
+                ctx.lineWidth = lw;
+                ctx.lineCap = 'round';
+                ctx.beginPath();
+                ctx.arc(-TILE / 2, -TILE / 2, TILE / 2, 0, Math.PI / 2);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.arc(TILE / 2, TILE / 2, TILE / 2, Math.PI, Math.PI * 1.5);
+                ctx.stroke();
+                ctx.restore();
+            }
+
+            function easeInOut(t) {
+                return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+            }
+
+            function draw(ts) {
+                const dt = Math.min(ts - lastTime, 50);
+                lastTime = ts;
+
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                for (let r = 0; r < rows; r++) {
+                    for (let c = 0; c < cols; c++) {
+                        const t = tiles[r][c];
+
+                        // Advance color progress
+                        t.colorProgress += t.colorSpeed * dt;
+                        if (t.colorProgress >= 1) {
+                            t.colorProgress = 0;
+                            t.colorIdx = t.nextColorIdx;
+                            t.nextColorIdx = (t.colorIdx + 1 + Math.floor(Math.random() * (COLORS.length - 1))) % COLORS.length;
+                        }
+
+                        const eased = easeInOut(t.colorProgress);
+                        const color = lerpColor(COLORS[t.colorIdx], COLORS[t.nextColorIdx], eased);
+
+                        // Wave-driven angle: tiles rotate continuously like a ripple
+                        const wave = Math.sin(ts * 0.0004 + t.phase);
+                        const angle = wave * Math.PI / 2;
+
+                        // Line width pulses with wave too
+                        const lw = 1.2 + Math.abs(wave) * 1.2;
+
+                        // Alternate tile types in a checkerboard
+                        if ((r + c) % 2 === 0) {
+                            drawTileArc(c * TILE, r * TILE, angle, color, lw);
+                        } else {
+                            drawTileCross(c * TILE, r * TILE, angle, color, lw);
+                        }
+                    }
+                }
+
+                requestAnimationFrame(draw);
+            }
+
+            resize();
+            window.addEventListener('resize', resize);
+            requestAnimationFrame((ts) => { lastTime = ts; requestAnimationFrame(draw); });
+        })();
+    </script>
+
+</body>
+</html>
