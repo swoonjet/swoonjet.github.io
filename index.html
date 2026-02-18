@@ -137,11 +137,11 @@
                 for (let r = 0; r < rows; r++) {
                     tiles[r] = [];
                     for (let c = 0; c < cols; c++) {
-                        // Each tile: one of two slash orientations, driven by position + time
-                        // Phase offsets create the flowing wave effect
-                        const wavePhase  = (c * 0.6 + r * 0.4);   // diagonal flow
-                        const colorPhase = (c * 0.3 - r * 0.5);    // colour flows opposite diagonal
-                        tiles[r][c] = { wavePhase, colorPhase };
+                        const wavePhase  = (c * 0.6 + r * 0.4);
+                        const colorPhase = (c * 0.3 - r * 0.5);
+                        // bubblePhase drives independent per-tile curvature oscillation
+                        const bubblePhase = (c * 1.1 + r * 0.7) + Math.random() * Math.PI * 2;
+                        tiles[r][c] = { wavePhase, colorPhase, bubblePhase };
                     }
                 }
             }
@@ -154,40 +154,38 @@
                 return `rgb(${Math.round(ar+(br-ar)*t)},${Math.round(ag+(bg-ag)*t)},${Math.round(ab+(bb-ab)*t)})`;
             }
 
-            // Classic straight-line truchet: one diagonal per tile
-            // type 0 = top-left → bottom-right  (\)
-            // type 1 = top-right → bottom-left   (/)
-            // We also draw a second perpendicular line through the centre for richness
-            function drawTile(x, y, t, color, lw) {
+            // Organic truchet: each tile draws a bezier arc.
+            // curvature ranges -1..1: 0=straight diagonal, ±1=fully curved arc.
+            // type 0 = \ orientation, type 1 = / orientation.
+            function drawTile(x, y, tileType, color, lw, curvature) {
                 ctx.strokeStyle = color;
                 ctx.lineWidth = lw;
                 ctx.lineCap = 'round';
 
-                if (t === 0) {
-                    // \ diagonal
-                    ctx.beginPath();
+                const T = TILE;
+                const half = T / 2;
+                // Control point offset — curvature bows the line organically
+                const bow = curvature * T * 0.75;
+
+                ctx.beginPath();
+                if (tileType === 0) {
+                    // \ arc: corners (0,0) → (T,T), bow perpendicular to diagonal
                     ctx.moveTo(x, y);
-                    ctx.lineTo(x + TILE, y + TILE);
-                    ctx.stroke();
-                    // short perpendicular tick at midpoint
-                    ctx.lineWidth = lw * 0.4;
-                    ctx.beginPath();
-                    ctx.moveTo(x + TILE * 0.5 - TILE * 0.25, y + TILE * 0.5 + TILE * 0.25);
-                    ctx.lineTo(x + TILE * 0.5 + TILE * 0.25, y + TILE * 0.5 - TILE * 0.25);
-                    ctx.stroke();
+                    ctx.bezierCurveTo(
+                        x + half + bow,  y + half - bow,   // cp1
+                        x + half + bow,  y + half - bow,   // cp2 (same = quadratic feel)
+                        x + T, y + T
+                    );
                 } else {
-                    // / diagonal
-                    ctx.beginPath();
-                    ctx.moveTo(x + TILE, y);
-                    ctx.lineTo(x, y + TILE);
-                    ctx.stroke();
-                    // short perpendicular tick at midpoint
-                    ctx.lineWidth = lw * 0.4;
-                    ctx.beginPath();
-                    ctx.moveTo(x + TILE * 0.5 - TILE * 0.25, y + TILE * 0.5 - TILE * 0.25);
-                    ctx.lineTo(x + TILE * 0.5 + TILE * 0.25, y + TILE * 0.5 + TILE * 0.25);
-                    ctx.stroke();
+                    // / arc: corners (T,0) → (0,T), bow the other perpendicular
+                    ctx.moveTo(x + T, y);
+                    ctx.bezierCurveTo(
+                        x + half + bow,  y + half + bow,
+                        x + half + bow,  y + half + bow,
+                        x, y + T
+                    );
                 }
+                ctx.stroke();
             }
 
             // Mouse tracking
@@ -202,47 +200,55 @@
                 targetY = -9999;
             });
 
-            const PUSH_RADIUS = 220;  // pixels of influence
-            const PUSH_STRENGTH = Math.PI * 1.5; // full rotation sweep at center
+            const PUSH_RADIUS = 220;
+            const PUSH_STRENGTH = Math.PI * 1.5;
+            // Mouse also forces curvature to max in its vicinity
+            const CURVE_RADIUS = 180;
 
             function draw(ts) {
                 const dt = Math.min(ts - lastTime, 50);
                 lastTime = ts;
 
-                // Smoothly interpolate mouse position for fluid feel
                 mouseX += (targetX - mouseX) * 0.1;
                 mouseY += (targetY - mouseY) * 0.1;
 
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
 
                 const time = ts * 0.00035;
+                // Separate slower time for curvature bubbling
+                const bubbleTime = ts * 0.00055;
 
                 for (let r = 0; r < rows; r++) {
                     for (let c = 0; c < cols; c++) {
                         const tile = tiles[r][c];
 
-                        // Tile centre in screen coords
                         const tx = c * TILE + TILE / 2;
                         const ty = r * TILE + TILE / 2;
 
-                        // Distance from mouse to tile centre
                         const dx = tx - mouseX;
                         const dy = ty - mouseY;
                         const dist = Math.sqrt(dx * dx + dy * dy);
 
-                        // Push influence: 1 at centre, 0 at PUSH_RADIUS
+                        // Mouse push rotation influence
                         const influence = Math.max(0, 1 - dist / PUSH_RADIUS);
-                        // Smooth falloff
                         const push = influence * influence * PUSH_STRENGTH;
 
-                        // Direction of push — angle away from mouse
-                        const pushAngle = Math.atan2(dy, dx);
+                        // Mouse curve influence — pulls curvature to max near cursor
+                        const curveInfluence = Math.max(0, 1 - dist / CURVE_RADIUS);
+                        const curvePull = curveInfluence * curveInfluence;
 
-                        // Base wave
+                        // Base wave → tile orientation
                         const wave = Math.sin(time + tile.wavePhase);
                         const tileType = wave > 0 ? 0 : 1;
                         const commitment = Math.abs(wave);
                         const alpha = 0.4 + commitment * 0.6;
+
+                        // Curvature is ONLY driven by mouse proximity — straight lines at rest
+                        // Near mouse: curves bubble organically; away from mouse: straight
+                        const bubbleOsc = Math.sin(bubbleTime * 1.3 + tile.bubblePhase);
+                        const mouseCurve = tileType === 0 ? 1 : -1;
+                        // curvature = 0 when no mouse, bubbles up to ±1 near cursor
+                        const curvature = bubbleOsc * mouseCurve * curvePull;
 
                         // Colour
                         const cwave = (Math.sin(time * 0.5 + tile.colorPhase) + 1) / 2;
@@ -254,23 +260,19 @@
                             cidxF - ci
                         );
 
-                        // Line weight — thicker near mouse push
-                        const lw = 1 + commitment * 1.8 + push * 1.5;
+                        const lw = 1.2 + commitment * 1.8 + push * 1.5;
 
-                        ctx.globalAlpha = alpha;
+                        ctx.globalAlpha = Math.min(1, alpha + influence * 0.5);
 
                         if (push > 0.01) {
-                            // Rotate the tile around its own centre, fanning away from mouse
                             ctx.save();
                             ctx.translate(tx, ty);
                             ctx.rotate(push);
                             ctx.translate(-tx, -ty);
-                            // Also brighten near mouse
-                            ctx.globalAlpha = Math.min(1, alpha + influence * 0.5);
-                            drawTile(c * TILE, r * TILE, tileType, color, lw);
+                            drawTile(c * TILE, r * TILE, tileType, color, lw, curvature);
                             ctx.restore();
                         } else {
-                            drawTile(c * TILE, r * TILE, tileType, color, lw);
+                            drawTile(c * TILE, r * TILE, tileType, color, lw, curvature);
                         }
                     }
                 }
