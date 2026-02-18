@@ -115,7 +115,7 @@
         </h1>
         <p class="blurb">Award-winning creative direction spanning digital experiences, brand systems, film, short fiction, music, and emerging technology.</p>
         <a href="mailto:jontoews@gmail.com" class="email-link">jontoews@gmail.com</a>
-        <p class="blurb" style="color: var(--muted); font-size: 0.95rem;">I'd love to hear from you about new projects, creative collaborations, or opportunities.</p>
+        <p class="blurb" style="color: var(--muted); font-size: 0.95rem;">I'd love to hear from you about new projects,<br>creative collaborations, or opportunities.</p>
     </div>
 
     <script>
@@ -202,8 +202,8 @@
                 targetY = -9999;
             });
 
-            const PUSH_RADIUS = 180;  // pixels of influence
-            const PUSH_STRENGTH = 2.2; // how much extra rotation at center
+            const PUSH_RADIUS = 220;  // pixels of influence
+            const PUSH_STRENGTH = Math.PI * 1.5; // full rotation sweep at center
 
             function draw(ts) {
                 const dt = Math.min(ts - lastTime, 50);
@@ -260,11 +260,13 @@
                         ctx.globalAlpha = alpha;
 
                         if (push > 0.01) {
-                            // Draw pushed version: rotate tile around its centre away from mouse
+                            // Rotate the tile around its own centre, fanning away from mouse
                             ctx.save();
                             ctx.translate(tx, ty);
-                            ctx.rotate(pushAngle + (tileType === 0 ? Math.PI / 4 : -Math.PI / 4) * push);
+                            ctx.rotate(push);
                             ctx.translate(-tx, -ty);
+                            // Also brighten near mouse
+                            ctx.globalAlpha = Math.min(1, alpha + influence * 0.5);
                             drawTile(c * TILE, r * TILE, tileType, color, lw);
                             ctx.restore();
                         } else {
