@@ -122,10 +122,11 @@
         (function() {
             const canvas = document.getElementById('truchet-canvas');
             const ctx = canvas.getContext('2d');
-            const TILE = 80;
+            const TILE = 70;
             let cols, rows, tiles;
             let lastTime = 0;
 
+            // Colour palette — same brand colours, different feel
             const COLORS = ['#ff1f71', '#c026d3', '#7858ff', '#06b6d4', '#ffffff'];
 
             function resize() {
@@ -133,25 +134,15 @@
                 canvas.height = window.innerHeight;
                 cols = Math.ceil(canvas.width / TILE) + 1;
                 rows = Math.ceil(canvas.height / TILE) + 1;
-                initTiles();
-            }
-
-            function initTiles() {
                 tiles = [];
                 for (let r = 0; r < rows; r++) {
                     tiles[r] = [];
                     for (let c = 0; c < cols; c++) {
-                        const colorIdx = Math.floor(Math.random() * COLORS.length);
-                        const nextColorIdx = (colorIdx + 1 + Math.floor(Math.random() * (COLORS.length - 1))) % COLORS.length;
-                        // Each tile has a "wave phase" based on position for a ripple effect
-                        const phase = (r + c) * 0.3;
-                        tiles[r][c] = {
-                            phase,
-                            colorIdx,
-                            nextColorIdx,
-                            colorProgress: Math.random(),
-                            colorSpeed: 0.0002 + Math.random() * 0.0003,
-                        };
+                        // Diagonal phase — creates flowing ribbons moving top-left to bottom-right
+                        const diagPhase = (c - r) * 0.45;
+                        // Each tile also drifts on its own slow colour cycle
+                        const colorOffset = Math.random() * Math.PI * 2;
+                        tiles[r][c] = { diagPhase, colorOffset };
                     }
                 }
             }
@@ -167,42 +158,18 @@
                 return `rgb(${rr},${rg},${rb})`;
             }
 
-            // Draw a "+" cross tile variant - straight lines through the center
-            function drawTileCross(x, y, angle, color, lw) {
-                ctx.save();
-                ctx.translate(x + TILE / 2, y + TILE / 2);
-                ctx.rotate(angle);
+            // Full semicircle drawn from a corner — the key truchet element here
+            function drawSemi(x, y, corner, color, lw) {
+                // corner: 0=TL, 1=TR, 2=BR, 3=BL
+                const cx = x + (corner === 1 || corner === 2 ? TILE : 0);
+                const cy = y + (corner === 2 || corner === 3 ? TILE : 0);
+                const startAngle = (corner * Math.PI / 2);
+                ctx.beginPath();
+                ctx.arc(cx, cy, TILE / 2, startAngle, startAngle + Math.PI);
                 ctx.strokeStyle = color;
                 ctx.lineWidth = lw;
                 ctx.lineCap = 'round';
-                // Two diagonal arcs like classic truchet but rotated
-                ctx.beginPath();
-                ctx.arc(-TILE / 2, TILE / 2, TILE / 2, -Math.PI / 2, 0);
                 ctx.stroke();
-                ctx.beginPath();
-                ctx.arc(TILE / 2, -TILE / 2, TILE / 2, Math.PI / 2, Math.PI);
-                ctx.stroke();
-                ctx.restore();
-            }
-
-            function drawTileArc(x, y, angle, color, lw) {
-                ctx.save();
-                ctx.translate(x + TILE / 2, y + TILE / 2);
-                ctx.rotate(angle);
-                ctx.strokeStyle = color;
-                ctx.lineWidth = lw;
-                ctx.lineCap = 'round';
-                ctx.beginPath();
-                ctx.arc(-TILE / 2, -TILE / 2, TILE / 2, 0, Math.PI / 2);
-                ctx.stroke();
-                ctx.beginPath();
-                ctx.arc(TILE / 2, TILE / 2, TILE / 2, Math.PI, Math.PI * 1.5);
-                ctx.stroke();
-                ctx.restore();
-            }
-
-            function easeInOut(t) {
-                return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
             }
 
             function draw(ts) {
@@ -211,34 +178,38 @@
 
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+                const t = ts * 0.0005;
+
                 for (let r = 0; r < rows; r++) {
                     for (let c = 0; c < cols; c++) {
-                        const t = tiles[r][c];
+                        const tile = tiles[r][c];
 
-                        // Advance color progress
-                        t.colorProgress += t.colorSpeed * dt;
-                        if (t.colorProgress >= 1) {
-                            t.colorProgress = 0;
-                            t.colorIdx = t.nextColorIdx;
-                            t.nextColorIdx = (t.colorIdx + 1 + Math.floor(Math.random() * (COLORS.length - 1))) % COLORS.length;
-                        }
+                        // Diagonal wave determines which corner the semicircle pivots from
+                        const wave = Math.sin(t + tile.diagPhase);
 
-                        const eased = easeInOut(t.colorProgress);
-                        const color = lerpColor(COLORS[t.colorIdx], COLORS[t.nextColorIdx], eased);
+                        // Map wave → one of 4 corners (snapping gives crisp truchet feel)
+                        // Use a slow smooth morph rather than hard snap
+                        const cornerF = ((wave + 1) / 2) * 3; // 0–3 float
+                        const corner = Math.floor(cornerF) % 4;
+                        const cornerNext = (corner + 1) % 4;
+                        const blend = cornerF - Math.floor(cornerF);
 
-                        // Wave-driven angle: tiles rotate continuously like a ripple
-                        const wave = Math.sin(ts * 0.0004 + t.phase);
-                        const angle = wave * Math.PI / 2;
+                        // Colour cycles slowly per tile along diagonal
+                        const colorWave = (Math.sin(t * 0.6 + tile.colorOffset) + 1) / 2;
+                        const colorIdxF = colorWave * (COLORS.length - 1);
+                        const ci = Math.floor(colorIdxF);
+                        const cn = Math.min(ci + 1, COLORS.length - 1);
+                        const color = lerpColor(COLORS[ci], COLORS[cn], colorIdxF - ci);
 
-                        // Line width pulses with wave too
-                        const lw = 1.2 + Math.abs(wave) * 1.2;
+                        // Line weight breathes with the wave
+                        const lw = 1.5 + Math.abs(wave) * 1.5;
 
-                        // Alternate tile types in a checkerboard
-                        if ((r + c) % 2 === 0) {
-                            drawTileArc(c * TILE, r * TILE, angle, color, lw);
-                        } else {
-                            drawTileCross(c * TILE, r * TILE, angle, color, lw);
-                        }
+                        // Draw both corners blended (cross-fade effect)
+                        ctx.globalAlpha = 1 - blend * 0.6;
+                        drawSemi(c * TILE, r * TILE, corner, color, lw);
+                        ctx.globalAlpha = blend * 0.6;
+                        drawSemi(c * TILE, r * TILE, cornerNext, color, lw);
+                        ctx.globalAlpha = 1;
                     }
                 }
 
