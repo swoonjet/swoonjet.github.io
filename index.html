@@ -164,24 +164,27 @@
 
                 const T = TILE;
                 const half = T / 2;
-                // Control point offset — curvature bows the line organically
-                const bow = curvature * T * 0.75;
+                // Control point is anchored between tile center and the unused corner.
+                // This keeps the curve inside the tile so lines never break away from corners.
+                const bow = curvature * T * 0.5;
 
                 ctx.beginPath();
                 if (tileType === 0) {
-                    // \ arc: corners (0,0) → (T,T), bow perpendicular to diagonal
+                    // \ diagonal: top-left (x,y) → bottom-right (x+T,y+T)
+                    // Unused corners: top-right and bottom-left
+                    // Bow toward top-right (positive curvature) or bottom-left (negative)
                     ctx.moveTo(x, y);
-                    ctx.bezierCurveTo(
-                        x + half + bow,  y + half - bow,   // cp1
-                        x + half + bow,  y + half - bow,   // cp2 (same = quadratic feel)
+                    ctx.quadraticCurveTo(
+                        x + half + bow,  y + half - bow,   // CP slides along anti-diagonal
                         x + T, y + T
                     );
                 } else {
-                    // / arc: corners (T,0) → (0,T), bow the other perpendicular
+                    // / diagonal: top-right (x+T,y) → bottom-left (x,y+T)
+                    // Unused corners: top-left and bottom-right
+                    // Bow toward bottom-right (positive curvature) or top-left (negative)
                     ctx.moveTo(x + T, y);
-                    ctx.bezierCurveTo(
-                        x + half + bow,  y + half + bow,
-                        x + half + bow,  y + half + bow,
+                    ctx.quadraticCurveTo(
+                        x + half - bow,  y + half + bow,   // CP slides along main diagonal
                         x, y + T
                     );
                 }
