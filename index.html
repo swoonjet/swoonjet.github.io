@@ -190,8 +190,29 @@
                 }
             }
 
+            // Mouse tracking
+            let mouseX = -9999, mouseY = -9999;
+            let targetX = -9999, targetY = -9999;
+            window.addEventListener('mousemove', e => {
+                targetX = e.clientX;
+                targetY = e.clientY;
+            });
+            window.addEventListener('mouseleave', () => {
+                targetX = -9999;
+                targetY = -9999;
+            });
+
+            const PUSH_RADIUS = 180;  // pixels of influence
+            const PUSH_STRENGTH = 2.2; // how much extra rotation at center
+
             function draw(ts) {
+                const dt = Math.min(ts - lastTime, 50);
                 lastTime = ts;
+
+                // Smoothly interpolate mouse position for fluid feel
+                mouseX += (targetX - mouseX) * 0.1;
+                mouseY += (targetY - mouseY) * 0.1;
+
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
 
                 const time = ts * 0.00035;
@@ -200,16 +221,30 @@
                     for (let c = 0; c < cols; c++) {
                         const tile = tiles[r][c];
 
-                        // Wave value: smoothly oscillates each tile between \ and /
-                        const wave = Math.sin(time + tile.wavePhase);
+                        // Tile centre in screen coords
+                        const tx = c * TILE + TILE / 2;
+                        const ty = r * TILE + TILE / 2;
 
-                        // Hard-snap to tile type but with a soft crossfade window
+                        // Distance from mouse to tile centre
+                        const dx = tx - mouseX;
+                        const dy = ty - mouseY;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+
+                        // Push influence: 1 at centre, 0 at PUSH_RADIUS
+                        const influence = Math.max(0, 1 - dist / PUSH_RADIUS);
+                        // Smooth falloff
+                        const push = influence * influence * PUSH_STRENGTH;
+
+                        // Direction of push — angle away from mouse
+                        const pushAngle = Math.atan2(dy, dx);
+
+                        // Base wave
+                        const wave = Math.sin(time + tile.wavePhase);
                         const tileType = wave > 0 ? 0 : 1;
-                        // Opacity peaks when wave is fully committed, dips near zero-crossing
                         const commitment = Math.abs(wave);
                         const alpha = 0.4 + commitment * 0.6;
 
-                        // Colour sweeps across the grid on its own diagonal
+                        // Colour
                         const cwave = (Math.sin(time * 0.5 + tile.colorPhase) + 1) / 2;
                         const cidxF = cwave * (COLORS.length - 1);
                         const ci = Math.floor(cidxF);
@@ -219,11 +254,22 @@
                             cidxF - ci
                         );
 
-                        // Line weight breathes with commitment
-                        const lw = 1 + commitment * 1.8;
+                        // Line weight — thicker near mouse push
+                        const lw = 1 + commitment * 1.8 + push * 1.5;
 
                         ctx.globalAlpha = alpha;
-                        drawTile(c * TILE, r * TILE, tileType, color, lw);
+
+                        if (push > 0.01) {
+                            // Draw pushed version: rotate tile around its centre away from mouse
+                            ctx.save();
+                            ctx.translate(tx, ty);
+                            ctx.rotate(pushAngle + (tileType === 0 ? Math.PI / 4 : -Math.PI / 4) * push);
+                            ctx.translate(-tx, -ty);
+                            drawTile(c * TILE, r * TILE, tileType, color, lw);
+                            ctx.restore();
+                        } else {
+                            drawTile(c * TILE, r * TILE, tileType, color, lw);
+                        }
                     }
                 }
 
