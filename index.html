@@ -86,14 +86,6 @@
             line-height: 1.6;
         }
 
-        .links {
-            display: flex;
-            gap: 1rem;
-            align-items: center;
-            flex-wrap: wrap;
-            justify-content: center;
-        }
-
         .email-link {
             display: inline-block;
             padding: 0.9rem 2.5rem;
@@ -110,24 +102,6 @@
             transform: translateY(-2px);
             box-shadow: 0 8px 30px rgba(255,31,113,0.3);
         }
-
-        .portfolio-link {
-            display: inline-block;
-            padding: 0.9rem 2.5rem;
-            background: transparent;
-            color: var(--text);
-            text-decoration: none;
-            border-radius: 100px;
-            font-weight: 600;
-            font-size: 1rem;
-            border: 1px solid #333;
-            transition: transform 0.3s, border-color 0.3s;
-        }
-
-        .portfolio-link:hover {
-            transform: translateY(-2px);
-            border-color: #666;
-        }
     </style>
 </head>
 <body>
@@ -140,10 +114,8 @@
             Creative Director
         </h1>
         <p class="blurb">Award-winning creative direction spanning digital experiences, brand systems, film, short fiction, music, and emerging technology.</p>
-        <div class="links">
-            <a href="/portfolio" class="portfolio-link">View Portfolio</a>
-            <a href="mailto:jontoews@gmail.com" class="email-link">jontoews@gmail.com</a>
-        </div>
+        <p class="blurb" style="color: var(--muted); font-size: 0.95rem; margin-top: -0.5rem;">I'd love to hear from you about new projects, creative collaborations, or opportunities.</p>
+        <a href="mailto:jontoews@gmail.com" class="email-link">jontoews@gmail.com</a>
     </div>
 
     <script>
