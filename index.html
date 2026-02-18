@@ -128,6 +128,14 @@
 
             const COLORS = ['#ff1f71', '#c026d3', '#7858ff', '#06b6d4', '#ffffff'];
 
+            const DISSOLVE_RADIUS = 170;
+            const MAX_PARTICLES = 700;
+            const PARTICLE_DRAG = 0.91;
+            const PARTICLE_LIFE = 55;
+            const SPAWN_RATE = 3; // particles spawned per nearby tile per frame
+
+            let particles = [];
+
             function resize() {
                 canvas.width = window.innerWidth;
                 canvas.height = window.innerHeight;
@@ -137,11 +145,10 @@
                 for (let r = 0; r < rows; r++) {
                     tiles[r] = [];
                     for (let c = 0; c < cols; c++) {
-                        const wavePhase  = (c * 0.6 + r * 0.4);
-                        const colorPhase = (c * 0.3 - r * 0.5);
-                        // bubblePhase drives independent per-tile curvature oscillation
-                        const bubblePhase = (c * 1.1 + r * 0.7) + Math.random() * Math.PI * 2;
-                        tiles[r][c] = { wavePhase, colorPhase, bubblePhase };
+                        tiles[r][c] = {
+                            wavePhase:  c * 0.6 + r * 0.4,
+                            colorPhase: c * 0.3 - r * 0.5
+                        };
                     }
                 }
             }
@@ -154,114 +161,128 @@
                 return `rgb(${Math.round(ar+(br-ar)*t)},${Math.round(ag+(bg-ag)*t)},${Math.round(ab+(bb-ab)*t)})`;
             }
 
-            // Organic truchet: each tile draws a bezier arc.
-            // curvature ranges -1..1: 0=straight diagonal, ±1=fully curved arc.
-            // type 0 = \ orientation, type 1 = / orientation.
-            function drawTile(x, y, tileType, color, lw, curvature) {
+            // Pure straight-line truchet
+            function drawTile(x, y, tileType, color, lw) {
                 ctx.strokeStyle = color;
                 ctx.lineWidth = lw;
                 ctx.lineCap = 'round';
-
-                const T = TILE;
-                const half = T / 2;
-                // Control point is anchored between tile center and the unused corner.
-                // This keeps the curve inside the tile so lines never break away from corners.
-                const bow = curvature * T * 0.5;
-
                 ctx.beginPath();
                 if (tileType === 0) {
-                    // \ diagonal: top-left (x,y) → bottom-right (x+T,y+T)
-                    // Unused corners: top-right and bottom-left
-                    // Bow toward top-right (positive curvature) or bottom-left (negative)
                     ctx.moveTo(x, y);
-                    ctx.quadraticCurveTo(
-                        x + half + bow,  y + half - bow,   // CP slides along anti-diagonal
-                        x + T, y + T
-                    );
+                    ctx.lineTo(x + TILE, y + TILE);
                 } else {
-                    // / diagonal: top-right (x+T,y) → bottom-left (x,y+T)
-                    // Unused corners: top-left and bottom-right
-                    // Bow toward bottom-right (positive curvature) or top-left (negative)
-                    ctx.moveTo(x + T, y);
-                    ctx.quadraticCurveTo(
-                        x + half - bow,  y + half + bow,   // CP slides along main diagonal
-                        x, y + T
-                    );
+                    ctx.moveTo(x + TILE, y);
+                    ctx.lineTo(x, y + TILE);
                 }
                 ctx.stroke();
+            }
+
+            // Spawn particles scattered along a tile's diagonal line
+            function spawnFromTile(tileX, tileY, tileType, color, influence) {
+                const count = Math.ceil(SPAWN_RATE * influence);
+                for (let i = 0; i < count; i++) {
+                    // Random point along the diagonal
+                    const t = Math.random();
+                    let px, py;
+                    if (tileType === 0) {
+                        px = tileX + t * TILE;
+                        py = tileY + t * TILE;
+                    } else {
+                        px = tileX + TILE - t * TILE;
+                        py = tileY + t * TILE;
+                    }
+                    // Velocity: perpendicular to the diagonal + random scatter
+                    const speed = 0.5 + Math.random() * 1.8;
+                    const angle = Math.random() * Math.PI * 2;
+                    particles.push({
+                        x: px, y: py,
+                        vx: Math.cos(angle) * speed,
+                        vy: Math.sin(angle) * speed,
+                        life: PARTICLE_LIFE * (0.6 + Math.random() * 0.8),
+                        maxLife: PARTICLE_LIFE,
+                        color,
+                        size: 1 + Math.random() * 1.8
+                    });
+                }
             }
 
             // Mouse tracking
             let mouseX = -9999, mouseY = -9999;
             let targetX = -9999, targetY = -9999;
-            window.addEventListener('mousemove', e => {
-                targetX = e.clientX;
-                targetY = e.clientY;
-            });
-            window.addEventListener('mouseleave', () => {
-                targetX = -9999;
-                targetY = -9999;
-            });
-
-            // Mouse curves tiles within this radius
-            const CURVE_RADIUS = 180;
+            window.addEventListener('mousemove', e => { targetX = e.clientX; targetY = e.clientY; });
+            window.addEventListener('mouseleave', () => { targetX = -9999; targetY = -9999; });
 
             function draw(ts) {
-                const dt = Math.min(ts - lastTime, 50);
                 lastTime = ts;
-
                 mouseX += (targetX - mouseX) * 0.1;
                 mouseY += (targetY - mouseY) * 0.1;
 
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
-
                 const time = ts * 0.00035;
-                // Separate slower time for curvature bubbling
-                const bubbleTime = ts * 0.00055;
 
+                // --- Draw grid tiles, fading near mouse ---
                 for (let r = 0; r < rows; r++) {
                     for (let c = 0; c < cols; c++) {
                         const tile = tiles[r][c];
-
                         const tx = c * TILE + TILE / 2;
                         const ty = r * TILE + TILE / 2;
+                        const dist = Math.hypot(tx - mouseX, ty - mouseY);
 
-                        const dx = tx - mouseX;
-                        const dy = ty - mouseY;
-                        const dist = Math.sqrt(dx * dx + dy * dy);
+                        const influence = Math.max(0, 1 - dist / DISSOLVE_RADIUS);
+                        const dissolvePull = influence * influence;
 
-                        // Mouse curve influence — fades to 0 outside CURVE_RADIUS
-                        const curveInfluence = Math.max(0, 1 - dist / CURVE_RADIUS);
-                        const curvePull = curveInfluence * curveInfluence;
-
-                        // Base wave → tile orientation
                         const wave = Math.sin(time + tile.wavePhase);
                         const tileType = wave > 0 ? 0 : 1;
                         const commitment = Math.abs(wave);
-                        const alpha = 0.4 + commitment * 0.6;
+                        const baseAlpha = 0.4 + commitment * 0.6;
 
-                        // Each tile bubbles independently via its own phase.
-                        // curvature = 0 at rest, oscillates up to ±1 near cursor.
-                        const bubbleOsc = Math.sin(bubbleTime * 1.3 + tile.bubblePhase);
-                        const curvature = bubbleOsc * curvePull;
+                        // Grid line fades out as particles take over
+                        const gridAlpha = baseAlpha * (1 - dissolvePull * 0.95);
 
-                        // Colour
                         const cwave = (Math.sin(time * 0.5 + tile.colorPhase) + 1) / 2;
                         const cidxF = cwave * (COLORS.length - 1);
                         const ci = Math.floor(cidxF);
-                        const color = lerpColor(
-                            COLORS[ci],
-                            COLORS[Math.min(ci + 1, COLORS.length - 1)],
-                            cidxF - ci
-                        );
+                        const color = lerpColor(COLORS[ci], COLORS[Math.min(ci + 1, COLORS.length - 1)], cidxF - ci);
 
                         const lw = 1.2 + commitment * 1.8;
 
-                        // Glow slightly near mouse
-                        ctx.globalAlpha = Math.min(1, alpha + curveInfluence * 0.4);
+                        if (gridAlpha > 0.01) {
+                            ctx.globalAlpha = gridAlpha;
+                            drawTile(c * TILE, r * TILE, tileType, color, lw);
+                        }
 
-                        drawTile(c * TILE, r * TILE, tileType, color, lw, curvature);
+                        // Spawn particles from dissolving tiles
+                        if (dissolvePull > 0.05 && particles.length < MAX_PARTICLES) {
+                            spawnFromTile(c * TILE, r * TILE, tileType, color, dissolvePull);
+                        }
                     }
+                }
+
+                // --- Update and draw particles ---
+                for (let i = particles.length - 1; i >= 0; i--) {
+                    const p = particles[i];
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.vx *= PARTICLE_DRAG;
+                    p.vy *= PARTICLE_DRAG;
+                    p.life--;
+
+                    if (p.life <= 0) {
+                        particles.splice(i, 1);
+                        continue;
+                    }
+
+                    const t = p.life / p.maxLife;
+                    ctx.globalAlpha = t * t * 0.9; // fade out quadratically
+                    ctx.fillStyle = p.color;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                // Trim pool if overflowing
+                if (particles.length > MAX_PARTICLES) {
+                    particles.splice(0, particles.length - MAX_PARTICLES);
                 }
 
                 ctx.globalAlpha = 1;
