@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lateral Walks</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=IBM+Plex+Mono:wght@300;400&display=swap');
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #faf8f4;
+      color: #2a2a28;
+      font-family: 'EB Garamond', Georgia, serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .container {
+      max-width: 520px;
+      padding: 80px 40px;
+    }
+    h1 {
+      font-size: 2rem;
+      font-weight: 400;
+      margin-bottom: 12px;
+    }
+    .subtitle {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      color: #8a8580;
+      letter-spacing: 0.08em;
+      margin-bottom: 48px;
+    }
+    .walk-link {
+      display: block;
+      padding: 20px 0;
+      border-top: 1px solid #e8e4dc;
+      text-decoration: none;
+      color: #2a2a28;
+      transition: padding-left 0.3s ease;
+    }
+    .walk-link:hover { padding-left: 12px; }
+    .walk-link:last-child { border-bottom: 1px solid #e8e4dc; }
+    .walk-title {
+      font-size: 1.2rem;
+      margin-bottom: 4px;
+    }
+    .walk-meta {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      color: #8a8580;
+      letter-spacing: 0.06em;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Lateral Walks</h1>
+    <p class="subtitle">A trained lateral thinker looks through live webcams and follows the chain of ideas wherever they go.</p>
+
+    <a href="tokyo/" class="walk-link">
+      <div class="walk-title">Tokyo → Iceland → Barcelona → NYC → Sydney → Bangkok → Tokyo</div>
+      <div class="walk-meta">12 steps · Infrastructure as notation · The zoom paradox · "Patience is the thing that escapes all epistemology"</div>
+    </a>
+
+    <a href="barcelona/" class="walk-link">
+      <div class="walk-title">Barcelona → Lisbon → Venice → Nice → Amsterdam → Istanbul → Tokyo → Barcelona</div>
+      <div class="walk-meta">12 steps · Frame-rate as truth · Surrendered vs contested edges · "There is no frame rate at which you see everything"</div>
+    </a>
+  </div>
+</body>
+</html>
