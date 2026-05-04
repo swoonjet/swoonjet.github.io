@@ -102,6 +102,34 @@
             transform: translateY(-2px);
             box-shadow: 0 8px 30px rgba(255,31,113,0.3);
         }
+
+        .experiments-link {
+            display: inline-block;
+            margin-top: 0.25rem;
+            font-size: 0.85rem;
+            font-weight: 500;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--muted);
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: color 0.25s ease, border-color 0.25s ease;
+        }
+
+        .experiments-link:hover {
+            color: var(--accent);
+            border-bottom-color: var(--accent);
+        }
+
+        .experiments-link .arrow {
+            display: inline-block;
+            margin-left: 0.4em;
+            transition: transform 0.25s ease;
+        }
+
+        .experiments-link:hover .arrow {
+            transform: translateX(4px);
+        }
     </style>
 </head>
 <body>
@@ -116,6 +144,7 @@
         <p class="blurb">Award-winning creative direction spanning digital experiences, brand systems, film, short fiction, music, and emerging technology.</p>
         <a href="mailto:jontoews@gmail.com" class="email-link">jontoews@gmail.com</a>
         <p class="blurb" style="color: var(--muted); font-size: 0.95rem;">I'd love to hear from you about new projects,<br>creative collaborations, or opportunities.</p>
+        <a href="/experiments/" class="experiments-link">Experiments<span class="arrow">→</span></a>
     </div>
 
     <script>
