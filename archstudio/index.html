@@ -1,0 +1,943 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>ArchStudio — Curved Forms</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0d0d1a;
+  color: #e0e0ff;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+  user-select: none;
+}
+#topbar {
+  background: #13132a;
+  border-bottom: 1px solid #2a2a4a;
+  padding: 0 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 46px;
+  flex-shrink: 0;
+}
+.logo { font-size: 16px; font-weight: 800; color: #8888ff; margin-right: 4px; }
+.logo span { color: #ff8866; }
+.tb-btn {
+  background: #1e1e3a; border: 1px solid #3a3a5a; color: #aaa;
+  padding: 5px 10px; border-radius: 6px; cursor: pointer; font-size: 12px;
+  transition: all 0.15s; white-space: nowrap;
+}
+.tb-btn:hover { background: #2a2a50; color: #fff; }
+.tb-btn.act { background: #3333aa; color: #fff; border-color: #6666cc; }
+.sep { width: 1px; height: 22px; background: #2a2a4a; }
+.flex1 { flex: 1; }
+
+#main { display: flex; flex: 1; overflow: hidden; }
+
+#toolbar {
+  width: 62px; background: #13132a; border-right: 1px solid #2a2a4a;
+  display: flex; flex-direction: column; align-items: center;
+  padding: 10px 0; gap: 4px; flex-shrink: 0; overflow-y: auto;
+}
+.tbtn {
+  width: 50px; height: 48px; background: #1a1a30; border: 1px solid #2e2e50;
+  border-radius: 8px; cursor: pointer; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; font-size: 9px; color: #666; gap: 2px;
+  transition: all 0.15s;
+}
+.tbtn .ic { font-size: 19px; line-height: 1; }
+.tbtn:hover { background: #252548; color: #bbb; border-color: #5555aa; }
+.tbtn.act { background: #3333aa; color: #fff; border-color: #7777dd; box-shadow: 0 0 8px #3333aa55; }
+.tsep { width: 34px; height: 1px; background: #1e1e3a; margin: 2px 0; }
+.tlabel { font-size: 8px; color: #333; text-transform: uppercase; letter-spacing: 0.5px; }
+
+#viewport { flex: 1; position: relative; overflow: hidden; }
+#three-canvas { display: block; width: 100%; height: 100%; }
+
+#hint {
+  position: absolute; top: 10px; left: 10px;
+  background: #0d0d1acc; border: 1px solid #2a2a4a;
+  padding: 4px 10px; border-radius: 6px; font-size: 10px; color: #555;
+  pointer-events: none;
+}
+#toast {
+  position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
+  background: #3333aa; color: #fff; padding: 6px 16px; border-radius: 20px;
+  font-size: 12px; font-weight: 600; opacity: 0; pointer-events: none;
+  transition: opacity 0.25s;
+}
+#toast.show { opacity: 1; }
+
+#propanel {
+  width: 220px; background: #13132a; border-left: 1px solid #2a2a4a;
+  flex-shrink: 0; overflow-y: auto; display: flex; flex-direction: column;
+}
+.ph { padding: 10px 13px 8px; font-size: 10px; font-weight: 700; color: #6655cc;
+  text-transform: uppercase; letter-spacing: 0.8px; border-bottom: 1px solid #1e1e3a; }
+.nosel { padding: 24px 13px; font-size: 12px; color: #444; text-align: center; line-height: 1.8; }
+.pg { padding: 9px 13px; border-bottom: 1px solid #1a1a2e; }
+.pgl { font-size: 9px; color: #444; text-transform: uppercase; letter-spacing: 0.5px;
+  font-weight: 700; margin-bottom: 8px; }
+.pr { margin-bottom: 8px; }
+.pr:last-child { margin-bottom: 0; }
+.pl { font-size: 11px; color: #666; margin-bottom: 4px; display: flex;
+  justify-content: space-between; align-items: center; }
+.pv { color: #aaa; font-weight: 600; }
+.slider {
+  -webkit-appearance: none; width: 100%; height: 4px;
+  background: #1e1e38; border-radius: 2px; outline: none;
+}
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 13px; height: 13px; border-radius: 50%;
+  background: #6655cc; cursor: pointer; border: 2px solid #9988ff;
+}
+.pcolor { width: 100%; height: 30px; border-radius: 5px; border: 1px solid #3a3a5a;
+  background: none; cursor: pointer; padding: 2px; }
+.presets { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 5px; }
+.preset { width: 19px; height: 19px; border-radius: 3px; cursor: pointer;
+  border: 1px solid #333; transition: transform 0.1s; }
+.preset:hover { transform: scale(1.25); }
+.pbtn {
+  width: 100%; padding: 6px; border-radius: 6px; border: 1px solid #2a2a4a;
+  background: #1a1a2e; color: #888; cursor: pointer; font-size: 11px;
+  transition: all 0.15s; margin-bottom: 5px; text-align: left;
+}
+.pbtn:hover { background: #252548; color: #ccc; }
+.pbtn.prim { border-color: #334499; background: #1a2255; color: #8899ff; }
+.pbtn.prim:hover { background: #2233aa; color: #fff; }
+.pbtn.dang { border-color: #551111; color: #cc6666; }
+.pbtn.dang:hover { background: #330000; color: #ff9999; }
+
+#statusbar {
+  height: 25px; background: #0a0a16; border-top: 1px solid #1a1a2e;
+  padding: 0 12px; display: flex; align-items: center; gap: 12px;
+  font-size: 10px; color: #444; flex-shrink: 0;
+}
+</style>
+</head>
+<body>
+
+<div id="topbar">
+  <div class="logo">Arch<span>Studio</span></div>
+  <div class="sep"></div>
+  <button class="tb-btn" onclick="undo()">↩ Undo</button>
+  <button class="tb-btn" onclick="redo()">↪ Redo</button>
+  <div class="sep"></div>
+  <button class="tb-btn" onclick="clearScene()">🗑 Clear</button>
+  <button class="tb-btn" onclick="loadSample()">◎ Sample</button>
+  <div class="sep"></div>
+  <button class="tb-btn act" id="snapBtn" onclick="toggleSnap()">Snap ½m</button>
+  <div class="sep"></div>
+  <button class="tb-btn" onclick="setView('iso')">Iso</button>
+  <button class="tb-btn" onclick="setView('top')">Top</button>
+  <button class="tb-btn" onclick="setView('front')">Front</button>
+  <div class="flex1"></div>
+  <button class="tb-btn" style="background:#1a2a1a;border-color:#336633;color:#88cc88" onclick="testPlace()" title="Place a rotunda at origin without raycasting — confirms 3D rendering works">⬡ Test</button>
+  <button class="tb-btn prim" style="background:#1a2255;border-color:#334499;color:#8899ff" onclick="snap2()">📸 Export</button>
+</div>
+
+<div id="main">
+  <div id="toolbar">
+    <div class="tlabel">Edit</div>
+    <button class="tbtn act" id="tool-select" onclick="setTool('select')">
+      <div class="ic">↖</div><div>Select</div>
+    </button>
+    <button class="tbtn" id="tool-delete" onclick="setTool('delete')">
+      <div class="ic">✕</div><div>Delete</div>
+    </button>
+    <div class="tsep"></div>
+    <div class="tlabel">Place</div>
+    <button class="tbtn" id="tool-rotunda" onclick="setTool('rotunda')">
+      <div class="ic">◯</div><div>Rotunda</div>
+    </button>
+    <button class="tbtn" id="tool-apse" onclick="setTool('apse')">
+      <div class="ic">⌓</div><div>Apse</div>
+    </button>
+    <button class="tbtn" id="tool-ellipse" onclick="setTool('ellipse')">
+      <div class="ic">⬬</div><div>Ellipse</div>
+    </button>
+    <button class="tbtn" id="tool-arcwall" onclick="setTool('arcwall')">
+      <div class="ic">◠</div><div>Arc Wall</div>
+    </button>
+    <button class="tbtn" id="tool-barrel" onclick="setTool('barrel')">
+      <div class="ic">∩</div><div>Barrel</div>
+    </button>
+    <div class="tsep"></div>
+    <div class="tlabel">Roof</div>
+    <button class="tbtn" id="tool-dome" onclick="setTool('dome')">
+      <div class="ic">◡</div><div>Dome</div>
+    </button>
+    <button class="tbtn" id="tool-ondome" onclick="setTool('ondome')">
+      <div class="ic">◉</div><div>Onion</div>
+    </button>
+    <button class="tbtn" id="tool-cone" onclick="setTool('cone')">
+      <div class="ic">△</div><div>Spire</div>
+    </button>
+    <button class="tbtn" id="tool-disc" onclick="setTool('disc')">
+      <div class="ic">⬤</div><div>Disc</div>
+    </button>
+    <div class="tsep"></div>
+    <button class="tbtn" onclick="raiseSelected(0.5)"><div class="ic">↑</div><div>Up</div></button>
+    <button class="tbtn" onclick="raiseSelected(-0.5)"><div class="ic">↓</div><div>Down</div></button>
+  </div>
+
+  <div id="viewport">
+    <canvas id="three-canvas"></canvas>
+    <div id="hint">Drag to orbit · Scroll to zoom · Right-drag to pan · Pick a tool then click scene</div>
+    <div id="toast"></div>
+  </div>
+
+  <div id="propanel">
+    <div class="ph">Properties</div>
+    <div id="nosel" class="nosel">Select a tool and<br>click the scene to place,<br>or click an object.<br><br><span style="color:#333">Try ◎ Sample to start.</span></div>
+    <div id="propbody" style="display:none">
+      <div class="pg">
+        <div class="pgl">Shape</div>
+        <div id="ptype" style="font-size:13px;color:#aaaaff;font-weight:700">Rotunda</div>
+      </div>
+      <div class="pg">
+        <div class="pgl">Size</div>
+        <div class="pr">
+          <div class="pl"><span id="lw">Width</span> <span class="pv" id="vw">5.0m</span></div>
+          <input type="range" class="slider" id="sw" min="0.5" max="24" step="0.25" oninput="chDim('w',this.value)">
+        </div>
+        <div class="pr" id="rowD">
+          <div class="pl"><span id="ld">Depth</span> <span class="pv" id="vd">5.0m</span></div>
+          <input type="range" class="slider" id="sd" min="0.5" max="24" step="0.25" oninput="chDim('d',this.value)">
+        </div>
+        <div class="pr">
+          <div class="pl"><span id="lh">Height</span> <span class="pv" id="vh">3.5m</span></div>
+          <input type="range" class="slider" id="sh" min="0.1" max="16" step="0.1" oninput="chDim('h',this.value)">
+        </div>
+        <div class="pr" id="rowSweep" style="display:none">
+          <div class="pl">Arc Sweep <span class="pv" id="vsweep">180°</span></div>
+          <input type="range" class="slider" id="ssweep" min="15" max="345" step="5" oninput="chSweep(this.value)">
+        </div>
+      </div>
+      <div class="pg">
+        <div class="pgl">Position</div>
+        <div class="pr">
+          <div class="pl">Elevation <span class="pv" id="velev">0.0m</span></div>
+          <input type="range" class="slider" id="selev" min="-2" max="24" step="0.25" oninput="chElev(this.value)">
+        </div>
+        <div class="pr">
+          <div class="pl">Rotation <span class="pv" id="vrot">0°</span></div>
+          <input type="range" class="slider" id="srot" min="0" max="360" step="5" oninput="chRot(this.value)">
+        </div>
+      </div>
+      <div class="pg">
+        <div class="pgl">Color</div>
+        <input type="color" class="pcolor" id="pcolor" value="#d4cfc4" oninput="chColor(this.value)">
+        <div class="presets" id="presets"></div>
+      </div>
+      <div class="pg">
+        <div class="pr">
+          <div class="pl">Opacity <span class="pv" id="vopac">100%</span></div>
+          <input type="range" class="slider" id="sopac" min="0.05" max="1" step="0.05" value="1" oninput="chOpac(this.value)">
+        </div>
+      </div>
+      <div class="pg">
+        <button class="pbtn prim" onclick="dupSelected()">⊕ Duplicate</button>
+        <button class="pbtn" onclick="focusSel()">⊙ Focus Camera</button>
+        <button class="pbtn dang" onclick="delSelected()">✕ Delete</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="statusbar">
+  <span id="shint" style="color:#555">Select tool active</span>
+  <span class="flex1"></span>
+  <span id="spos" style="color:#333">—</span>
+  <span id="scnt" style="color:#333">0 objects</span>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ── Diagnostics: show error immediately if Three.js missing ──
+window.onerror = function(msg, src, line) {
+  const h = document.getElementById('hint');
+  if (h) { h.innerHTML = '❌ JS error: ' + msg + ' (line ' + line + ')'; h.style.color='#ff4444'; }
+  return false;
+};
+if (typeof THREE === 'undefined') {
+  const h = document.getElementById('hint');
+  h.innerHTML = '❌ Three.js failed to load from CDN — check internet connection';
+  h.style.color = '#ff4444';
+  // Hard stop — nothing else will work
+  throw new Error('THREE not defined');
+}
+
+
+const CPRESETS = ['#e8e0d4','#d4cfc4','#c8c2b6','#b8a898','#a89880','#8a7060',
+  '#6b5843','#7a5033','#5c3822','#4a4a5a','#5a5a72','#ccbbaa','#2a3a2a','#3a5a3a'];
+const pcont = document.getElementById('presets');
+CPRESETS.forEach(c => {
+  const el = document.createElement('div');
+  el.className = 'preset';
+  el.style.background = c;
+  el.onclick = () => { document.getElementById('pcolor').value = c; chColor(c); };
+  pcont.appendChild(el);
+});
+
+// ── State ──────────────────────────────────────────────
+const objects = [];
+let selected = null;
+let currentTool = 'select';
+let snapOn = true;
+const SNAP = 0.5;
+let undoStack = [], redoStack = [];
+
+// ── Scene ──────────────────────────────────────────────
+const canvas = document.getElementById('three-canvas');
+const vp     = document.getElementById('viewport');
+
+let renderer;
+try {
+  renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, preserveDrawingBuffer: true });
+} catch(e) {
+  document.getElementById('hint').innerHTML = '❌ WebGL init failed: ' + e.message;
+  document.getElementById('hint').style.color = '#ff4444';
+  throw e; // stop execution
+}
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+document.getElementById('hint').innerHTML = '✅ THREE r' + THREE.REVISION + ' · WebGL OK — Drag to orbit · Scroll to zoom · Right-drag to pan · Pick a tool then click scene';
+document.getElementById('hint').style.color = '';
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0d0d1a);
+scene.fog = new THREE.FogExp2(0x0d0d1a, 0.012);
+
+const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 500);
+const orbitTarget = new THREE.Vector3(0, 0, 0);
+let sph = { th: 0.7, ph: 1.0, r: 30 };
+updateCam();
+
+// Lights
+scene.add(new THREE.AmbientLight(0x334466, 0.8));
+const sun = new THREE.DirectionalLight(0xfff5e0, 1.8);
+sun.position.set(20, 40, 15);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.camera.left = sun.shadow.camera.bottom = -50;
+sun.shadow.camera.right = sun.shadow.camera.top = 50;
+sun.shadow.camera.far = 200;
+sun.shadow.bias = -0.001;
+scene.add(sun);
+const fillLight = new THREE.DirectionalLight(0x4466aa, 0.4);
+fillLight.position.set(-10, 10, -10);
+scene.add(fillLight);
+scene.add(new THREE.HemisphereLight(0x335588, 0x221100, 0.5));
+
+// Ground
+const gnd = new THREE.Mesh(new THREE.PlaneGeometry(100,100), new THREE.MeshLambertMaterial({color:0x111122}));
+gnd.rotation.x = -Math.PI/2; gnd.position.y = -0.01; gnd.receiveShadow = true;
+scene.add(gnd);
+scene.add(new THREE.GridHelper(60, 60, 0x222244, 0x1a1a30));
+
+// Ground plane for raycasting (invisible)
+const groundPlane = new THREE.Mesh(
+  new THREE.PlaneGeometry(200, 200),
+  new THREE.MeshBasicMaterial({visible: false, side: THREE.DoubleSide})
+);
+groundPlane.rotation.x = -Math.PI / 2;
+scene.add(groundPlane);
+
+let previewMesh = null;
+
+function resize() {
+  const w = vp.clientWidth, h = vp.clientHeight;
+  renderer.setSize(w, h);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+}
+resize();
+new ResizeObserver(resize).observe(vp);
+
+// ── Camera ─────────────────────────────────────────────
+function updateCam() {
+  camera.position.set(
+    orbitTarget.x + sph.r * Math.sin(sph.ph) * Math.sin(sph.th),
+    orbitTarget.y + sph.r * Math.cos(sph.ph),
+    orbitTarget.z + sph.r * Math.sin(sph.ph) * Math.cos(sph.th)
+  );
+  camera.lookAt(orbitTarget);
+}
+
+function setView(v) {
+  if (v === 'iso')   { sph = {th:0.7, ph:1.0, r:30}; orbitTarget.set(0,2,0); }
+  if (v === 'top')   { sph = {th:0.7, ph:0.01, r:35}; orbitTarget.set(0,0,0); }
+  if (v === 'front') { sph = {th:0, ph:Math.PI/2, r:30}; orbitTarget.set(0,3,0); }
+  updateCam();
+}
+
+// ── Geometry ───────────────────────────────────────────
+// ALL use only built-in Three.js primitives — no ExtrudeGeometry, no LatheGeometry
+const SEG = 48;
+
+function makeGeo(type, w, h, d, sweep) {
+  try {
+    const r = w / 2;
+    switch(type) {
+      case 'rotunda': return new THREE.CylinderGeometry(r, r, h, SEG);
+      case 'disc':    return new THREE.CylinderGeometry(r, r, h, SEG);
+      case 'apse':    return new THREE.CylinderGeometry(r, r, h, SEG, 1, false, 0, Math.PI);
+      case 'ellipse': return new THREE.CylinderGeometry(1, 1, h, SEG);  // scaled in buildMesh
+      case 'arcwall': return new THREE.CylinderGeometry(w, w, h, SEG, 1, true, 0, sweep);
+      case 'barrel': {
+        const g = new THREE.CylinderGeometry(r, r, d, SEG, 1, true, 0, Math.PI);
+        g.rotateX(-Math.PI / 2);
+        return g;
+      }
+      case 'dome':
+      case 'ondome':  return new THREE.SphereGeometry(r, SEG, 32, 0, Math.PI*2, 0, Math.PI/2);
+      case 'cone':    return new THREE.ConeGeometry(r, h, SEG);
+      default:        return new THREE.CylinderGeometry(r, r, h, SEG);
+    }
+  } catch(err) {
+    console.error('makeGeo error for type='+type+':', err);
+    return new THREE.CylinderGeometry(1, 1, 1, 16);
+  }
+}
+
+// Default dims & colors per type
+const DEFS = {
+  rotunda:{ w:5,   h:3.5, d:5,   color:'#d4cfc4' },
+  apse:   { w:4,   h:3.5, d:4,   color:'#ccc8bc' },
+  ellipse:{ w:6,   h:3.5, d:4,   color:'#d0cabc' },
+  arcwall:{ w:3,   h:3.5, d:0.3, color:'#c0bbb0' },
+  barrel: { w:4,   h:2.5, d:6,   color:'#b8b0a4' },
+  dome:   { w:5,   h:3.0, d:5,   color:'#ddd8cc' },
+  ondome: { w:2.5, h:4.5, d:2.5, color:'#ccbbaa' },
+  cone:   { w:2,   h:4.0, d:2,   color:'#8a6a4e' },
+  disc:   { w:6,   h:0.3, d:6,   color:'#aeaaa0' },
+};
+
+// Dim labels per type  [w-label, d-shown, h-label]
+const DLBLS = {
+  rotunda:['Diameter',   false, 'Height'],
+  apse:   ['Diameter',   false, 'Height'],
+  ellipse:['Width (X)',  true,  'Height'],
+  arcwall:['Arc Radius', false, 'Wall Height'],
+  barrel: ['Arch Span',  true,  'Arch Rise'],
+  dome:   ['Diameter',   false, 'Dome Height'],
+  ondome: ['Diameter',   false, 'Total Height'],
+  cone:   ['Base Diam.', false, 'Height'],
+  disc:   ['Diameter',   false, 'Thickness'],
+};
+
+// Types whose geometry base is at y=0 (not centered)
+const BASE_TYPES = {dome:1, ondome:1, barrel:1};
+
+function getY(o) {
+  return BASE_TYPES[o.type] ? o.elev : o.elev + o.h / 2;
+}
+
+function buildMesh(o) {
+  const geo = makeGeo(o.type, o.w, o.h, o.d, o.sweep);
+  const mat = new THREE.MeshLambertMaterial({
+    color: new THREE.Color(o.color),
+    transparent: o.opacity < 1,
+    opacity: o.opacity
+  });
+  const m = new THREE.Mesh(geo, mat);
+  m.castShadow = true; m.receiveShadow = true;
+  // Apply scale for non-uniform shapes
+  if (o.type === 'ellipse') m.scale.set(o.w/2, 1, o.d/2);
+  if (o.type === 'dome' || o.type === 'ondome') m.scale.y = o.h / (o.w/2);
+  if (o.type === 'barrel') m.scale.y = o.h / (o.w/2);
+  placeMesh(m, o);
+  return m;
+}
+
+function placeMesh(m, o) {
+  m.position.set(o.x, getY(o), o.z);
+  m.rotation.y = o.rot;
+}
+
+// ── Object management ──────────────────────────────────
+function addObject(type, x, z, opts) {
+  const def = DEFS[type];
+  const o = {
+    type, x, z,
+    w: opts&&opts.w!=null ? opts.w : def.w,
+    h: opts&&opts.h!=null ? opts.h : def.h,
+    d: opts&&opts.d!=null ? opts.d : def.d,
+    color: (opts&&opts.color) || def.color,
+    elev:  (opts&&opts.elev)  || 0,
+    opacity: (opts&&opts.opacity!=null) ? opts.opacity : 1,
+    rot:   (opts&&opts.rot)   || 0,
+    sweep: (opts&&opts.sweep!=null) ? opts.sweep : Math.PI,
+  };
+  o.mesh = buildMesh(o);
+  scene.add(o.mesh);
+  objects.push(o);
+  updateCnt();
+  return o;
+}
+
+function rebuildObj(o) {
+  scene.remove(o.mesh);
+  o.mesh.geometry.dispose();
+  o.mesh = buildMesh(o);
+  scene.add(o.mesh);
+  if (selected === o) o.mesh.material.emissive = new THREE.Color(0x221133);
+}
+
+function removeObj(o) {
+  scene.remove(o.mesh);
+  o.mesh.geometry.dispose();
+  o.mesh.material.dispose();
+  const i = objects.indexOf(o);
+  if (i >= 0) objects.splice(i, 1);
+  if (selected === o) { selected = null; updatePanel(); }
+  updateCnt();
+}
+
+function selectObj(o) {
+  if (selected === o) return;
+  clearSel();
+  selected = o;
+  if (o) o.mesh.material.emissive = new THREE.Color(0x221133);
+  updatePanel();
+}
+
+function clearSel() {
+  if (selected) selected.mesh.material.emissive = new THREE.Color(0x000000);
+  selected = null;
+  updatePanel();
+}
+
+// ── Raycasting ─────────────────────────────────────────
+function getNDC(cx, cy) {
+  const rect = canvas.getBoundingClientRect();
+  return {
+    x: ((cx - rect.left) / rect.width)  * 2 - 1,
+    y: -((cy - rect.top)  / rect.height) * 2 + 1
+  };
+}
+
+function groundPt(cx, cy) {
+  const ndc = getNDC(cx, cy);
+  const rc = new THREE.Raycaster();
+  rc.setFromCamera(ndc, camera);
+  const hits = rc.intersectObject(groundPlane, false);
+  if (hits.length > 0) return hits[0].point;
+  // Fallback: intersect y=0 plane directly
+  const pt = new THREE.Vector3();
+  const plane = new THREE.Plane(new THREE.Vector3(0,1,0), 0);
+  rc.ray.intersectPlane(plane, pt);
+  return pt;
+}
+
+function hitTest(cx, cy) {
+  const ndc = getNDC(cx, cy);
+  const rc = new THREE.Raycaster();
+  rc.setFromCamera(ndc, camera);
+  const meshes = objects.map(o => o.mesh);
+  const hits = rc.intersectObjects(meshes, false);
+  if (hits.length) return objects.find(o => o.mesh === hits[0].object) || null;
+  return null;
+}
+
+const doSnap = v => snapOn ? Math.round(v / SNAP) * SNAP : v;
+
+// ── Mouse handling (same pattern as V1 that worked) ────
+let ms = { down:false, btn:0, sx:0, sy:0, lx:0, ly:0, dragging:false, wasDrag:false };
+let dragObj = null, dragElev = 0;
+const dragOff = new THREE.Vector3();
+
+canvas.addEventListener('mousedown', e => {
+  ms = { down:true, btn:e.button, sx:e.clientX, sy:e.clientY,
+         lx:e.clientX, ly:e.clientY, dragging:false, wasDrag:false };
+  if (e.button === 0 && currentTool === 'select') {
+    const hit = hitTest(e.clientX, e.clientY);
+    if (hit) {
+      selectObj(hit);
+      dragObj = hit; dragElev = hit.elev;
+      const pt = groundPt(e.clientX, e.clientY);
+      if (pt) dragOff.set(hit.x - pt.x, 0, hit.z - pt.z);
+    }
+  }
+  e.preventDefault();
+});
+
+// mousemove + mouseup on document so events fire even when cursor leaves canvas
+document.addEventListener('mousemove', e => {
+  const dx = e.clientX - ms.lx, dy = e.clientY - ms.ly;
+  if (Math.abs(e.clientX - ms.sx) > 6 || Math.abs(e.clientY - ms.sy) > 6) {
+    ms.dragging = true; ms.wasDrag = true;
+  }
+  if (ms.down) {
+    if (ms.btn === 0 && dragObj && ms.dragging) {
+      const pt = groundPt(e.clientX, e.clientY);
+      if (pt) {
+        dragObj.x = doSnap(pt.x + dragOff.x);
+        dragObj.z = doSnap(pt.z + dragOff.z);
+        placeMesh(dragObj.mesh, dragObj);
+      }
+    } else if (ms.btn === 0 && !dragObj && ms.dragging) {
+      sph.th -= dx * 0.008;
+      sph.ph = Math.max(0.05, Math.min(1.5, sph.ph + dy * 0.008));
+      updateCam();
+    } else if (ms.btn === 2 && ms.dragging) {
+      const right = new THREE.Vector3();
+      right.crossVectors(camera.getWorldDirection(new THREE.Vector3()), new THREE.Vector3(0,1,0)).normalize();
+      orbitTarget.addScaledVector(right, -dx * sph.r * 0.001);
+      orbitTarget.y += dy * sph.r * 0.001;
+      updateCam();
+    }
+  }
+  // Only show ground position & preview when hovering the canvas
+  const rect = canvas.getBoundingClientRect();
+  const overCanvas = e.clientX >= rect.left && e.clientX <= rect.right &&
+                     e.clientY >= rect.top  && e.clientY <= rect.bottom;
+  if (overCanvas) {
+    const pt = groundPt(e.clientX, e.clientY);
+    if (pt) document.getElementById('spos').textContent = `X ${pt.x.toFixed(1)}  Z ${pt.z.toFixed(1)}`;
+    if (!['select','delete'].includes(currentTool)) showPreview(e.clientX, e.clientY);
+    else clearPreview();
+  }
+  ms.lx = e.clientX; ms.ly = e.clientY;
+});
+
+document.addEventListener('mouseup', e => {
+  if (e.button === 0 && !ms.wasDrag && ms.down) {
+    // Only act if the initial press was on the canvas
+    const rect = canvas.getBoundingClientRect();
+    const startedOnCanvas = ms.sx >= rect.left && ms.sx <= rect.right &&
+                            ms.sy >= rect.top  && ms.sy <= rect.bottom;
+    if (startedOnCanvas) {
+      if (currentTool === 'select') {
+        const hit = hitTest(e.clientX, e.clientY);
+        hit ? selectObj(hit) : clearSel();
+      } else if (currentTool === 'delete') {
+        const hit = hitTest(e.clientX, e.clientY);
+        if (hit) { pushUndo(); removeObj(hit); toast('Deleted'); }
+      } else {
+        try {
+          const pt = groundPt(e.clientX, e.clientY);
+          const px = pt ? doSnap(pt.x) : 0;
+          const pz = pt ? doSnap(pt.z) : 0;
+          pushUndo();
+          const o = addObject(currentTool, px, pz);
+          selectObj(o);
+          toast(currentTool.charAt(0).toUpperCase() + currentTool.slice(1) + ' placed');
+        } catch(err) {
+          console.error('Place error:', err);
+          toast('Error placing — check console');
+        }
+      }
+    }
+  }
+  dragObj = null;
+  ms.down = false; ms.dragging = false;
+});
+
+canvas.addEventListener('wheel', e => {
+  sph.r = Math.max(3, Math.min(120, sph.r + e.deltaY * 0.05));
+  updateCam();
+  e.preventDefault();
+}, { passive: false });
+
+canvas.addEventListener('contextmenu', e => e.preventDefault());
+
+// Preview ghost
+function showPreview(cx, cy) {
+  const type = currentTool;
+  const def = DEFS[type]; if (!def) { clearPreview(); return; }
+  const pt = groundPt(cx, cy); if (!pt) { clearPreview(); return; }
+  if (!previewMesh || previewMesh._t !== type) {
+    clearPreview();
+    const geo = makeGeo(type, def.w, def.h, def.d, Math.PI);
+    previewMesh = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({color:0x6644cc, transparent:true, opacity:0.4}));
+    previewMesh._t = type;
+    // Apply same scales as real object
+    const r = def.w/2;
+    if (type === 'ellipse') previewMesh.scale.set(def.w/2, 1, def.d/2);
+    if (type === 'dome' || type === 'ondome') previewMesh.scale.y = def.h/r;
+    if (type === 'barrel') previewMesh.scale.y = def.h/r;
+    scene.add(previewMesh);
+  }
+  const tmpO = { type, x:doSnap(pt.x), z:doSnap(pt.z), w:def.w, h:def.h, d:def.d, elev:0, rot:0 };
+  placeMesh(previewMesh, tmpO);
+}
+
+function clearPreview() {
+  if (previewMesh) {
+    scene.remove(previewMesh);
+    previewMesh.geometry.dispose(); previewMesh.material.dispose();
+    previewMesh = null;
+  }
+}
+
+// ── Keyboard ───────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT') return;
+  const k = e.key.toLowerCase();
+  if ((e.ctrlKey||e.metaKey) && k==='z') { e.preventDefault(); undo(); return; }
+  if ((e.ctrlKey||e.metaKey) && k==='y') { e.preventDefault(); redo(); return; }
+  if (k==='escape'||k==='v') setTool('select');
+  else if (k==='r') setTool('rotunda');
+  else if (k==='a') setTool('apse');
+  else if (k==='e') setTool('ellipse');
+  else if (k==='w') setTool('arcwall');
+  else if (k==='b') setTool('barrel');
+  else if (k==='d'&&!e.ctrlKey) dupSelected();
+  else if (k==='o') setTool('ondome');
+  else if (k==='c') setTool('cone');
+  else if (k==='f') setTool('disc');
+  else if (k==='delete'||k==='backspace') { if(selected){pushUndo();removeObj(selected);} }
+  else if (k==='arrowup')   { e.preventDefault(); raiseSelected(0.5); }
+  else if (k==='arrowdown') { e.preventDefault(); raiseSelected(-0.5); }
+});
+
+// ── Tool switching ─────────────────────────────────────
+const HINTS = {
+  select:'Click to select · Drag to move · ↑↓ raise/lower · D duplicate',
+  delete:'Click an object to delete it',
+  rotunda:'Click to place a round cylinder room',
+  apse:'Click to place a semi-circular apse — use Rotation to orient it',
+  ellipse:'Click to place an oval room — adjust Width & Depth for proportions',
+  arcwall:'Click to place a curved arc wall',
+  barrel:'Click to place a barrel vault arch — Rotation sets tunnel direction',
+  dome:'Click to place a hemispherical dome — set Elevation to stack on walls',
+  ondome:'Click to place a tall onion dome',
+  cone:'Click to place a conical spire',
+  disc:'Click to place a circular disc slab',
+};
+
+function setTool(t) {
+  currentTool = t;
+  document.querySelectorAll('.tbtn').forEach(b => b.classList.remove('act'));
+  const btn = document.getElementById('tool-'+t);
+  if (btn) btn.classList.add('act');
+  document.getElementById('shint').textContent = HINTS[t] || '';
+  if (t==='select'||t==='delete') clearPreview();
+}
+
+function toggleSnap() {
+  snapOn = !snapOn;
+  const b = document.getElementById('snapBtn');
+  b.textContent = snapOn ? 'Snap ½m' : 'Free Move';
+  b.classList.toggle('act', snapOn);
+}
+
+// ── Properties panel ───────────────────────────────────
+function updatePanel() {
+  const nosel = document.getElementById('nosel');
+  const body  = document.getElementById('propbody');
+  if (!selected) { nosel.style.display=''; body.style.display='none'; return; }
+  nosel.style.display = 'none'; body.style.display = '';
+  const o = selected;
+  const names = {rotunda:'Rotunda',apse:'Apse',ellipse:'Ellipse Room',arcwall:'Arc Wall',
+    barrel:'Barrel Vault',dome:'Dome',ondome:'Onion Dome',cone:'Cone Spire',disc:'Disc Slab'};
+  document.getElementById('ptype').textContent = names[o.type] || o.type;
+  const lbls = DLBLS[o.type] || ['Width', true, 'Height'];
+  document.getElementById('lw').textContent = lbls[0];
+  document.getElementById('ld').textContent = o.type==='barrel' ? 'Vault Length' : 'Depth (Z)';
+  document.getElementById('lh').textContent = lbls[2];
+  document.getElementById('rowD').style.display = lbls[1] ? '' : 'none';
+  document.getElementById('rowSweep').style.display = o.type==='arcwall' ? '' : 'none';
+  setSlider('sw','vw', o.w, 'm');
+  setSlider('sd','vd', o.d, 'm');
+  setSlider('sh','vh', o.h, 'm');
+  setSlider('ssweep','vsweep', Math.round(o.sweep*180/Math.PI), '°');
+  setSlider('selev','velev', o.elev, 'm');
+  setSlider('srot','vrot', Math.round(o.rot*180/Math.PI)%360, '°');
+  document.getElementById('pcolor').value = o.color;
+  setSlider('sopac','vopac', Math.round(o.opacity*100), '%');
+}
+
+function setSlider(sid, vid, val, unit) {
+  document.getElementById(sid).value = val;
+  document.getElementById(vid).textContent = val + unit;
+}
+
+function chDim(ax, val) {
+  if (!selected) return;
+  val = parseFloat(val);
+  if (ax==='w') { selected.w=val; document.getElementById('vw').textContent=val.toFixed(1)+'m'; }
+  if (ax==='d') { selected.d=val; document.getElementById('vd').textContent=val.toFixed(1)+'m'; }
+  if (ax==='h') { selected.h=val; document.getElementById('vh').textContent=val.toFixed(1)+'m'; }
+  rebuildObj(selected);
+}
+
+function chSweep(val) {
+  if (!selected) return;
+  selected.sweep = parseFloat(val) * Math.PI / 180;
+  document.getElementById('vsweep').textContent = Math.round(parseFloat(val)) + '°';
+  rebuildObj(selected);
+}
+
+function chElev(val) {
+  if (!selected) return;
+  selected.elev = parseFloat(val);
+  document.getElementById('velev').textContent = selected.elev.toFixed(1)+'m';
+  placeMesh(selected.mesh, selected);
+}
+
+function chRot(val) {
+  if (!selected) return;
+  selected.rot = parseFloat(val) * Math.PI / 180;
+  document.getElementById('vrot').textContent = Math.round(parseFloat(val))+'°';
+  selected.mesh.rotation.y = selected.rot;
+}
+
+function chColor(val) {
+  if (!selected) return;
+  selected.color = val;
+  selected.mesh.material.color = new THREE.Color(val);
+}
+
+function chOpac(val) {
+  if (!selected) return;
+  const v = parseFloat(val);
+  selected.opacity = v;
+  selected.mesh.material.transparent = v < 1;
+  selected.mesh.material.opacity = v;
+  document.getElementById('vopac').textContent = Math.round(v*100)+'%';
+}
+
+// ── Actions ────────────────────────────────────────────
+function delSelected() {
+  if (!selected) return;
+  pushUndo(); removeObj(selected); toast('Deleted');
+}
+
+function dupSelected() {
+  if (!selected) return;
+  pushUndo();
+  const o = selected;
+  const n = addObject(o.type, o.x+1.5, o.z+1.5, {w:o.w,h:o.h,d:o.d,color:o.color,elev:o.elev,opacity:o.opacity,rot:o.rot,sweep:o.sweep});
+  selectObj(n); toast('Duplicated');
+}
+
+function raiseSelected(amt) {
+  if (!selected) return;
+  selected.elev = Math.round((selected.elev + amt) * 100) / 100;
+  document.getElementById('selev').value = selected.elev;
+  document.getElementById('velev').textContent = selected.elev.toFixed(1)+'m';
+  placeMesh(selected.mesh, selected);
+}
+
+function focusSel() {
+  if (!selected) return;
+  orbitTarget.set(selected.x, selected.elev + selected.h/2, selected.z);
+  updateCam();
+}
+
+function clearScene() {
+  pushUndo();
+  while (objects.length) removeObj(objects[0]);
+  toast('Cleared');
+}
+
+function updateCnt() {
+  document.getElementById('scnt').textContent = objects.length + ' object' + (objects.length!==1?'s':'');
+}
+
+// ── Undo / Redo ────────────────────────────────────────
+function captureState() {
+  return objects.map(o => ({...o, mesh: undefined}));
+}
+function pushUndo() {
+  undoStack.push(captureState());
+  if (undoStack.length > 50) undoStack.shift();
+  redoStack = [];
+}
+function restoreState(state) {
+  selected = null;
+  while (objects.length) {
+    scene.remove(objects[0].mesh);
+    objects[0].mesh.geometry.dispose();
+    objects[0].mesh.material.dispose();
+    objects.splice(0,1);
+  }
+  state.forEach(s => addObject(s.type, s.x, s.z, {w:s.w,h:s.h,d:s.d,color:s.color,elev:s.elev,opacity:s.opacity,rot:s.rot,sweep:s.sweep}));
+  updatePanel(); updateCnt();
+}
+function undo() { if (!undoStack.length){toast('Nothing to undo');return;} redoStack.push(captureState()); restoreState(undoStack.pop()); toast('Undo'); }
+function redo() { if (!redoStack.length){toast('Nothing to redo');return;} undoStack.push(captureState()); restoreState(redoStack.pop()); toast('Redo'); }
+
+// ── Sample scene (Byzantine-inspired) ─────────────────
+function loadSample() {
+  pushUndo();
+  while (objects.length) removeObj(objects[0]);
+  // Central rotunda + main dome + onion finial
+  addObject('rotunda', 0, 0,    {w:10, h:4.5, color:'#d8d0c0'});
+  addObject('dome',    0, 0,    {w:10.2, h:5.5, color:'#ccb89a', elev:4.5});
+  addObject('ondome',  0, 0,    {w:2.2, h:4.0, color:'#8a7050', elev:10.0});
+  // Four apse arms
+  addObject('apse', 0,  -8,  {w:5, h:4.0, color:'#ccc5b5', rot:0});
+  addObject('apse', 0,   8,  {w:5, h:4.0, color:'#ccc5b5', rot:Math.PI});
+  addObject('apse',-8,   0,  {w:5, h:4.0, color:'#ccc5b5', rot:-Math.PI/2});
+  addObject('apse', 8,   0,  {w:5, h:4.0, color:'#ccc5b5', rot:Math.PI/2});
+  // Small domes over apses
+  addObject('dome', 0, -8, {w:5.2, h:2.8, color:'#baaa90', elev:4.0});
+  addObject('dome', 0,  8, {w:5.2, h:2.8, color:'#baaa90', elev:4.0});
+  addObject('dome',-8,  0, {w:5.2, h:2.8, color:'#baaa90', elev:4.0});
+  addObject('dome', 8,  0, {w:5.2, h:2.8, color:'#baaa90', elev:4.0});
+  // Barrel vaults connecting center to apses
+  addObject('barrel', 0, -4, {w:5, h:2.5, d:4, color:'#bab5aa'});
+  addObject('barrel', 0,  4, {w:5, h:2.5, d:4, color:'#bab5aa'});
+  addObject('barrel',-4,  0, {w:5, h:2.5, d:4, color:'#bab5aa', rot:Math.PI/2});
+  addObject('barrel', 4,  0, {w:5, h:2.5, d:4, color:'#bab5aa', rot:Math.PI/2});
+  // Corner towers
+  [[-10,-10],[10,-10],[-10,10],[10,10]].forEach(([x,z]) => {
+    addObject('rotunda', x, z, {w:3, h:7, color:'#c8c0b0'});
+    addObject('cone',    x, z, {w:3.4, h:4, color:'#7a6040', elev:7});
+  });
+  // Circular podium
+  addObject('disc', 0, 0, {w:22, h:0.6, color:'#a8a49c', elev:-0.6});
+  addObject('disc', 0, 0, {w:20, h:0.3, color:'#b0aca4', elev:-0.3});
+  setView('iso');
+  toast('Sample loaded!');
+}
+
+// ── Debug / test ───────────────────────────────────────
+function testPlace() {
+  // Places objects directly without any raycasting — confirms geometry + rendering works
+  pushUndo();
+  addObject('rotunda', 0, 0,   {w:5, h:4, color:'#88ccff'});
+  addObject('dome',    0, 0,   {w:5.2, h:3, color:'#aaddff', elev:4});
+  addObject('cone',    3, 3,   {w:2, h:5, color:'#ffaaaa'});
+  addObject('barrel', -3, 3,   {w:4, h:2.5, d:5, color:'#aaffaa'});
+  toast('Test shapes placed at origin!');
+}
+
+// ── Export ─────────────────────────────────────────────
+function snap2() {
+  renderer.render(scene, camera);
+  const a = document.createElement('a');
+  a.href = canvas.toDataURL('image/png');
+  a.download = 'archstudio_' + Date.now() + '.png';
+  a.click(); toast('Exported!');
+}
+
+// ── Toast ──────────────────────────────────────────────
+let toastTimer;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 1800);
+}
+
+// ── Render loop ────────────────────────────────────────
+(function loop() { requestAnimationFrame(loop); renderer.render(scene, camera); })();
+
+// Boot
+setTool('select');
+setView('iso');
+toast('ArchStudio ready — click ◎ Sample to start');
+</script>
+</body>
+</html>
