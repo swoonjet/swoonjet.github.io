@@ -1,0 +1,1730 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Level Sheet Builder — DesignAgency</title>
+<style>
+  :root {
+    --bg: #f5f3ee;
+    --surface: #fff;
+    --surface-2: #faf9f5;
+    --ink: #1a1a1a;
+    --ink-2: #4a4a4a;
+    --ink-mute: #6b6b6b;
+    --line: #d9d5cc;
+    --line-strong: #b8b4ab;
+    --accent: #1a5d73;
+    --rank-1: #1a8754;
+    --rank-2: #6c6c6c;
+    --rank-3: #a22e2e;
+    --warn: #b35400;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Inter', ui-sans-serif, -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 13px;
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+  }
+
+  /* ─── TOP BAR ─────────────────────────────────────────── */
+  #topbar {
+    height: 56px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    gap: 16px;
+    flex-shrink: 0;
+  }
+  #logo { height: 32px; flex-shrink: 0; }
+  #project-select {
+    flex: 1; max-width: 360px;
+    padding: 7px 10px;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--ink);
+    font-family: inherit;
+    font-size: 13px;
+    border-radius: 3px;
+    outline: none;
+    cursor: pointer;
+  }
+  #project-select:focus { border-color: var(--accent); }
+  .topbar-spacer { flex: 1; }
+  .btn {
+    padding: 7px 14px;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--ink);
+    font-family: inherit;
+    font-size: 12px;
+    cursor: pointer;
+    border-radius: 3px;
+    letter-spacing: 0.02em;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .btn:hover { border-color: var(--ink); }
+  .btn-pri { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+  .btn-pri:hover { background: #000; }
+  .btn-warn { color: var(--warn); border-color: var(--warn); }
+  .btn-warn:hover { background: var(--warn); color: var(--surface); }
+
+  /* ─── MAIN LAYOUT ─────────────────────────────────────── */
+  #main {
+    display: flex;
+    height: calc(100vh - 56px);
+    overflow: hidden;
+  }
+  #editor {
+    width: 480px;
+    flex-shrink: 0;
+    background: var(--bg);
+    border-right: 1px solid var(--line);
+    overflow-y: auto;
+    padding: 20px;
+  }
+  #preview-wrap {
+    flex: 1;
+    overflow: auto;
+    background: #e8e4dc;
+    padding: 20px;
+  }
+
+  /* ─── EDITOR ──────────────────────────────────────────── */
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    margin-bottom: 16px;
+    overflow: hidden;
+  }
+  .panel-head {
+    padding: 12px 14px;
+    background: var(--surface-2);
+    border-bottom: 1px solid var(--line);
+    font-weight: 600;
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-2);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .panel-head .panel-tag {
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: 0;
+    color: var(--ink-mute);
+    font-size: 11px;
+  }
+  .panel-body { padding: 14px; }
+  .panel.collapsed .panel-body { display: none; }
+  .field { margin-bottom: 10px; }
+  .field-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .field-row.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+  label {
+    display: block;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ink-mute);
+    margin-bottom: 4px;
+    font-weight: 500;
+  }
+  input[type=text], input[type=number], input[type=email], input[type=date],
+  input[type=color], select, textarea {
+    width: 100%;
+    padding: 6px 8px;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--ink);
+    font-family: inherit;
+    font-size: 12px;
+    border-radius: 2px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  input[type=color] { padding: 2px; height: 30px; cursor: pointer; }
+  input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+  textarea { resize: vertical; min-height: 50px; line-height: 1.4; }
+
+  /* Supplier card in editor */
+  .supplier-card {
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    margin-bottom: 12px;
+    background: var(--surface);
+    overflow: hidden;
+  }
+  .supplier-card-head {
+    padding: 10px 12px;
+    background: var(--surface-2);
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .supplier-card-head .swatch {
+    width: 14px; height: 14px;
+    border-radius: 2px;
+    border: 1px solid rgba(0,0,0,0.15);
+    flex-shrink: 0;
+  }
+  .supplier-card-head .name {
+    flex: 1; font-weight: 600; font-size: 13px;
+  }
+  .supplier-card-head .meta {
+    font-size: 11px; color: var(--ink-mute);
+    font-variant-numeric: tabular-nums;
+  }
+  .supplier-card-body {
+    padding: 12px;
+  }
+  .supplier-card.collapsed .supplier-card-body { display: none; }
+
+  .item-card {
+    border: 1px solid var(--line);
+    border-radius: 2px;
+    background: var(--bg);
+    margin-bottom: 8px;
+    padding: 10px;
+  }
+  .item-card .item-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    font-size: 11px;
+    color: var(--ink-mute);
+  }
+  .item-card .item-head .item-num {
+    background: var(--ink); color: var(--surface);
+    padding: 1px 5px; font-size: 10px;
+    border-radius: 2px; font-weight: 600;
+  }
+  .icon-btn {
+    background: none; border: none;
+    color: var(--ink-mute); cursor: pointer;
+    padding: 2px 6px; font-size: 14px;
+    border-radius: 2px;
+    transition: color 0.15s, background 0.15s;
+  }
+  .icon-btn:hover { color: var(--ink); background: rgba(0,0,0,0.05); }
+  .icon-btn.danger:hover { color: var(--warn); background: rgba(179,84,0,0.1); }
+
+  .add-btn {
+    width: 100%;
+    padding: 8px;
+    border: 1px dashed var(--line-strong);
+    background: transparent;
+    color: var(--ink-mute);
+    font-family: inherit;
+    font-size: 12px;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.15s;
+  }
+  .add-btn:hover { border-color: var(--ink); color: var(--ink); background: var(--surface-2); }
+
+  /* ─── PREVIEW ─────────────────────────────────────────── */
+  .preview-toolbar {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    padding: 10px 14px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    color: var(--ink-mute);
+  }
+  .preview-toolbar .right { margin-left: auto; display: flex; gap: 6px; }
+
+  /* The level sheet itself — preview area */
+  #sheet {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Inter', ui-sans-serif, -apple-system, BlinkMacSystemFont, sans-serif;
+    max-width: 1320px;
+    margin: 0 auto;
+    padding: 0 0 96px;
+    font-feature-settings: "tnum" 1;
+  }
+  /* Masthead lives on a clean white band */
+  #sheet .sheet-masthead {
+    display: flex; align-items: flex-end; justify-content: space-between;
+    background: #ffffff;
+    padding: 36px 32px 28px;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 32px;
+    gap: 24px;
+  }
+  #sheet .masthead-left { display: flex; flex-direction: column; flex: 1; }
+  #sheet .masthead-logo { height: 50px; margin-bottom: 18px; align-self: flex-start; }
+  #sheet .masthead-body { padding: 0 32px; }
+  #sheet .sheet-bleed { padding: 0 32px; }
+  #sheet h1 { margin: 0; font-size: 42px; line-height: 1; letter-spacing: -0.02em; font-weight: 600; }
+  #sheet .kicker { text-transform: uppercase; letter-spacing: 0.12em; font-size: 11px; color: var(--ink-mute); margin-bottom: 6px; }
+  #sheet .subtitle { margin-top: 6px; font-size: 14px; color: var(--ink-mute); }
+  #sheet .date { font-size: 13px; color: var(--ink-mute); text-align: right; font-variant-numeric: tabular-nums; }
+
+  #sheet .supplier-row {
+    display: flex; flex-wrap: wrap;
+    gap: 16px; margin-bottom: 48px;
+  }
+  #sheet .supplier-row .supp-card {
+    flex: 1 1 280px; min-width: 280px;
+  }
+  #sheet .supp-card {
+    background: var(--surface); padding: 20px 20px 18px;
+    border: 1px solid var(--line);
+  }
+  #sheet .supp-top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+  #sheet .supp-name { font-weight: 700; font-size: 18px; letter-spacing: -0.01em; }
+  #sheet .supp-qn { font-size: 11px; color: var(--ink-mute); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
+  #sheet .supp-total { font-size: 34px; font-weight: 600; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; margin: 12px 0 10px; }
+  #sheet .supp-meta { display: flex; gap: 16px; font-size: 11px; color: var(--ink-mute); text-transform: uppercase; letter-spacing: 0.08em; border-top: 1px dashed var(--line); padding-top: 10px; }
+  #sheet .supp-contact, #sheet .supp-notes { font-size: 12px; color: var(--ink-mute); margin-top: 8px; }
+  #sheet .supp-notes { font-style: italic; }
+
+  #sheet .category { margin-bottom: 56px; break-inside: avoid; page-break-inside: avoid; }
+  #sheet .cat-head {
+    display: flex; justify-content: space-between; align-items: baseline;
+    padding-bottom: 12px; border-bottom: 2px solid var(--ink); margin-bottom: 20px;
+  }
+  #sheet .cat-head h2 { margin: 0; font-size: 24px; font-weight: 600; letter-spacing: -0.01em; }
+  #sheet .cat-meta { font-size: 12px; color: var(--ink-mute); font-variant-numeric: tabular-nums; }
+  #sheet .grid {
+    display: flex; flex-wrap: wrap; gap: 16px;
+  }
+  #sheet .grid > .item {
+    flex: 0 0 calc((100% - 32px) / 3);
+    max-width: calc((100% - 32px) / 3);
+  }
+
+  #sheet .item {
+    background: var(--surface); border: 1px solid var(--line);
+    display: flex; flex-direction: column;
+    break-inside: avoid; page-break-inside: avoid;
+  }
+  #sheet .item.empty {
+    border: 1px dashed var(--line); background: transparent;
+    align-items: center; justify-content: center; min-height: 200px;
+  }
+  #sheet .empty-label { color: var(--ink-mute); font-size: 13px; font-style: italic; }
+  #sheet .rank {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 16px; border-bottom: 1px solid var(--line);
+    font-size: 12px; font-variant-numeric: tabular-nums;
+  }
+  #sheet .rank-pill {
+    color: #fff; padding: 2px 8px; font-weight: 600;
+    font-size: 11px; letter-spacing: 0.04em;
+  }
+  #sheet .rank .diff { color: var(--ink-mute); }
+  /* aspect-ratio is unreliable in html2canvas — use the padding-bottom hack */
+  #sheet .img-wrap {
+    position: relative; background: var(--surface-2);
+    width: 100%; height: 0; padding-bottom: 75%; /* 4:3 */
+    overflow: hidden;
+  }
+  #sheet .img-wrap img {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%; object-fit: contain; display: block;
+  }
+  #sheet .body { padding: 16px 16px 18px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+  #sheet .supplier-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em; font-weight: 600; }
+  #sheet .name { font-size: 15px; font-weight: 600; line-height: 1.3; margin: 0; }
+  #sheet .sku { font-size: 11px; color: var(--ink-mute); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
+  #sheet .desc { font-size: 12px; color: var(--ink-2); line-height: 1.5; }
+  #sheet .specs {
+    display: grid; grid-template-columns: auto 1fr; gap: 4px 12px;
+    font-size: 11px; margin-top: 4px;
+  }
+  #sheet .specs dt { color: var(--ink-mute); text-transform: uppercase; letter-spacing: 0.06em; font-size: 10px; }
+  #sheet .specs dd { color: var(--ink); }
+  #sheet .price-block {
+    margin-top: auto; padding-top: 12px;
+    border-top: 1px solid var(--line);
+    font-size: 12px;
+  }
+  #sheet .price-block .pb-row {
+    display: flex; gap: 12px; margin-bottom: 6px;
+  }
+  #sheet .price-block .pb-row > div { flex: 1; }
+  #sheet .price-block .label { color: var(--ink-mute); display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; }
+  #sheet .price-block .value { font-weight: 600; font-variant-numeric: tabular-nums; }
+  #sheet .price-block .line-total {
+    padding-top: 8px; border-top: 1px dashed var(--line);
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin-top: 4px;
+  }
+  #sheet .price-block .line-total .value { font-size: 14px; }
+
+  /* ─── PRINT STYLES — Save as PDF prints only the sheet ─── */
+  @media print {
+    body { background: white; overflow: visible; }
+    #topbar, #editor, .preview-toolbar { display: none !important; }
+    #main { display: block; height: auto; overflow: visible; }
+    #preview-wrap {
+      padding: 0; background: white;
+      overflow: visible; height: auto;
+    }
+    #sheet { padding: 24px 20px; max-width: none; }
+    #sheet .category { page-break-inside: avoid; }
+    #sheet .item { page-break-inside: avoid; }
+    @page { margin: 0.5in; size: letter landscape; }
+  }
+
+  /* ─── EMPTY STATE ─────────────────────────────────────── */
+  .empty-state {
+    text-align: center; padding: 60px 20px;
+    color: var(--ink-mute); font-size: 14px; line-height: 1.6;
+  }
+  .empty-state h2 { font-size: 22px; color: var(--ink); margin-bottom: 12px; font-weight: 600; }
+  .empty-state .hint { font-size: 12px; color: var(--ink-mute); margin-top: 16px; }
+
+  /* ─── MODAL ───────────────────────────────────────────── */
+  .modal-bg {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.45);
+    display: none;
+    align-items: center; justify-content: center;
+    z-index: 999;
+  }
+  .modal-bg.show { display: flex; }
+  .modal {
+    background: var(--surface);
+    border-radius: 4px;
+    width: 560px; max-width: 90vw; max-height: 86vh;
+    display: flex; flex-direction: column;
+    box-shadow: 0 16px 48px rgba(0,0,0,0.25);
+    overflow: hidden;
+  }
+  .modal-head {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--line);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .modal-head h3 {
+    flex: 1; font-size: 15px; font-weight: 600; margin: 0;
+  }
+  .modal-body {
+    padding: 18px 20px;
+    overflow-y: auto;
+    flex: 1;
+  }
+  .modal-foot {
+    padding: 12px 20px;
+    border-top: 1px solid var(--line);
+    display: flex; gap: 8px; justify-content: flex-end;
+    background: var(--surface-2);
+  }
+  .modal p { font-size: 13px; line-height: 1.5; color: var(--ink-2); margin-bottom: 12px; }
+  .modal code {
+    background: var(--bg); padding: 1px 5px; border-radius: 2px;
+    font-family: ui-monospace, SFMono-Regular, monospace; font-size: 11px;
+  }
+  .progress-list {
+    border: 1px solid var(--line); border-radius: 3px;
+    background: var(--bg); padding: 6px;
+    max-height: 280px; overflow-y: auto;
+  }
+  .progress-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 8px; border-radius: 2px;
+    font-size: 12px; line-height: 1.3;
+  }
+  .progress-row + .progress-row { border-top: 1px solid var(--line); }
+  .progress-row .pname {
+    flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    font-family: ui-monospace, SFMono-Regular, monospace; font-size: 11px;
+  }
+  .progress-row .pstatus {
+    font-size: 10px; padding: 2px 7px; border-radius: 2px;
+    text-transform: uppercase; letter-spacing: 0.06em; font-weight: 500;
+  }
+  .pstatus.pending  { background: #f0ede4; color: var(--ink-mute); }
+  .pstatus.working  { background: #fff4d6; color: #8a6e1a; }
+  .pstatus.done     { background: #e1f3e8; color: #1a8754; }
+  .pstatus.error    { background: #f7e1e1; color: var(--rank-3); }
+
+  /* ─── TOAST ───────────────────────────────────────────── */
+  #toast {
+    position: fixed; bottom: 24px; left: 50%;
+    transform: translateX(-50%);
+    background: var(--ink); color: var(--surface);
+    padding: 8px 16px; border-radius: 3px;
+    font-size: 12px; opacity: 0;
+    transition: opacity 0.2s;
+    pointer-events: none;
+    z-index: 1000;
+  }
+  #toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<div id="topbar">
+  <img id="logo" alt="DesignAgency" />
+  <select id="project-select">
+    <option value="__new__">+ New Project</option>
+  </select>
+  <button class="btn" id="btn-rename" title="Rename project">Rename</button>
+  <button class="btn btn-warn" id="btn-delete" title="Delete project">Delete</button>
+  <div class="topbar-spacer"></div>
+  <button class="btn btn-pri" id="btn-import-quote">Import Quote (PDF / Image)</button>
+  <button class="btn" id="btn-import-json">Import JSON</button>
+  <button class="btn" id="btn-export-json">Export JSON</button>
+  <button class="btn" id="btn-settings" title="API key settings">⚙</button>
+  <button class="btn" id="btn-print">Print</button>
+  <button class="btn btn-pri" id="btn-export-pdf">Download PDF</button>
+</div>
+
+<div id="main">
+  <!-- ── EDITOR ───────────────────────────────────────── -->
+  <div id="editor">
+    <div class="panel" id="panel-project">
+      <div class="panel-head" data-toggle="panel-project">
+        <span>Project</span>
+        <span class="panel-tag">client + masthead info</span>
+      </div>
+      <div class="panel-body">
+        <div class="field">
+          <label>Project Name</label>
+          <input type="text" id="f-project" placeholder="Agora Yorkville">
+        </div>
+        <div class="field-row">
+          <div>
+            <label>Client</label>
+            <input type="text" id="f-client" placeholder="Design Agency">
+          </div>
+          <div>
+            <label>Currency</label>
+            <select id="f-currency">
+              <option value="USD">USD ($)</option>
+              <option value="CAD">CAD ($)</option>
+              <option value="EUR">EUR (€)</option>
+              <option value="GBP">GBP (£)</option>
+              <option value="AUD">AUD ($)</option>
+              <option value="JPY">JPY (¥)</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label>Prepared By</label>
+          <input type="text" id="f-preparedBy" placeholder="Frances Hahn, Design Agency">
+        </div>
+        <div class="field">
+          <label>Notes</label>
+          <textarea id="f-notes" placeholder="Restaurant FF&E bid leveling · all prices CAD pre-tax · …"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel" id="panel-suppliers">
+      <div class="panel-head" data-toggle="panel-suppliers">
+        <span>Suppliers</span>
+        <span class="panel-tag" id="suppliers-count">0 suppliers · 0 items</span>
+      </div>
+      <div class="panel-body">
+        <div id="suppliers-list"></div>
+        <button class="add-btn" id="btn-add-supplier">+ Add supplier</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head" data-toggle="panel-help">
+        <span>Help / Tips</span>
+        <span class="panel-tag">how to use</span>
+      </div>
+      <div class="panel-body" style="font-size:11px; color:var(--ink-mute); line-height:1.6;">
+        <p style="margin-bottom:8px;"><strong style="color:var(--ink-2);">Categories rank within themselves.</strong> Use identical spelling across suppliers — e.g. always <code>Task Chair</code>, not <code>Task chair</code>.</p>
+        <p style="margin-bottom:8px;"><strong style="color:var(--ink-2);">Image URLs</strong> can be public HTTPS links or local paths like <code>assets/leap.jpg</code>. Manufacturer Open Graph images often work best. Failures fall back to a styled placeholder.</p>
+        <p style="margin-bottom:8px;"><strong style="color:var(--ink-2);">Print</strong> opens browser PDF dialog for highest fidelity. <strong>Download PDF</strong> generates the file directly.</p>
+        <p><strong style="color:var(--ink-2);">JSON import</strong> accepts the same per-supplier format as the Python CLI (one supplier per file, multi-select to load all).</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── PREVIEW ──────────────────────────────────────── -->
+  <div id="preview-wrap">
+    <div class="preview-toolbar">
+      <span>Live preview · updates as you edit</span>
+      <div class="right">
+        <button class="btn" id="btn-zoom-out">−</button>
+        <span style="font-size:11px; padding:0 4px; min-width:40px; text-align:center;" id="zoom-level">100%</span>
+        <button class="btn" id="btn-zoom-in">+</button>
+      </div>
+    </div>
+    <div id="sheet"></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+<input type="file" id="file-import-json" accept=".json" multiple style="display:none">
+<input type="file" id="file-import-quote" accept="application/pdf,image/png,image/jpeg,image/webp,image/gif" multiple style="display:none">
+
+<!-- ── Settings Modal ────────────────────────────────────── -->
+<div class="modal-bg" id="modal-settings">
+  <div class="modal">
+    <div class="modal-head"><h3>Settings — Anthropic API key</h3></div>
+    <div class="modal-body">
+      <p>Used for auto-extracting supplier data from PDFs and screenshots. Your key is stored only in this browser's <code>localStorage</code> and is sent directly to <code>api.anthropic.com</code> from your machine — never anywhere else.</p>
+      <div class="field">
+        <label>API Key (<code>sk-ant-...</code>)</label>
+        <input type="password" id="f-apikey" placeholder="sk-ant-...">
+      </div>
+      <div class="field">
+        <label>Model</label>
+        <select id="f-model">
+          <option value="claude-haiku-4-5-20251001">Haiku 4.5 — fastest, cheapest</option>
+          <option value="claude-sonnet-4-6" selected>Sonnet 4.6 — balanced</option>
+          <option value="claude-opus-4-7">Opus 4.7 — best accuracy</option>
+        </select>
+      </div>
+      <p style="font-size:11px; color:var(--ink-mute); margin-top:14px;">Get a key at <code>console.anthropic.com</code>. The web tool sends one request per imported file with <code>anthropic-dangerous-direct-browser-access: true</code>. PDFs ≤32MB and images ≤5MB are supported.</p>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" data-modal-close>Cancel</button>
+      <button class="btn btn-pri" id="btn-save-settings">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Import Progress Modal ─────────────────────────────── -->
+<div class="modal-bg" id="modal-import">
+  <div class="modal">
+    <div class="modal-head"><h3>Importing Quotes</h3></div>
+    <div class="modal-body">
+      <p id="import-summary">Sending files to Claude for extraction…</p>
+      <div class="progress-list" id="import-progress"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-pri" data-modal-close id="btn-import-done">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════════
+const STORE_KEY = 'level-sheet-projects-v1';
+const LOGO_DATA_URI = 'data:image/png;base64,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';
+const ACTIVE_KEY = 'level-sheet-active-project';
+
+const CURRENCY_SYMBOLS = { USD: '$', CAD: 'CA$', EUR: '€', GBP: '£', JPY: '¥', AUD: 'A$' };
+
+const DEFAULT_BRAND_COLORS = ['#1a5d73', '#7a4f9b', '#3d8b3d', '#a8552c', '#7a6b4f', '#2b4d8c'];
+
+let projects = [];
+let activeId = null;
+let zoom = 1;
+
+function uuid() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = Math.random() * 16 | 0;
+    return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+  });
+}
+
+function emptyProject(name = 'Untitled Project') {
+  return {
+    id: uuid(),
+    name,
+    client: '',
+    preparedBy: '',
+    notes: '',
+    currency: 'USD',
+    suppliers: []
+  };
+}
+
+function emptySupplier(brandColor) {
+  return {
+    id: uuid(),
+    supplier: 'New Supplier',
+    brand_color: brandColor || DEFAULT_BRAND_COLORS[0],
+    contact: { name: '', email: '', phone: '' },
+    quote_number: '',
+    quote_date: new Date().toISOString().slice(0, 10),
+    validity_days: 30,
+    lead_time_weeks: 8,
+    shipping_cost: 0,
+    notes: '',
+    items: []
+  };
+}
+
+function emptyItem() {
+  return {
+    id: uuid(),
+    sku: '',
+    category: '',
+    name: '',
+    description: '',
+    finish: '',
+    warranty_years: '',
+    unit_price: 0,
+    quantity: 1,
+    image_url: ''
+  };
+}
+
+// ═══════════════════════════════════════════════════════════
+//  PERSISTENCE
+// ═══════════════════════════════════════════════════════════
+function loadProjects() {
+  try {
+    const raw = localStorage.getItem(STORE_KEY);
+    projects = raw ? JSON.parse(raw) : [];
+  } catch { projects = []; }
+  activeId = localStorage.getItem(ACTIVE_KEY);
+  if (!projects.length) {
+    const p = emptyProject('My First Level Sheet');
+    projects.push(p);
+    activeId = p.id;
+    saveProjects();
+  } else if (!projects.find(p => p.id === activeId)) {
+    activeId = projects[0].id;
+  }
+}
+
+function saveProjects() {
+  try {
+    localStorage.setItem(STORE_KEY, JSON.stringify(projects));
+    localStorage.setItem(ACTIVE_KEY, activeId);
+  } catch (e) { console.warn('save failed:', e); }
+}
+
+function activeProject() {
+  return projects.find(p => p.id === activeId);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  RENDER LEVEL SHEET (the actual deliverable)
+// ═══════════════════════════════════════════════════════════
+function money(n, cur) {
+  const sym = CURRENCY_SYMBOLS[cur] || (cur + ' ');
+  const v = (parseFloat(n) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return `${sym}${v}`;
+}
+
+function pctOver(price, lowest) {
+  if (!lowest || lowest <= 0) return '';
+  const p = (price - lowest) / lowest * 100;
+  return p < 0.5 ? '+0%' : `+${Math.round(p)}%`;
+}
+
+function escapeHtml(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => (
+    {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function pickIcon(category) {
+  const c = (category || '').toLowerCase();
+  if (c.includes('round') && c.includes('table')) return 'table-round';
+  if (c.includes('lounge') || c.includes('sofa') || c.includes('soft') || c.includes('banquette')) return 'lounge';
+  if (c.includes('desk')) return 'desk-ht';
+  if (c.includes('table')) return 'table-conf';
+  if (c.includes('side chair') || c.includes('guest') || c.includes('visitor')) return 'chair-guest';
+  if (c.includes('task') || c.includes('exec') || c.includes('chair') || c.includes('stool')) return 'chair-task';
+  if (c.includes('storage') || c.includes('cabinet') || c.includes('pedestal') || c.includes('shelf')) return 'storage';
+  return 'default';
+}
+
+const ICON_PATHS = {
+  'chair-task': '<g stroke="#4a4a4a" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M130 74 Q130 68 136 68 L164 68 Q170 68 170 74 L170 113 L130 113 Z"/><rect x="118" y="113" width="64" height="12" rx="2"/><line x1="150" y1="125" x2="150" y2="150"/><line x1="107" y1="168" x2="150" y2="150"/><line x1="126" y1="172" x2="150" y2="150"/><line x1="150" y1="176" x2="150" y2="150"/><line x1="174" y1="172" x2="150" y2="150"/><line x1="193" y1="168" x2="150" y2="150"/></g>',
+  'chair-guest': '<g stroke="#4a4a4a" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="125" y="70" width="50" height="52" rx="3"/><rect x="113" y="122" width="74" height="12" rx="2"/><line x1="119" y1="134" x2="119" y2="172"/><line x1="181" y1="134" x2="181" y2="172"/><line x1="137" y1="134" x2="137" y2="172"/><line x1="163" y1="134" x2="163" y2="172"/></g>',
+  'table-conf': '<g stroke="#4a4a4a" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M108 92 L192 92 L198 104 L102 104 Z"/><line x1="106" y1="104" x2="106" y2="168"/><line x1="194" y1="104" x2="194" y2="168"/></g>',
+  'table-round': '<g stroke="#4a4a4a" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="150" cy="95" rx="46" ry="8"/><path d="M146 103 L142 150 M154 103 L158 150"/><ellipse cx="150" cy="153" rx="22" ry="4"/></g>',
+  'desk-ht': '<g stroke="#4a4a4a" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="100" y="95" width="100" height="10" rx="1"/><rect x="118" y="105" width="9" height="28"/><rect x="115" y="133" width="15" height="30"/><rect x="173" y="105" width="9" height="28"/><rect x="170" y="133" width="15" height="30"/></g>',
+  'storage': '<g stroke="#4a4a4a" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="115" y="72" width="70" height="98" rx="2"/><line x1="150" y1="72" x2="150" y2="170"/><line x1="115" y1="108" x2="185" y2="108" opacity="0.45"/><line x1="115" y1="144" x2="185" y2="144" opacity="0.45"/></g>',
+  'lounge': '<g stroke="#4a4a4a" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M102 102 Q102 96 108 96 L192 96 Q198 96 198 102 L198 138 L102 138 Z"/><rect x="94" y="138" width="112" height="20" rx="3"/></g>',
+  'default': '<g stroke="#4a4a4a" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="122" y="86" width="56" height="84" rx="3"/></g>'
+};
+
+function placeholderSvg(item, supplier, brandColor) {
+  const iconKey = pickIcon(item.category);
+  const icon = ICON_PATHS[iconKey] || ICON_PATHS['default'];
+  const cat = (item.category || '').toUpperCase().slice(0, 28);
+  const name = (item.name || '').slice(0, 40);
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" preserveAspectRatio="xMidYMid meet">
+    <rect width="400" height="300" fill="#f5f3ee"/>
+    <g style="color:#4a4a4a;" transform="translate(50 30)">${icon}</g>
+    <circle cx="28" cy="28" r="6" fill="${brandColor || '#1a5d73'}"/>
+    <text x="200" y="260" text-anchor="middle" font-family="ui-sans-serif, system-ui, sans-serif" font-size="13" font-weight="600" letter-spacing="1.4" fill="#8a8680">${escapeHtml(cat)}</text>
+    <text x="200" y="280" text-anchor="middle" font-family="ui-sans-serif, system-ui, sans-serif" font-size="11" fill="#a09a8f">${escapeHtml(supplier)} · ${escapeHtml(name)}</text>
+  </svg>`;
+  return 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg)));
+}
+
+function renderSheet() {
+  const p = activeProject();
+  const sheet = document.getElementById('sheet');
+  if (!p) { sheet.innerHTML = ''; return; }
+
+  const cur = p.currency || 'USD';
+  const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+  // Aggregate items by category, supplier totals
+  const byCategory = {};
+  const supplierTotals = {};
+  for (const s of p.suppliers) {
+    let total = (parseFloat(s.shipping_cost) || 0);
+    for (const it of s.items) {
+      const line = (parseFloat(it.unit_price) || 0) * (parseInt(it.quantity) || 0);
+      total += line;
+      const cat = (it.category || 'Uncategorized').trim();
+      if (!byCategory[cat]) byCategory[cat] = [];
+      byCategory[cat].push({
+        ...it,
+        supplier: s.supplier,
+        brand_color: s.brand_color,
+        currency: cur,
+        lead_time_weeks: s.lead_time_weeks
+      });
+    }
+    supplierTotals[s.id] = total;
+  }
+  // Sort each category by unit_price ascending
+  Object.values(byCategory).forEach(arr => arr.sort((a, b) => (parseFloat(a.unit_price) || 0) - (parseFloat(b.unit_price) || 0)));
+  const categoryOrder = Object.keys(byCategory).sort();
+
+  // Empty state
+  if (!p.suppliers.length || categoryOrder.length === 0) {
+    sheet.innerHTML = `
+      <div class="empty-state">
+        <h2>${escapeHtml(p.name) || 'Untitled Project'}</h2>
+        <div>Add suppliers and items in the editor to populate the level sheet.</div>
+        <div class="hint">Or import existing supplier-quote JSON files via the toolbar.</div>
+      </div>`;
+    return;
+  }
+
+  // Supplier summary cards
+  const supplierCards = p.suppliers.map(s => {
+    const total = supplierTotals[s.id] || 0;
+    const contactLine = [s.contact?.name, s.contact?.email].filter(Boolean).map(escapeHtml).join(' · ') || '—';
+    return `
+      <div class="supp-card" style="border-top:3px solid ${s.brand_color || '#1a5d73'};">
+        <div class="supp-top">
+          <div class="supp-name">${escapeHtml(s.supplier) || '(unnamed)'}</div>
+          <div class="supp-qn">${escapeHtml(s.quote_number) || ''}</div>
+        </div>
+        <div class="supp-total">${money(total, cur)}</div>
+        <div class="supp-meta">
+          <span>${parseInt(s.lead_time_weeks) || 0} wk lead</span>
+          <span>${s.items.length} line items</span>
+          <span>valid ${parseInt(s.validity_days) || '—'} days</span>
+        </div>
+        <div class="supp-contact">${contactLine}</div>
+        ${s.notes ? `<div class="supp-notes">${escapeHtml(s.notes)}</div>` : ''}
+      </div>`;
+  }).join('');
+
+  // Category sections
+  const categorySections = categoryOrder.map(cat => {
+    const items = byCategory[cat];
+    const lowest = items[0].unit_price || 0;
+    const rankColors = ['#1a8754', '#6c6c6c', '#a22e2e'];
+    const tiles = items.map((it, i) => {
+      const diff = i === 0 ? 'Lowest' : pctOver(it.unit_price, lowest);
+      const badge = rankColors[Math.min(i, 2)];
+      const imgSrc = it.image_url || placeholderSvg(it, it.supplier, it.brand_color);
+      const imgFallback = placeholderSvg(it, it.supplier, it.brand_color).replace(/'/g, "\\'");
+      return `
+        <article class="item">
+          <div class="rank">
+            <span class="rank-pill" style="background:${badge};">#${i+1}</span>
+            <span class="diff">${diff}</span>
+          </div>
+          <div class="img-wrap">
+            <img src="${escapeHtml(imgSrc)}" alt="${escapeHtml(it.name)}" loading="lazy"
+                 onerror="this.onerror=null; this.src='${imgFallback}'">
+          </div>
+          <div class="body">
+            <div class="supplier-label" style="color:${it.brand_color || '#1a5d73'};">${escapeHtml(it.supplier)}</div>
+            <h3 class="name">${escapeHtml(it.name) || '(unnamed)'}</h3>
+            ${it.sku ? `<div class="sku">SKU · ${escapeHtml(it.sku)}</div>` : ''}
+            ${it.description ? `<p class="desc">${escapeHtml(it.description)}</p>` : ''}
+            <dl class="specs">
+              <dt>Finish</dt><dd>${escapeHtml(it.finish) || '—'}</dd>
+              <dt>Warranty</dt><dd>${it.warranty_years ? escapeHtml(it.warranty_years) + ' yrs' : '—'}</dd>
+              <dt>Lead</dt><dd>${it.lead_time_weeks ? it.lead_time_weeks + ' wk' : '—'}</dd>
+            </dl>
+            <div class="price-block">
+              <div class="pb-row">
+                <div><span class="label">Unit</span><span class="value">${money(it.unit_price, cur)}</span></div>
+                <div><span class="label">Qty</span><span class="value">${parseInt(it.quantity) || 0}</span></div>
+              </div>
+              <div class="line-total"><span class="label">Line total</span><span class="value">${money((parseFloat(it.unit_price)||0) * (parseInt(it.quantity)||0), cur)}</span></div>
+            </div>
+          </div>
+        </article>`;
+    });
+    // Pad to 3 columns
+    for (let i = items.length; i < 3; i++) {
+      tiles.push('<article class="item empty"><div class="empty-label">No quote in this category</div></article>');
+    }
+    return `
+      <section class="category">
+        <header class="cat-head">
+          <h2>${escapeHtml(cat)}</h2>
+          <span class="cat-meta">${items.length} ${items.length === 1 ? 'quote' : 'quotes'} · lowest ${money(lowest, cur)}</span>
+        </header>
+        <div class="grid">${tiles.join('')}</div>
+      </section>`;
+  }).join('');
+
+  sheet.innerHTML = `
+    <header class="sheet-masthead">
+      <div class="masthead-left">
+        <img class="masthead-logo" src="${LOGO_DATA_URI}" alt="DesignAgency">
+        <div class="kicker">Bid Leveling Sheet</div>
+        <h1>${escapeHtml(p.name) || 'Untitled Project'}</h1>
+        ${p.client || p.preparedBy ? `<div class="subtitle">${escapeHtml([p.client, p.preparedBy].filter(Boolean).join(' · '))}</div>` : ''}
+      </div>
+      <div class="date">${today}</div>
+    </header>
+    <div class="sheet-bleed">
+      <div class="supplier-row">${supplierCards}</div>
+      ${categorySections}
+      ${p.notes ? `<div style="margin-top:48px; padding-top:20px; border-top:1px solid #d9d5cc; font-size:12px; color:#6b6b6b; line-height:1.6;">${escapeHtml(p.notes)}</div>` : ''}
+    </div>
+  `;
+  applyZoom();
+}
+
+function applyZoom() {
+  const sheet = document.getElementById('sheet');
+  sheet.style.transform = `scale(${zoom})`;
+  sheet.style.transformOrigin = 'top center';
+  document.getElementById('zoom-level').textContent = Math.round(zoom * 100) + '%';
+}
+
+// ═══════════════════════════════════════════════════════════
+//  EDITOR — render the form on the left
+// ═══════════════════════════════════════════════════════════
+function renderEditor() {
+  const p = activeProject();
+  if (!p) return;
+  document.getElementById('f-project').value = p.name || '';
+  document.getElementById('f-client').value = p.client || '';
+  document.getElementById('f-preparedBy').value = p.preparedBy || '';
+  document.getElementById('f-notes').value = p.notes || '';
+  document.getElementById('f-currency').value = p.currency || 'USD';
+
+  const list = document.getElementById('suppliers-list');
+  list.innerHTML = '';
+  let totalItems = 0;
+  for (const s of p.suppliers) {
+    list.appendChild(renderSupplierCard(s));
+    totalItems += s.items.length;
+  }
+  document.getElementById('suppliers-count').textContent =
+    `${p.suppliers.length} supplier${p.suppliers.length === 1 ? '' : 's'} · ${totalItems} item${totalItems === 1 ? '' : 's'}`;
+}
+
+function renderSupplierCard(s) {
+  const card = document.createElement('div');
+  card.className = 'supplier-card';
+  card.dataset.supplierId = s.id;
+  const collapsed = !!s._collapsed;
+  if (collapsed) card.classList.add('collapsed');
+
+  const total = (parseFloat(s.shipping_cost) || 0) +
+    s.items.reduce((sum, it) => sum + ((parseFloat(it.unit_price) || 0) * (parseInt(it.quantity) || 0)), 0);
+  const cur = activeProject().currency || 'USD';
+
+  card.innerHTML = `
+    <div class="supplier-card-head">
+      <div class="swatch" style="background:${s.brand_color}"></div>
+      <div class="name">${escapeHtml(s.supplier) || '(unnamed)'}</div>
+      <div class="meta">${money(total, cur)} · ${s.items.length} items</div>
+      <button class="icon-btn danger" data-action="delete-supplier" title="Remove supplier">×</button>
+    </div>
+    <div class="supplier-card-body">
+      <div class="field">
+        <label>Supplier Name</label>
+        <input type="text" data-field="supplier" value="${escapeHtml(s.supplier)}">
+      </div>
+      <div class="field-row">
+        <div>
+          <label>Quote Number</label>
+          <input type="text" data-field="quote_number" value="${escapeHtml(s.quote_number)}">
+        </div>
+        <div>
+          <label>Brand Color</label>
+          <input type="color" data-field="brand_color" value="${escapeHtml(s.brand_color)}">
+        </div>
+      </div>
+      <div class="field-row cols-3">
+        <div>
+          <label>Quote Date</label>
+          <input type="date" data-field="quote_date" value="${escapeHtml(s.quote_date)}">
+        </div>
+        <div>
+          <label>Lead (wks)</label>
+          <input type="number" data-field="lead_time_weeks" value="${s.lead_time_weeks}" min="0">
+        </div>
+        <div>
+          <label>Valid (days)</label>
+          <input type="number" data-field="validity_days" value="${s.validity_days}" min="0">
+        </div>
+      </div>
+      <div class="field-row cols-3">
+        <div>
+          <label>Contact Name</label>
+          <input type="text" data-field="contact.name" value="${escapeHtml(s.contact?.name || '')}">
+        </div>
+        <div>
+          <label>Email</label>
+          <input type="email" data-field="contact.email" value="${escapeHtml(s.contact?.email || '')}">
+        </div>
+        <div>
+          <label>Shipping (${cur})</label>
+          <input type="number" data-field="shipping_cost" value="${s.shipping_cost}" min="0" step="0.01">
+        </div>
+      </div>
+      <div class="field">
+        <label>Supplier Notes</label>
+        <textarea data-field="notes">${escapeHtml(s.notes)}</textarea>
+      </div>
+
+      <div style="font-size:10px; text-transform:uppercase; letter-spacing:0.08em; color:var(--ink-mute); margin:14px 0 8px; font-weight:500;">Line Items</div>
+      <div data-items></div>
+      <button class="add-btn" data-action="add-item">+ Add item</button>
+    </div>`;
+
+  const itemsWrap = card.querySelector('[data-items]');
+  s.items.forEach((it, idx) => itemsWrap.appendChild(renderItemRow(it, idx)));
+
+  // Wire bindings
+  card.querySelector('.supplier-card-head').addEventListener('click', e => {
+    if (e.target.closest('.icon-btn') || e.target.tagName === 'INPUT') return;
+    s._collapsed = !s._collapsed;
+    card.classList.toggle('collapsed');
+  });
+  card.querySelectorAll('[data-field]').forEach(inp => {
+    inp.addEventListener('mousedown', e => e.stopPropagation());
+    inp.addEventListener('input', () => {
+      const f = inp.dataset.field;
+      const v = inp.type === 'number' ? parseFloat(inp.value) : inp.value;
+      if (f.includes('.')) {
+        const [a, b] = f.split('.');
+        s[a] = s[a] || {};
+        s[a][b] = v;
+      } else {
+        s[f] = v;
+      }
+      // Light update — re-render preview, refresh card head meta
+      if (f === 'supplier' || f === 'brand_color' || f === 'shipping_cost') {
+        const head = card.querySelector('.supplier-card-head');
+        head.querySelector('.swatch').style.background = s.brand_color;
+        head.querySelector('.name').textContent = s.supplier || '(unnamed)';
+      }
+      saveProjects();
+      renderSheet();
+    });
+  });
+  card.querySelector('[data-action="delete-supplier"]').addEventListener('click', e => {
+    e.stopPropagation();
+    if (!confirm(`Remove supplier "${s.supplier || '(unnamed)'}" and all its ${s.items.length} items?`)) return;
+    const p = activeProject();
+    p.suppliers = p.suppliers.filter(x => x.id !== s.id);
+    saveProjects();
+    renderEditor(); renderSheet();
+  });
+  card.querySelector('[data-action="add-item"]').addEventListener('click', () => {
+    s.items.push(emptyItem());
+    saveProjects();
+    renderEditor(); renderSheet();
+  });
+  return card;
+}
+
+function renderItemRow(it, idx) {
+  const row = document.createElement('div');
+  row.className = 'item-card';
+  row.innerHTML = `
+    <div class="item-head">
+      <span class="item-num">#${idx + 1}</span>
+      <span style="flex:1; font-size:12px; color:var(--ink); font-weight:500;">${escapeHtml(it.name) || '(unnamed)'}</span>
+      <button class="icon-btn danger" data-action="delete-item" title="Remove">×</button>
+    </div>
+    <div class="field-row">
+      <div>
+        <label>Category</label>
+        <input type="text" data-field="category" value="${escapeHtml(it.category)}" placeholder="Task Chair">
+      </div>
+      <div>
+        <label>SKU</label>
+        <input type="text" data-field="sku" value="${escapeHtml(it.sku)}" placeholder="ACME-12345">
+      </div>
+    </div>
+    <div class="field">
+      <label>Product Name</label>
+      <input type="text" data-field="name" value="${escapeHtml(it.name)}" placeholder="ErgoPro 2 Task Chair">
+    </div>
+    <div class="field">
+      <label>Description</label>
+      <textarea data-field="description" placeholder="Lumbar-support mesh back…">${escapeHtml(it.description)}</textarea>
+    </div>
+    <div class="field-row cols-3">
+      <div>
+        <label>Unit Price</label>
+        <input type="number" data-field="unit_price" value="${it.unit_price}" min="0" step="0.01">
+      </div>
+      <div>
+        <label>Qty</label>
+        <input type="number" data-field="quantity" value="${it.quantity}" min="1" step="1">
+      </div>
+      <div>
+        <label>Warranty (yr)</label>
+        <input type="number" data-field="warranty_years" value="${it.warranty_years || ''}" min="0">
+      </div>
+    </div>
+    <div class="field">
+      <label>Finish / Material</label>
+      <input type="text" data-field="finish" value="${escapeHtml(it.finish)}" placeholder="Black frame / Mesh back">
+    </div>
+    <div class="field">
+      <label>Image URL <span style="text-transform:none; letter-spacing:0; color:var(--ink-mute);">— public HTTPS or relative <code>assets/...</code></span></label>
+      <input type="text" data-field="image_url" value="${escapeHtml(it.image_url)}" placeholder="https://…/product.jpg">
+    </div>
+  `;
+  row.querySelectorAll('[data-field]').forEach(inp => {
+    inp.addEventListener('mousedown', e => e.stopPropagation());
+    inp.addEventListener('input', () => {
+      const f = inp.dataset.field;
+      const v = inp.type === 'number' ? parseFloat(inp.value) || 0 : inp.value;
+      it[f] = v;
+      // Update item head live
+      if (f === 'name') row.querySelector('.item-head span:nth-child(2)').textContent = v || '(unnamed)';
+      saveProjects();
+      renderSheet();
+    });
+  });
+  row.querySelector('[data-action="delete-item"]').addEventListener('click', () => {
+    const card = row.closest('.supplier-card');
+    const sid = card.dataset.supplierId;
+    const p = activeProject();
+    const s = p.suppliers.find(x => x.id === sid);
+    if (!s) return;
+    s.items = s.items.filter(x => x.id !== it.id);
+    saveProjects();
+    renderEditor(); renderSheet();
+  });
+  return row;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  PROJECT PICKER
+// ═══════════════════════════════════════════════════════════
+function renderProjectPicker() {
+  const sel = document.getElementById('project-select');
+  sel.innerHTML = '';
+  for (const p of projects) {
+    const opt = document.createElement('option');
+    opt.value = p.id;
+    opt.textContent = p.name || '(unnamed)';
+    if (p.id === activeId) opt.selected = true;
+    sel.appendChild(opt);
+  }
+  const newOpt = document.createElement('option');
+  newOpt.value = '__new__';
+  newOpt.textContent = '+ New project…';
+  sel.appendChild(newOpt);
+}
+
+document.getElementById('project-select').addEventListener('change', e => {
+  if (e.target.value === '__new__') {
+    const name = prompt('Project name?', 'New Project');
+    if (!name) {
+      e.target.value = activeId;
+      return;
+    }
+    const p = emptyProject(name);
+    projects.push(p);
+    activeId = p.id;
+    saveProjects();
+    renderProjectPicker(); renderEditor(); renderSheet();
+  } else {
+    activeId = e.target.value;
+    saveProjects();
+    renderEditor(); renderSheet();
+  }
+});
+
+document.getElementById('btn-rename').addEventListener('click', () => {
+  const p = activeProject();
+  if (!p) return;
+  const name = prompt('Rename project to:', p.name);
+  if (!name) return;
+  p.name = name;
+  saveProjects();
+  renderProjectPicker(); renderEditor(); renderSheet();
+});
+
+document.getElementById('btn-delete').addEventListener('click', () => {
+  const p = activeProject();
+  if (!p) return;
+  if (!confirm(`Delete project "${p.name}" and all its ${p.suppliers.length} suppliers? This cannot be undone.`)) return;
+  projects = projects.filter(x => x.id !== p.id);
+  if (!projects.length) projects.push(emptyProject('Untitled Project'));
+  activeId = projects[0].id;
+  saveProjects();
+  renderProjectPicker(); renderEditor(); renderSheet();
+  toast('Project deleted');
+});
+
+// ═══════════════════════════════════════════════════════════
+//  MASTHEAD FIELD BINDINGS
+// ═══════════════════════════════════════════════════════════
+['f-project','f-client','f-preparedBy','f-notes','f-currency'].forEach(id => {
+  const el = document.getElementById(id);
+  el.addEventListener('input', () => {
+    const p = activeProject();
+    if (!p) return;
+    if (id === 'f-project') p.name = el.value;
+    if (id === 'f-client') p.client = el.value;
+    if (id === 'f-preparedBy') p.preparedBy = el.value;
+    if (id === 'f-notes') p.notes = el.value;
+    if (id === 'f-currency') p.currency = el.value;
+    saveProjects();
+    if (id === 'f-project') renderProjectPicker();
+    renderSheet();
+    if (id === 'f-currency') renderEditor(); // re-render shipping label currency
+  });
+});
+
+document.getElementById('btn-add-supplier').addEventListener('click', () => {
+  const p = activeProject();
+  const color = DEFAULT_BRAND_COLORS[p.suppliers.length % DEFAULT_BRAND_COLORS.length];
+  p.suppliers.push(emptySupplier(color));
+  saveProjects();
+  renderEditor(); renderSheet();
+});
+
+// ═══════════════════════════════════════════════════════════
+//  PANEL TOGGLES
+// ═══════════════════════════════════════════════════════════
+document.querySelectorAll('.panel-head[data-toggle]').forEach(h => {
+  h.addEventListener('click', () => {
+    h.parentElement.classList.toggle('collapsed');
+  });
+});
+
+// ═══════════════════════════════════════════════════════════
+//  IMPORT / EXPORT JSON (compatible with Python tool)
+// ═══════════════════════════════════════════════════════════
+document.getElementById('btn-import-json').addEventListener('click', () => {
+  document.getElementById('file-import-json').click();
+});
+
+document.getElementById('file-import-json').addEventListener('change', async e => {
+  const files = Array.from(e.target.files || []);
+  if (!files.length) return;
+  const p = activeProject();
+  let added = 0;
+  for (const f of files) {
+    try {
+      const text = await f.text();
+      const data = JSON.parse(text);
+      // Detect format: full project export OR single supplier quote
+      if (data.suppliers && Array.isArray(data.suppliers)) {
+        // Full project — replace current
+        if (!confirm(`"${data.name || f.name}" looks like a full project export. Replace current project?`)) continue;
+        const incoming = { ...data, id: uuid() };
+        incoming.suppliers = incoming.suppliers.map(s => ({ ...s, id: uuid(), items: (s.items||[]).map(it => ({ ...it, id: uuid() })) }));
+        projects.push(incoming);
+        activeId = incoming.id;
+        saveProjects();
+        renderProjectPicker(); renderEditor(); renderSheet();
+        toast(`Loaded "${incoming.name}"`);
+        e.target.value = '';
+        return;
+      }
+      // Single supplier
+      if (data.supplier && Array.isArray(data.items)) {
+        const s = {
+          id: uuid(),
+          supplier: data.supplier || '',
+          brand_color: data.brand_color || DEFAULT_BRAND_COLORS[p.suppliers.length % DEFAULT_BRAND_COLORS.length],
+          contact: data.contact || { name: '', email: '', phone: '' },
+          quote_number: data.quote_number || '',
+          quote_date: data.quote_date || new Date().toISOString().slice(0, 10),
+          validity_days: data.validity_days || 30,
+          lead_time_weeks: data.lead_time_weeks || 0,
+          shipping_cost: data.shipping_cost || 0,
+          notes: data.notes || '',
+          items: (data.items || []).map(it => ({
+            id: uuid(),
+            sku: it.sku || '',
+            category: it.category || '',
+            name: it.name || '',
+            description: it.description || '',
+            finish: it.finish || '',
+            warranty_years: it.warranty_years || '',
+            unit_price: parseFloat(it.unit_price) || 0,
+            quantity: parseInt(it.quantity) || 1,
+            image_url: it.image_url || ''
+          }))
+        };
+        p.suppliers.push(s);
+        if (data.currency) p.currency = data.currency;
+        added++;
+      } else {
+        console.warn(`${f.name}: not a recognized quote or project format`);
+      }
+    } catch (err) {
+      console.warn(`${f.name}: parse failed`, err);
+    }
+  }
+  saveProjects();
+  renderEditor(); renderSheet();
+  if (added) toast(`Imported ${added} supplier${added === 1 ? '' : 's'}`);
+  e.target.value = '';
+});
+
+document.getElementById('btn-export-json').addEventListener('click', () => {
+  const p = activeProject();
+  if (!p) return;
+  const json = JSON.stringify(p, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = (p.name || 'project').replace(/[^a-z0-9]+/gi, '-').toLowerCase() + '.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast('JSON exported');
+});
+
+// ═══════════════════════════════════════════════════════════
+//  SETTINGS — Anthropic API key
+// ═══════════════════════════════════════════════════════════
+const SETTINGS_KEY = 'level-sheet-settings-v1';
+function loadSettings() {
+  try { return JSON.parse(localStorage.getItem(SETTINGS_KEY)) || {}; } catch { return {}; }
+}
+function saveSettings(s) {
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
+}
+
+document.getElementById('btn-settings').addEventListener('click', () => {
+  const s = loadSettings();
+  document.getElementById('f-apikey').value = s.apiKey || '';
+  document.getElementById('f-model').value = s.model || 'claude-sonnet-4-6';
+  document.getElementById('modal-settings').classList.add('show');
+});
+document.getElementById('btn-save-settings').addEventListener('click', () => {
+  saveSettings({
+    apiKey: document.getElementById('f-apikey').value.trim(),
+    model: document.getElementById('f-model').value
+  });
+  document.getElementById('modal-settings').classList.remove('show');
+  toast('Settings saved');
+});
+document.querySelectorAll('[data-modal-close]').forEach(btn =>
+  btn.addEventListener('click', e => e.target.closest('.modal-bg').classList.remove('show'))
+);
+
+// ═══════════════════════════════════════════════════════════
+//  IMPORT QUOTE (PDF / image) — extracts via Claude API
+// ═══════════════════════════════════════════════════════════
+document.getElementById('btn-import-quote').addEventListener('click', () => {
+  const s = loadSettings();
+  if (!s.apiKey) {
+    toast('Set your Anthropic API key first');
+    document.getElementById('btn-settings').click();
+    return;
+  }
+  document.getElementById('file-import-quote').click();
+});
+
+document.getElementById('file-import-quote').addEventListener('change', async e => {
+  const files = Array.from(e.target.files || []);
+  e.target.value = '';
+  if (!files.length) return;
+  const settings = loadSettings();
+  if (!settings.apiKey) { toast('Add API key in Settings'); return; }
+
+  // Show progress modal
+  const modal = document.getElementById('modal-import');
+  const list = document.getElementById('import-progress');
+  const summary = document.getElementById('import-summary');
+  list.innerHTML = '';
+  modal.classList.add('show');
+  document.getElementById('btn-import-done').disabled = true;
+
+  const rows = files.map(f => {
+    const row = document.createElement('div');
+    row.className = 'progress-row';
+    row.innerHTML = `<span class="pname">${escapeHtml(f.name)}</span><span class="pstatus pending">queued</span>`;
+    list.appendChild(row);
+    return row;
+  });
+
+  let done = 0, errs = 0;
+  // Process serially — keeps API rate limits & UI clean
+  for (let i = 0; i < files.length; i++) {
+    const f = files[i];
+    const status = rows[i].querySelector('.pstatus');
+    status.className = 'pstatus working';
+    status.textContent = 'extracting…';
+    summary.textContent = `Processing ${i+1} of ${files.length}…`;
+    try {
+      const supplier = await extractSupplierFromFile(f, settings, status);
+      const p = activeProject();
+      // Default brand color if Claude didn't pick one
+      if (!supplier.brand_color) {
+        supplier.brand_color = DEFAULT_BRAND_COLORS[p.suppliers.length % DEFAULT_BRAND_COLORS.length];
+      }
+      // Adopt currency if present and project has none defined yet
+      if (supplier._currency && !p.currency_set) {
+        p.currency = supplier._currency;
+        p.currency_set = true;
+      }
+      delete supplier._currency;
+      p.suppliers.push(supplier);
+      saveProjects();
+      status.className = 'pstatus done';
+      status.textContent = `✓ ${supplier.items.length} items`;
+      done++;
+    } catch (err) {
+      console.error(`[import] ${f.name}:`, err);
+      status.className = 'pstatus error';
+      const msg = err && err.message ? err.message : 'failed';
+      status.textContent = msg.slice(0, 60);
+      status.title = msg;
+      // Click the row to copy the full error to clipboard for diagnosis
+      rows[i].style.cursor = 'pointer';
+      rows[i].onclick = () => {
+        navigator.clipboard?.writeText(`${f.name}\n${msg}`);
+        toast('Error copied to clipboard');
+      };
+      errs++;
+    }
+  }
+
+  summary.textContent = `Done — ${done} imported, ${errs} failed.`;
+  document.getElementById('btn-import-done').disabled = false;
+  renderEditor(); renderSheet();
+});
+
+const EXTRACTION_SYSTEM = `You extract structured furniture quote data from supplier-provided PDFs, screenshots, and emails. Return ONLY valid JSON — no prose, no markdown fences, no commentary. Schema:
+{
+  "supplier": "string",
+  "brand_color": "#hex (pick a color matching the supplier's brand or product category — never a stark primary like pure red)",
+  "contact": {"name": "string", "email": "string", "phone": "string"},
+  "quote_number": "string",
+  "quote_date": "YYYY-MM-DD",
+  "validity_days": number,
+  "lead_time_weeks": number,
+  "shipping_cost": number,
+  "currency": "USD|CAD|EUR|GBP|AUD|JPY",
+  "notes": "string — overall quote notes",
+  "items": [
+    {
+      "sku": "manufacturer SKU or product code",
+      "category": "Task Chair | Guest Chair | Conference Table | Soft Seating | Storage | Height-Adjust Desk | Lounge | etc",
+      "name": "product name",
+      "description": "1-2 line description",
+      "finish": "color / material / fabric",
+      "warranty_years": number,
+      "unit_price": number (no symbols),
+      "quantity": number,
+      "image_url": "leave empty unless a public URL is on the page"
+    }
+  ]
+}
+
+Rules:
+1. CATEGORY MUST be canonical and IDENTICAL across all suppliers (use Task Chair not Task chair, Conference Table not Meeting Table). Pick from the standard names.
+2. unit_price is per-unit, not extended. Strip currency symbols.
+3. If a field is missing, omit it (don't invent values). Empty strings are OK for optional text fields.
+4. shipping_cost is the freight/delivery charge if listed; 0 if not.
+5. Output a SINGLE JSON object covering ONE supplier.`;
+
+async function extractSupplierFromFile(file, settings, statusEl) {
+  const dataUri = await fileToDataUri(file);
+  const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
+  const mediaType = file.type || (isPdf ? 'application/pdf' : 'image/jpeg');
+  const base64 = dataUri.split(',', 2)[1];
+
+  const content = [
+    isPdf
+      ? { type: 'document', source: { type: 'base64', media_type: mediaType, data: base64 } }
+      : { type: 'image',    source: { type: 'base64', media_type: mediaType, data: base64 } },
+    { type: 'text', text: 'Extract the supplier quote into the JSON schema above. Return only the JSON object.' }
+  ];
+
+  const body = {
+    model: settings.model || 'claude-sonnet-4-6',
+    max_tokens: 4096,
+    system: EXTRACTION_SYSTEM,
+    messages: [{ role: 'user', content }]
+  };
+
+  // Retry on transient overload/server errors (529, 503, 500, 408, 429) with exponential backoff
+  const RETRYABLE = new Set([408, 429, 500, 502, 503, 504, 529]);
+  const MAX_ATTEMPTS = 5;
+  let resp, lastErr = null;
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      resp = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          'x-api-key': settings.apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify(body)
+      });
+      if (resp.ok) break;
+      const text = await resp.text();
+      lastErr = `API ${resp.status}: ${text.slice(0, 200)}`;
+      if (!RETRYABLE.has(resp.status) || attempt === MAX_ATTEMPTS) {
+        throw new Error(lastErr);
+      }
+      // 529 = Anthropic overloaded. Honor Retry-After header if present, else exp backoff
+      const ra = parseInt(resp.headers.get('retry-after')) || 0;
+      const wait = ra > 0 ? ra * 1000 : Math.min(15000, 1500 * Math.pow(2, attempt - 1));
+      if (statusEl) statusEl.textContent = `retry ${attempt}/${MAX_ATTEMPTS - 1}…`;
+      await new Promise(r => setTimeout(r, wait));
+    } catch (netErr) {
+      // Network-level failure (DNS, CORS, offline) — only retry once
+      if (attempt < 2) {
+        await new Promise(r => setTimeout(r, 1500));
+        continue;
+      }
+      throw netErr;
+    }
+  }
+  if (!resp || !resp.ok) throw new Error(lastErr || 'API request failed');
+  const data = await resp.json();
+  const textOut = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
+  // Strip code fences if any sneak through
+  const json = textOut.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim();
+  let parsed;
+  try { parsed = JSON.parse(json); }
+  catch (e) {
+    // Attempt to extract first JSON object via brace-balance
+    const m = json.match(/\{[\s\S]*\}/);
+    if (!m) throw new Error('no JSON in response');
+    parsed = JSON.parse(m[0]);
+  }
+
+  // Normalize → supplier object the editor expects
+  const supplier = {
+    id: uuid(),
+    supplier: parsed.supplier || file.name.replace(/\.[^.]+$/, ''),
+    brand_color: parsed.brand_color || '',
+    contact: {
+      name: parsed.contact?.name || '',
+      email: parsed.contact?.email || '',
+      phone: parsed.contact?.phone || ''
+    },
+    quote_number: parsed.quote_number || '',
+    quote_date: parsed.quote_date || new Date().toISOString().slice(0, 10),
+    validity_days: parseInt(parsed.validity_days) || 30,
+    lead_time_weeks: parseInt(parsed.lead_time_weeks) || 0,
+    shipping_cost: parseFloat(parsed.shipping_cost) || 0,
+    notes: parsed.notes || '',
+    items: (parsed.items || []).map(it => ({
+      id: uuid(),
+      sku: it.sku || '',
+      category: it.category || '',
+      name: it.name || '',
+      description: it.description || '',
+      finish: it.finish || '',
+      warranty_years: parseFloat(it.warranty_years) || '',
+      unit_price: parseFloat(it.unit_price) || 0,
+      quantity: parseInt(it.quantity) || 1,
+      image_url: it.image_url || ''
+    })),
+    _currency: parsed.currency || ''
+  };
+  return supplier;
+}
+
+function fileToDataUri(file) {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result);
+    r.onerror = () => reject(new Error('read failed'));
+    r.readAsDataURL(file);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+//  PRINT / PDF EXPORT
+// ═══════════════════════════════════════════════════════════
+document.getElementById('btn-print').addEventListener('click', () => {
+  // Reset zoom for accurate print
+  const z = zoom; zoom = 1; applyZoom();
+  setTimeout(() => {
+    window.print();
+    setTimeout(() => { zoom = z; applyZoom(); }, 500);
+  }, 100);
+});
+
+document.getElementById('btn-export-pdf').addEventListener('click', async () => {
+  const p = activeProject();
+  if (!p) return;
+  const sheet = document.getElementById('sheet');
+  const z = zoom; zoom = 1; applyZoom();
+
+  // Wait for fonts + reflow
+  try { if (document.fonts && document.fonts.ready) await document.fonts.ready; } catch {}
+  await new Promise(r => setTimeout(r, 100));
+
+  // Snapshot the rendered sheet HTML (data URIs are already baked into <img> srcs)
+  const sheetHtml = sheet.outerHTML;
+
+  // Pull our existing stylesheet so the new window matches the live preview exactly
+  const styleEl = document.querySelector('style');
+  const baseCss = styleEl ? styleEl.textContent : '';
+
+  const filename = (p.name || 'level-sheet').replace(/[^a-z0-9]+/gi, '-').toLowerCase();
+
+  // Build a self-contained print document. The browser's native print engine
+  // renders this — full CSS support, no canvas, no CORS, no taint. The user
+  // gets the system "Save as PDF" dialog (one click, file goes to Downloads).
+  const html = `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>${escapeHtml(filename)}</title>
+${baseCss ? `<style>${baseCss}</style>` : ''}
+<style>
+  /* Print-only overrides — strip the editor chrome and reflow the sheet
+     for letter landscape. */
+  html, body { background: #ffffff; overflow: visible; height: auto; }
+  body { font-family: 'Inter', ui-sans-serif, -apple-system, BlinkMacSystemFont, sans-serif; }
+  #sheet {
+    background: #ffffff;
+    max-width: none;
+    width: auto;
+    margin: 0;
+    padding: 0 0 12px;
+    transform: none !important;
+  }
+  #sheet .sheet-masthead {
+    padding: 28px 32px 22px;
+    margin-bottom: 22px;
+  }
+  #sheet .sheet-bleed { padding: 0 32px; }
+
+  /* Rhythm: tighter for print so each category section pulls its weight on the page */
+  #sheet .supplier-row { margin-bottom: 28px; gap: 12px; }
+  #sheet .category    { margin-bottom: 28px; }
+  #sheet .grid        { gap: 12px; }
+
+  /* Page break behaviour */
+  #sheet .category, #sheet .item, #sheet .supp-card {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  #sheet .cat-head { break-after: avoid; page-break-after: avoid; }
+
+  /* Letter landscape, light margins. The browser handles all layout — */
+  /* no scaling, no clipping. */
+  @page {
+    size: letter landscape;
+    margin: 0.35in;
+  }
+
+  @media screen {
+    /* When the print window is open as a regular tab (rare), make it look OK */
+    body { padding: 20px; background: #f5f3ee; }
+    #sheet { box-shadow: 0 4px 24px rgba(0,0,0,0.10); margin: 0 auto; max-width: 1200px; }
+  }
+</style>
+</head>
+<body>
+${sheetHtml}
+<script>
+  // Auto-trigger print once everything is laid out + images decoded.
+  window.addEventListener('load', async () => {
+    try { if (document.fonts && document.fonts.ready) await document.fonts.ready; } catch (e) {}
+    // Wait for all <img> to settle (decoded or failed) so layout is final
+    const imgs = Array.from(document.images);
+    await Promise.all(imgs.map(i => i.complete ? null : new Promise(r => {
+      i.addEventListener('load', r, { once: true });
+      i.addEventListener('error', r, { once: true });
+    })));
+    setTimeout(() => {
+      try { document.title = ${JSON.stringify(filename)}; } catch (e) {}
+      window.print();
+    }, 150);
+  });
+  // Close the window automatically after the print dialog is dismissed
+  window.addEventListener('afterprint', () => { setTimeout(() => window.close(), 200); });
+<\/script>
+</body>
+</html>`;
+
+  zoom = z; applyZoom();
+
+  const win = window.open('', '_blank');
+  if (!win) {
+    alert('Pop-up blocked — allow pop-ups for this page (the PDF opens in a new tab so the browser can render it cleanly).');
+    return;
+  }
+  win.document.open();
+  win.document.write(html);
+  win.document.close();
+  toast('Opening print dialog…');
+});
+
+// ═══════════════════════════════════════════════════════════
+//  ZOOM
+// ═══════════════════════════════════════════════════════════
+document.getElementById('btn-zoom-in').addEventListener('click', () => { zoom = Math.min(2, zoom * 1.1); applyZoom(); });
+document.getElementById('btn-zoom-out').addEventListener('click', () => { zoom = Math.max(0.4, zoom / 1.1); applyZoom(); });
+
+// ═══════════════════════════════════════════════════════════
+//  TOAST
+// ═══════════════════════════════════════════════════════════
+let toastTimer = null;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 1800);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  BOOT
+// ═══════════════════════════════════════════════════════════
+document.getElementById('logo').src = LOGO_DATA_URI;
+loadProjects();
+renderProjectPicker();
+renderEditor();
+renderSheet();
+</script>
+</body>
+</html>
