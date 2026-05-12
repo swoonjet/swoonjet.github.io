@@ -300,20 +300,6 @@
       </div>
     </section>
 
-    <section>
-      <h2>Brick</h2>
-      <div class="row2">
-        <div class="control">
-          <label>Mortar <span class="v" id="mortar-v">10</span></label>
-          <input type="range" id="mortar" min="2" max="22" value="10">
-        </div>
-        <div class="control">
-          <label>Height <span class="v" id="bh-v">65</span></label>
-          <input type="range" id="bh" min="40" max="90" value="65">
-        </div>
-      </div>
-    </section>
-
     <section class="actions">
       <button id="randomize" class="primary">Surprise me</button>
       <button id="export-svg">Export SVG</button>
@@ -840,6 +826,7 @@
       let xMm = -offsetMm;
       let brickIdx = 0;
       while (xMm < wallWidthMm + 50) {
+        let advanced = false;
         for (const type of courseDef.pattern) {
           if (xMm > wallWidthMm) break;
           const w = brickWidth(type);
@@ -881,8 +868,10 @@
           }
 
           xMm += w + MORTAR;
+          advanced = true;
           brickIdx++;
         }
+        if (!advanced) break;  // prevent infinite loop when xMm lands in dead zone
       }
       yMm += courseHeight + MORTAR;
     }
@@ -1010,7 +999,20 @@
     }
   }
 
-  function render() {
+  // Coalesce many rapid render() calls (e.g. slider drags) into one per frame.
+  let _renderPending = false;
+  function scheduleRender() {
+    if (_renderPending) return;
+    _renderPending = true;
+    requestAnimationFrame(() => {
+      _renderPending = false;
+      renderNow();
+    });
+  }
+
+  function render() { scheduleRender(); }
+
+  function renderNow() {
     const { bricks, wallWidthMm, wallHeightMm } = buildWall();
 
     // viewbox with a little padding
@@ -1180,8 +1182,6 @@
     const bindings = [
       ['cols', 'cols-v'],
       ['rows', 'rows-v'],
-      ['mortar', 'mortar-v'],
-      ['bh', 'bh-v'],
     ];
     for (const [id, vid] of bindings) {
       const el = document.getElementById(id);
@@ -1191,8 +1191,6 @@
         v.textContent = value;
         if (id === 'cols') state.cols = value;
         else if (id === 'rows') state.rows = value;
-        else if (id === 'mortar') MORTAR = value;
-        else if (id === 'bh') BRICK_HEIGHT = value;
         render();
       });
     }
