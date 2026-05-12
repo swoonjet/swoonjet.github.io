@@ -236,6 +236,7 @@
     <section>
       <h2>Color rule</h2>
       <select id="color-rule"></select>
+      <p class="description" id="color-desc" style="display:none"></p>
       <div id="color-params"></div>
       <div>
         <div class="swatch-label">Palette</div>
@@ -246,6 +247,7 @@
     <section>
       <h2>Projection rule</h2>
       <select id="proj-rule"></select>
+      <p class="description" id="proj-desc" style="display:none"></p>
       <div id="proj-params"></div>
       <div class="control">
         <label>Light direction
@@ -533,6 +535,43 @@
       apply: ({courseIdx, brickIdx, params}) =>
         seededRand(courseIdx, brickIdx, 7) < params.density / 100 ? 1 : 0,
     },
+
+    // ===== EXPERIMENTAL =====
+    { id: 'moire_beats',
+      name: 'Moiré beats',
+      experimental: true,
+      desc: 'Interference of two coprime strides — XOR of "every Nth brick" and "every Mth course". The two rhythms beat against each other to create bands that drift across the wall.',
+      params: {
+        p1: { label: 'Stride A (brick)',  min: 2, max: 13, default: 3 },
+        p2: { label: 'Stride B (course)', min: 2, max: 13, default: 5 },
+      },
+      apply: ({courseIdx, brickIdx, params}) => {
+        const a = (brickIdx  % params.p1) === 0;
+        const b = (courseIdx % params.p2) === 0;
+        return (a !== b) ? 1 : 0;
+      },
+    },
+    { id: 'wolfram_ca',
+      name: 'Cellular automaton',
+      experimental: true,
+      desc: 'Wolfram\'s elementary CA: each row\'s accent positions are computed from the row above using a rule number 0–255. Try 30 (chaotic), 90 (Sierpinski triangles), 110 (Turing-complete), 184 (traffic). Has never been used in actual masonry — but it should.',
+      params: {
+        rule: { label: 'Rule (0–255)', min: 0, max: 255, default: 90 },
+      },
+      apply: ({courseIdx, brickIdx, params}) =>
+        caGet(params.rule, courseIdx, brickIdx),
+    },
+    { id: 'voronoi_cells',
+      name: 'Voronoi cells',
+      experimental: true,
+      desc: 'Wall partitioned into Voronoi cells around random seed points; a fraction of the cells are accented. Organic patchwork of accent regions — no two seed configurations are the same.',
+      params: {
+        seeds:  { label: 'Seeds',         min: 3,  max: 30, default: 12 },
+        accent: { label: 'Accent ratio',  min: 10, max: 90, default: 40 },
+      },
+      apply: ({courseIdx, brickIdx, params}) =>
+        voroGet(params.seeds, params.accent, courseIdx, brickIdx),
+    },
   ];
 
   // ============ Projection rules ============
@@ -615,6 +654,84 @@
       },
       apply: ({courseIdx, brickIdx, params}) =>
         seededRand(courseIdx, brickIdx, 11) < params.density / 100 ? params.depth : 0,
+    },
+
+    // ===== EXPERIMENTAL =====
+    { id: 'topographic',
+      name: 'Topographic wave',
+      experimental: true,
+      desc: 'Continuous depth field — each brick projects by sin(x·fX) · cos(y·fY) × amplitude. Surface reads as a sculptural wave rather than discrete projecting bricks.',
+      params: {
+        freqX: { label: 'X waves',  min: 1, max: 20, default: 4 },
+        freqY: { label: 'Y waves',  min: 1, max: 20, default: 3 },
+        depth: { label: 'Amplitude (mm)', min: 5, max: 60, default: 26 },
+      },
+      apply: ({courseIdx, brickIdx, params}) => {
+        const v = Math.sin(brickIdx * params.freqX * 0.04) *
+                  Math.cos(courseIdx * params.freqY * 0.06);
+        return Math.round(v * params.depth);
+      },
+    },
+    { id: 'radial_pulse',
+      name: 'Radial pulse',
+      experimental: true,
+      desc: 'Concentric depth rings emanating from the wall centre — projects in waves of crest and trough. Like ripples in stone.',
+      params: {
+        freq:  { label: 'Frequency',     min: 1, max: 20, default: 6 },
+        phase: { label: 'Phase',         min: 0, max: 100, default: 0 },
+        depth: { label: 'Amplitude (mm)', min: 5, max: 60, default: 30 },
+      },
+      apply: ({courseIdx, brickIdx, params}) => {
+        // approximate wall centre (in brick-index units)
+        // Note: derived from default wall; pattern shifts with wall size, which is fine.
+        const cx = 11, cy = 13;
+        const dx = brickIdx - cx;
+        const dy = (courseIdx - cy) * 1.8; // y exaggerated since brick aspect ≈ 3:1
+        const d = Math.sqrt(dx*dx + dy*dy);
+        const v = Math.sin(d * params.freq * 0.18 + params.phase * 0.063);
+        return Math.round(v * params.depth);
+      },
+    },
+    { id: 'quasicrystal',
+      name: 'Quasi-crystal',
+      experimental: true,
+      desc: 'Sum of N plane waves at evenly-spaced angles. Non-rational angles produce aperiodic patterns with rotational symmetry — the brick analogue of a Penrose tiling.',
+      params: {
+        folds: { label: 'Symmetry (n-fold)', min: 3, max: 12, default: 5 },
+        freq:  { label: 'Frequency',         min: 1, max: 12, default: 4 },
+        depth: { label: 'Amplitude (mm)',    min: 5, max: 60, default: 28 },
+      },
+      apply: ({courseIdx, brickIdx, params}) => {
+        let sum = 0;
+        const n = params.folds;
+        const k = params.freq * 0.13;
+        for (let i = 0; i < n; i++) {
+          const a = (i * Math.PI) / n;
+          sum += Math.cos((brickIdx * Math.cos(a) + courseIdx * 1.8 * Math.sin(a)) * k);
+        }
+        return Math.round((sum / n) * params.depth);
+      },
+    },
+    { id: 'noise_terrain',
+      name: 'Noise terrain',
+      experimental: true,
+      desc: 'Smoothed deterministic noise field — bricks project at heights drawn from a 2D landscape. Each brick is a pixel of a low-resolution terrain map.',
+      params: {
+        scale: { label: 'Scale',         min: 1, max: 12, default: 4 },
+        depth: { label: 'Amplitude (mm)', min: 5, max: 60, default: 30 },
+      },
+      apply: ({courseIdx, brickIdx, params}) => {
+        // 4-octave hash-based noise
+        const s = params.scale * 0.08;
+        let v = 0, amp = 1, freq = s, total = 0;
+        for (let o = 0; o < 4; o++) {
+          v += (seededRand(Math.floor(brickIdx * freq), Math.floor(courseIdx * freq), 13 + o) - 0.5) * amp;
+          total += amp;
+          amp *= 0.5;
+          freq *= 2;
+        }
+        return Math.round((v / total) * 2 * params.depth);
+      },
     },
   ];
 
@@ -757,6 +874,59 @@
     x = (x ^ (x >>> 17)) | 0;
     x = (x ^ (x << 5)) | 0;
     return ((x >>> 0) / 4294967295);
+  }
+
+  // ============ Cellular-automaton cache (for the Wolfram CA color rule) ============
+  const CA_W = 120;
+  const CA_H = 120;
+  const _caCache = new Map();
+  function caGet(rule, courseIdx, brickIdx) {
+    let grid = _caCache.get(rule);
+    if (!grid) {
+      grid = new Uint8Array(CA_W * CA_H);
+      grid[CA_W >> 1] = 1; // single seed at top centre
+      for (let r = 1; r < CA_H; r++) {
+        const rowBase = r * CA_W;
+        const prevBase = (r - 1) * CA_W;
+        for (let c = 0; c < CA_W; c++) {
+          const l = grid[prevBase + ((c - 1 + CA_W) % CA_W)];
+          const m = grid[prevBase + c];
+          const rt = grid[prevBase + ((c + 1) % CA_W)];
+          const pat = (l << 2) | (m << 1) | rt;
+          grid[rowBase + c] = (rule >> pat) & 1;
+        }
+      }
+      _caCache.set(rule, grid);
+    }
+    return grid[(courseIdx % CA_H) * CA_W + (brickIdx % CA_W)];
+  }
+
+  // ============ Voronoi cache (for the Voronoi cells color rule) ============
+  const _voroCache = new Map();
+  function voroGet(seedCount, accentPct, courseIdx, brickIdx) {
+    const key = seedCount + '_' + accentPct;
+    let seeds = _voroCache.get(key);
+    if (!seeds) {
+      seeds = [];
+      for (let i = 0; i < seedCount; i++) {
+        seeds.push({
+          x: seededRand(i, 0, 71) * 80,
+          y: seededRand(i, 1, 71) * 80,
+          accent: seededRand(i, 2, 71) < accentPct / 100 ? 1 : 0,
+        });
+      }
+      _voroCache.set(key, seeds);
+    }
+    const px = brickIdx % 80;
+    const py = courseIdx % 80;
+    let bestD = Infinity, bestI = 0;
+    for (let i = 0; i < seeds.length; i++) {
+      const dx = px - seeds[i].x;
+      const dy = py - seeds[i].y;
+      const d2 = dx*dx + dy*dy;
+      if (d2 < bestD) { bestD = d2; bestI = i; }
+    }
+    return seeds[bestI].accent;
   }
 
   // ============ State ============
@@ -1087,31 +1257,55 @@
     document.getElementById('bond-desc').innerHTML = bond.desc;
   }
 
-  function populateRuleSelect(selId, paramContainerId, rules, ruleIdKey, paramsKey) {
+  function populateRuleSelect(selId, paramContainerId, rules, ruleIdKey, paramsKey, descId) {
     const sel = document.getElementById(selId);
     sel.innerHTML = '';
-    rules.forEach(r => {
+    const classical    = rules.filter(r => !r.experimental);
+    const experimental = rules.filter(r =>  r.experimental);
+    const addToGroup = (group, items) => items.forEach(r => {
       const opt = document.createElement('option');
       opt.value = r.id;
       opt.textContent = r.name;
-      sel.appendChild(opt);
+      group.appendChild(opt);
     });
+    if (classical.length) {
+      const g = document.createElement('optgroup');
+      g.label = 'Classical';
+      addToGroup(g, classical);
+      sel.appendChild(g);
+    }
+    if (experimental.length) {
+      const g = document.createElement('optgroup');
+      g.label = '— Experimental —';
+      addToGroup(g, experimental);
+      sel.appendChild(g);
+    }
     sel.value = state[ruleIdKey];
+
+    const updateDesc = () => {
+      if (!descId) return;
+      const r = rules.find(r => r.id === state[ruleIdKey]);
+      const el = document.getElementById(descId);
+      if (!el) return;
+      if (r && r.desc) { el.textContent = r.desc; el.style.display = 'block'; }
+      else             { el.style.display = 'none'; }
+    };
+
     sel.addEventListener('change', () => {
       state[ruleIdKey] = sel.value;
-      // reset params to defaults
       const rule = rules.find(r => r.id === sel.value);
       state[paramsKey] = {};
       for (const k in rule.params) state[paramsKey][k] = rule.params[k].default;
       renderRuleParams(paramContainerId, rule, paramsKey);
+      updateDesc();
       render();
     });
-    // initial params
     const rule = rules.find(r => r.id === sel.value);
     for (const k in rule.params) {
       if (state[paramsKey][k] === undefined) state[paramsKey][k] = rule.params[k].default;
     }
     renderRuleParams(paramContainerId, rule, paramsKey);
+    updateDesc();
   }
 
   function renderRuleParams(containerId, rule, paramsKey) {
@@ -1237,6 +1431,7 @@
     for (const k in cr.params) state.colorParams[k] = cr.params[k].min + Math.floor(Math.random() * (cr.params[k].max - cr.params[k].min + 1));
     document.getElementById('color-rule').value = cr.id;
     renderRuleParams('color-params', cr, 'colorParams');
+    updateColorDesc();
 
     const pr = PROJECTION_RULES[Math.floor(Math.random() * PROJECTION_RULES.length)];
     state.projRuleId = pr.id;
@@ -1244,6 +1439,7 @@
     for (const k in pr.params) state.projParams[k] = pr.params[k].min + Math.floor(Math.random() * (pr.params[k].max - pr.params[k].min + 1));
     document.getElementById('proj-rule').value = pr.id;
     renderRuleParams('proj-params', pr, 'projParams');
+    updateProjDesc();
 
     // 50% chance of a decorative band
     const bandPick = Math.random() < 0.5
@@ -1350,12 +1546,16 @@
     else             { el.style.display = 'none'; }
   }
 
-  function updateBandDesc() {
-    const r = BAND_RULES.find(b => b.id === state.bandRuleId);
-    const el = document.getElementById('band-desc');
+  function updateRuleDesc(rules, ruleIdKey, descId) {
+    const r = rules.find(x => x.id === state[ruleIdKey]);
+    const el = document.getElementById(descId);
+    if (!el) return;
     if (r && r.desc) { el.textContent = r.desc; el.style.display = 'block'; }
     else             { el.style.display = 'none'; }
   }
+  function updateBandDesc()  { updateRuleDesc(BAND_RULES,       'bandRuleId',  'band-desc'); }
+  function updateColorDesc() { updateRuleDesc(COLOR_RULES,      'colorRuleId', 'color-desc'); }
+  function updateProjDesc()  { updateRuleDesc(PROJECTION_RULES, 'projRuleId',  'proj-desc'); }
 
   // ============ Quoin setup ============
   function populateQuoin() {
@@ -1394,11 +1594,9 @@
 
   // ============ Init ============
   populateBonds();
-  populateRuleSelect('color-rule', 'color-params', COLOR_RULES, 'colorRuleId', 'colorParams');
-  populateRuleSelect('proj-rule', 'proj-params', PROJECTION_RULES, 'projRuleId', 'projParams');
-  populateRuleSelect('band-rule', 'band-params', BAND_RULES, 'bandRuleId', 'bandParams');
-  document.getElementById('band-rule').addEventListener('change', updateBandDesc);
-  updateBandDesc();
+  populateRuleSelect('color-rule', 'color-params', COLOR_RULES, 'colorRuleId', 'colorParams', 'color-desc');
+  populateRuleSelect('proj-rule', 'proj-params', PROJECTION_RULES, 'projRuleId', 'projParams', 'proj-desc');
+  populateRuleSelect('band-rule', 'band-params', BAND_RULES, 'bandRuleId', 'bandParams', 'band-desc');
   populateCrown();
   populateQuoin();
   setupPalette();
