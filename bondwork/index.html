@@ -1,0 +1,1412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>bondwork — brick bond pattern generator</title>
+<style>
+  :root {
+    --bg: #efe9dc;
+    --panel: #e8e1d0;
+    --ink: #1d1a14;
+    --muted: #6a6051;
+    --rule: #cabe9f;
+    --rule-strong: #aa9d7c;
+    --accent: #213b5f;
+    --shadow: rgba(20, 12, 4, 0.4);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Manrope', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    font-size: 13px;
+    line-height: 1.5;
+    display: flex;
+  }
+
+  aside {
+    width: 320px;
+    flex: 0 0 320px;
+    background: var(--panel);
+    border-right: 1px solid var(--rule-strong);
+    padding: 22px 22px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    overflow-y: auto;
+  }
+  header h1 {
+    font-family: 'Manrope', sans-serif;
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    margin: 0 0 2px;
+  }
+  header p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+
+  section { display: flex; flex-direction: column; gap: 8px; }
+  section h2 {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--muted);
+    font-weight: 600;
+    margin: 0;
+  }
+  .description {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.55;
+    margin: 0;
+    padding: 8px 10px;
+    background: rgba(0,0,0,0.03);
+    border-left: 2px solid var(--rule-strong);
+  }
+  .description strong { color: var(--ink); font-weight: 600; }
+
+  select, input[type=number] {
+    width: 100%;
+    padding: 7px 10px;
+    background: var(--bg);
+    border: 1px solid var(--rule-strong);
+    color: var(--ink);
+    font: inherit;
+    font-size: 13px;
+    border-radius: 0;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  select {
+    background-image: linear-gradient(45deg, transparent 50%, var(--ink) 50%),
+                      linear-gradient(135deg, var(--ink) 50%, transparent 50%);
+    background-position: calc(100% - 14px) 50%, calc(100% - 10px) 50%;
+    background-size: 4px 4px;
+    background-repeat: no-repeat;
+    padding-right: 28px;
+  }
+
+  .control { display: flex; flex-direction: column; gap: 4px; }
+  .control label {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.02em;
+  }
+  .control label .v {
+    color: var(--ink);
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    font-size: 11px;
+  }
+  input[type=range] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 2px;
+    background: var(--rule-strong);
+    outline: none;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--ink);
+    cursor: pointer;
+  }
+  input[type=range]::-moz-range-thumb {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--ink);
+    cursor: pointer;
+    border: none;
+  }
+
+  .palette {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .swatch {
+    width: 28px;
+    height: 28px;
+    border: 1px solid var(--ink);
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+  }
+  .swatch.mortar { border-style: dashed; }
+  .swatch input[type=color] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    border: 0;
+  }
+  .swatch-label {
+    font-size: 9px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.10em;
+    margin-bottom: 4px;
+  }
+
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+  .actions { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; padding-top: 14px; border-top: 1px solid var(--rule); }
+  .actions button {
+    padding: 9px 12px;
+    border: 1px solid var(--rule-strong);
+    background: transparent;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    color: var(--ink);
+    border-radius: 0;
+    text-align: left;
+  }
+  .actions button:hover { background: rgba(0,0,0,0.04); }
+  .actions button.primary {
+    background: var(--ink);
+    color: var(--bg);
+    border-color: var(--ink);
+  }
+  .actions button.primary:hover { background: #2c2820; }
+
+  main {
+    flex: 1;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background:
+      linear-gradient(180deg, #faf6eb, #ede5d1);
+    overflow: hidden;
+    padding: 22px;
+  }
+  #wall {
+    width: 100%;
+    height: 100%;
+    max-width: 100%;
+    max-height: 100%;
+    display: block;
+  }
+
+  .meta {
+    position: absolute;
+    bottom: 16px;
+    left: 22px;
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.05em;
+    background: rgba(255,255,255,0.6);
+    padding: 6px 10px;
+    border: 1px solid var(--rule);
+  }
+  .meta strong { color: var(--ink); font-weight: 500; }
+</style>
+</head>
+<body>
+  <aside>
+    <header>
+      <h1>bondwork</h1>
+      <p>brick bond generator</p>
+    </header>
+
+    <section>
+      <h2>Bond</h2>
+      <select id="bond"></select>
+      <p class="description" id="bond-desc"></p>
+    </section>
+
+    <section>
+      <h2>Color rule</h2>
+      <select id="color-rule"></select>
+      <div id="color-params"></div>
+      <div>
+        <div class="swatch-label">Palette</div>
+        <div class="palette" id="palette"></div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Projection rule</h2>
+      <select id="proj-rule"></select>
+      <div id="proj-params"></div>
+      <div class="control">
+        <label>Light direction
+          <select id="light" style="width: 90px; padding: 2px 6px; font-size: 11px;">
+            <option value="NW">NW</option>
+            <option value="NE">NE</option>
+          </select>
+        </label>
+      </div>
+    </section>
+
+    <section>
+      <h2>Decorative band</h2>
+      <select id="band-rule"></select>
+      <p class="description" id="band-desc" style="display:none"></p>
+      <div id="band-params"></div>
+    </section>
+
+    <section>
+      <h2>Wall crown (top)</h2>
+      <select id="crown"></select>
+      <p class="description" id="crown-desc" style="display:none"></p>
+    </section>
+
+    <section>
+      <h2>Edges (quoins)</h2>
+      <select id="quoin"></select>
+      <p class="description" id="quoin-desc" style="display:none"></p>
+      <div class="row2">
+        <div class="control">
+          <label>Width <span class="v" id="quoin-w-v">2</span></label>
+          <input type="range" id="quoin-w" min="1" max="6" value="2">
+        </div>
+        <div class="control">
+          <label>Project <span class="v" id="quoin-p-v">24</span></label>
+          <input type="range" id="quoin-p" min="0" max="60" value="24">
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Wall</h2>
+      <div class="row2">
+        <div class="control">
+          <label>Width <span class="v" id="cols-v">22</span></label>
+          <input type="range" id="cols" min="6" max="50" value="22">
+        </div>
+        <div class="control">
+          <label>Height <span class="v" id="rows-v">26</span></label>
+          <input type="range" id="rows" min="6" max="60" value="26">
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Brick</h2>
+      <div class="row2">
+        <div class="control">
+          <label>Mortar <span class="v" id="mortar-v">10</span></label>
+          <input type="range" id="mortar" min="2" max="22" value="10">
+        </div>
+        <div class="control">
+          <label>Height <span class="v" id="bh-v">65</span></label>
+          <input type="range" id="bh" min="40" max="90" value="65">
+        </div>
+      </div>
+    </section>
+
+    <section class="actions">
+      <button id="randomize" class="primary">Surprise me</button>
+      <button id="export-svg">Export SVG</button>
+      <button id="export-png">Export PNG</button>
+    </section>
+  </aside>
+
+  <main>
+    <svg id="wall" xmlns="http://www.w3.org/2000/svg"></svg>
+    <div class="meta" id="meta">—</div>
+  </main>
+
+<script>
+'use strict';
+(() => {
+  // ============ Constants ============
+  const STRETCHER_LEN = 215;   // mm, standard UK brick length
+  const HEADER_LEN    = 102.5; // mm, standard width
+  let   BRICK_HEIGHT  = 65;
+  let   MORTAR        = 10;
+  const SOLDIER_H     = 215;   // soldier course height
+  const DOGTOOTH_W    = 105;   // dogtooth element width / course height (~ header diagonal)
+  const DENTIL_W      = 75;    // dentil block width
+  const DENTIL_GAP    = 38;    // gap between dentils
+
+  // helper: width in mm for each brick type in elevation
+  function brickWidth(type) {
+    if (type === 'S')        return STRETCHER_LEN;
+    if (type === 'H')        return HEADER_LEN;
+    if (type === 'soldier')  return HEADER_LEN;
+    if (type === 'sailor')   return STRETCHER_LEN;
+    if (type === 'dogtooth') return DOGTOOTH_W;
+    if (type === 'dentil')   return DENTIL_W + DENTIL_GAP;
+    return STRETCHER_LEN;
+  }
+  function brickHeight(type) {
+    if (type === 'soldier' || type === 'sailor') return SOLDIER_H;
+    if (type === 'dogtooth') return DOGTOOTH_W;
+    return BRICK_HEIGHT;
+  }
+
+  // offset helpers (in mm)
+  const off = {
+    none: () => 0,
+    half_stretcher: () => (STRETCHER_LEN + MORTAR) / 2,
+    half_header: () => (HEADER_LEN + MORTAR) / 2,
+    flemish_shift: () => (STRETCHER_LEN + MORTAR) / 2 + (HEADER_LEN + MORTAR) / 2,
+  };
+
+  // ============ Bonds (with research notes) ============
+  const BONDS = [
+    { id: 'stretcher',
+      name: 'Stretcher / Running',
+      desc: 'All stretchers, each course offset by half a brick. The standard modern bond — quick to lay, requires no through-wall headers. Universal in contemporary cavity-wall construction; structurally weaker than English or Flemish.',
+      courses: [
+        { pattern: ['S'], offset: 'none' },
+        { pattern: ['S'], offset: 'half_stretcher' },
+      ],
+    },
+    { id: 'header',
+      name: 'Header',
+      desc: 'All headers, offset by half a header per course. Favoured for curved walls (shorter face navigates radii cleanly) and for formal decorative surfaces. Common in 18th-century English garden walls.',
+      courses: [
+        { pattern: ['H'], offset: 'none' },
+        { pattern: ['H'], offset: 'half_header' },
+      ],
+    },
+    { id: 'english',
+      name: 'English',
+      desc: 'Alternating courses of all-stretchers and all-headers. Considered the strongest of the traditional bonds — every other course is a transverse tie. Standard for heavy industrial brickwork, retaining walls, and 17th–19th century English construction.',
+      courses: [
+        { pattern: ['S'], offset: 'none' },
+        { pattern: ['H'], offset: 'none' },
+      ],
+    },
+    { id: 'english_cross',
+      name: 'English Cross / Dutch',
+      desc: 'Like English bond, but each stretcher course is shifted by half a brick relative to the stretcher course two rows below. The shift produces a diagonal cross or diamond pattern across many courses. Characteristic of Dutch and Northern European architecture.',
+      courses: [
+        { pattern: ['S'], offset: 'none' },
+        { pattern: ['H'], offset: 'none' },
+        { pattern: ['S'], offset: 'half_stretcher' },
+        { pattern: ['H'], offset: 'none' },
+      ],
+    },
+    { id: 'flemish',
+      name: 'Flemish',
+      desc: 'Each course alternates header-stretcher-header-stretcher; headers in successive courses align vertically over the centres of stretchers below. The most decorative of the structural bonds — used in fine Georgian and Federal-period brickwork.',
+      courses: [
+        { pattern: ['H', 'S'], offset: 'none' },
+        { pattern: ['H', 'S'], offset: 'flemish_shift' },
+      ],
+    },
+    { id: 'flemish_garden',
+      name: 'Flemish Garden Wall (Sussex)',
+      desc: 'Three stretchers and one header per course, alternating. An economical Flemish variant for non-structural garden walls; widespread in southern England.',
+      courses: [
+        { pattern: ['S', 'S', 'S', 'H'], offset: 'none' },
+        { pattern: ['S', 'S', 'S', 'H'], offset: 'half_stretcher' },
+      ],
+    },
+    { id: 'monk',
+      name: 'Monk / Yorkshire',
+      desc: 'Two stretchers and one header repeated. Distinctive offset rhythm with widely spaced headers — mostly decorative. Common in Northern England.',
+      courses: [
+        { pattern: ['S', 'S', 'H'], offset: 'none' },
+        { pattern: ['S', 'S', 'H'], offset: 'half_stretcher' },
+      ],
+    },
+    { id: 'american',
+      name: 'American Common',
+      desc: 'Five to seven courses of stretcher followed by one course of headers. Compromise between the speed of stretcher bond and the strength of English bond. Standard for 19th- and early 20th-century American load-bearing brickwork.',
+      courses: [
+        { pattern: ['S'], offset: 'none' },
+        { pattern: ['S'], offset: 'half_stretcher' },
+        { pattern: ['S'], offset: 'none' },
+        { pattern: ['S'], offset: 'half_stretcher' },
+        { pattern: ['S'], offset: 'none' },
+        { pattern: ['S'], offset: 'half_stretcher' },
+        { pattern: ['H'], offset: 'none' },
+      ],
+    },
+    { id: 'stack',
+      name: 'Stack',
+      desc: 'Bricks placed directly on top of one another with no offset. Structurally very weak (must be reinforced with bed-joint steel for any load-bearing use). Used as decorative feature panels and infills.',
+      courses: [
+        { pattern: ['S'], offset: 'none' },
+      ],
+    },
+    { id: 'soldier_belt',
+      name: 'Soldier-Course Belt',
+      desc: 'Stretcher bond punctuated by a row of soldier bricks (upright, narrow face out) at regular intervals. The soldier course serves as a decorative belt or string course at floor lines and openings — a Victorian and Edwardian facade staple.',
+      courses: [
+        { pattern: ['S'], offset: 'none' },
+        { pattern: ['S'], offset: 'half_stretcher' },
+        { pattern: ['S'], offset: 'none' },
+        { pattern: ['S'], offset: 'half_stretcher' },
+        { pattern: ['S'], offset: 'none' },
+        { pattern: ['S'], offset: 'half_stretcher' },
+        { pattern: ['soldier'], offset: 'none' },
+      ],
+    },
+    { id: 'diaper',
+      name: 'Tudor Diaper (auto)',
+      desc: 'Flemish-bond field punctuated with vitrified (glazed) headers placed to form diamond, lozenge, or chevron patterns. Pioneered in late-medieval English brickwork (Hampton Court Palace, c. 1515) and revived in the Tudor Revival of the 1880s–1920s. Switch to "Diaper diamond" colour rule for the classic look.',
+      courses: [
+        { pattern: ['H', 'S'], offset: 'none' },
+        { pattern: ['H', 'S'], offset: 'flemish_shift' },
+      ],
+      hint: { colorRule: 'diaper', palette: ['#a8593a', '#2a1c1a'] },
+    },
+    { id: 'rat_trap',
+      name: 'Rat-Trap / Chinese',
+      desc: 'Bricks laid on edge with internal cavities, saving roughly 25% of brick and providing built-in thermal insulation. Used historically across China and revived in India as a sustainable bond by architect Laurie Baker.',
+      courses: [
+        { pattern: ['H', 'S'], offset: 'none' },
+        { pattern: ['H', 'S'], offset: 'flemish_shift' },
+      ],
+      // simplified visually — same pattern as Flemish but indicate cavity via color rule
+    },
+  ];
+
+  // ============ Color rules ============
+  const COLOR_RULES = [
+    { id: 'solid',
+      name: 'Solid',
+      params: {},
+      apply: () => 0,
+    },
+    { id: 'natural_variation',
+      name: 'Natural variation',
+      params: {
+        amount: { label: 'Amount', min: 0, max: 100, default: 35 },
+      },
+      apply: ({courseIdx, brickIdx, params}) => {
+        const r = seededRand(courseIdx, brickIdx);
+        const a = params.amount / 100;
+        if (r < a * 0.20) return 2;        // light variant
+        if (r < a * 0.40) return 1;        // dark variant
+        return 0;
+      },
+    },
+    { id: 'header_accent',
+      name: 'Headers accent',
+      params: {},
+      apply: ({brickType}) => brickType === 'H' ? 1 : 0,
+    },
+    { id: 'every_nth',
+      name: 'Every Nth brick',
+      params: {
+        stride: { label: 'Stride', min: 2, max: 12, default: 5 },
+      },
+      apply: ({brickIdx, params}) => brickIdx % params.stride === 0 ? 1 : 0,
+    },
+    { id: 'diagonal_stripes',
+      name: 'Diagonal stripes',
+      params: {
+        period: { label: 'Period', min: 2, max: 14, default: 5 },
+      },
+      apply: ({courseIdx, brickIdx, params}) =>
+        (courseIdx + brickIdx) % params.period === 0 ? 1 : 0,
+    },
+    { id: 'diaper',
+      name: 'Diaper diamond',
+      params: {
+        period: { label: 'Period', min: 4, max: 20, default: 8 },
+      },
+      apply: ({courseIdx, brickIdx, brickType, params}) => {
+        if (brickType !== 'H') return 0;
+        const p = params.period;
+        const a = ((courseIdx + brickIdx * 2) % p + p) % p;
+        const b = ((courseIdx - brickIdx * 2) % p + p) % p;
+        return (a === 0 || b === 0) ? 1 : 0;
+      },
+    },
+    { id: 'checker',
+      name: 'Checker (course × brick)',
+      params: {
+        period: { label: 'Period', min: 2, max: 10, default: 3 },
+      },
+      apply: ({courseIdx, brickIdx, params}) => {
+        const p = params.period;
+        return ((Math.floor(courseIdx / p) + Math.floor(brickIdx / p)) % 2 === 0) ? 1 : 0;
+      },
+    },
+    { id: 'random_accent',
+      name: 'Scattered accents',
+      params: {
+        density: { label: 'Density', min: 1, max: 50, default: 8 },
+      },
+      apply: ({courseIdx, brickIdx, params}) =>
+        seededRand(courseIdx, brickIdx, 7) < params.density / 100 ? 1 : 0,
+    },
+  ];
+
+  // ============ Projection rules ============
+  const PROJECTION_RULES = [
+    { id: 'flush',
+      name: 'Flush',
+      params: {},
+      apply: () => 0,
+    },
+    { id: 'every_nth_brick',
+      name: 'Every Nth brick',
+      params: {
+        stride: { label: 'Stride', min: 2, max: 12, default: 4 },
+        depth: { label: 'Depth (mm)', min: -60, max: 60, default: 28 },
+      },
+      apply: ({brickIdx, params}) =>
+        brickIdx % params.stride === 0 ? params.depth : 0,
+    },
+    { id: 'every_nth_course',
+      name: 'Every Nth course',
+      params: {
+        stride: { label: 'Stride', min: 2, max: 14, default: 6 },
+        depth: { label: 'Depth (mm)', min: -60, max: 60, default: 28 },
+      },
+      apply: ({courseIdx, params}) =>
+        courseIdx % params.stride === 0 ? params.depth : 0,
+    },
+    { id: 'modulo_grid',
+      name: 'Grid (course × brick)',
+      params: {
+        cstride: { label: 'Course stride', min: 2, max: 12, default: 4 },
+        bstride: { label: 'Brick stride', min: 2, max: 12, default: 4 },
+        depth: { label: 'Depth (mm)', min: -60, max: 60, default: 28 },
+      },
+      apply: ({courseIdx, brickIdx, params}) =>
+        courseIdx % params.cstride === 0 && brickIdx % params.bstride === 0 ? params.depth : 0,
+    },
+    { id: 'diagonal',
+      name: 'Diagonal stripes',
+      params: {
+        slope: { label: 'Slope', min: 1, max: 8, default: 2 },
+        period: { label: 'Period', min: 3, max: 12, default: 5 },
+        depth: { label: 'Depth (mm)', min: -60, max: 60, default: 22 },
+      },
+      apply: ({courseIdx, brickIdx, params}) =>
+        ((courseIdx * params.slope + brickIdx) % params.period) === 0 ? params.depth : 0,
+    },
+    { id: 'sine_wave',
+      name: 'Sine wave (horizontal)',
+      params: {
+        freq: { label: 'Frequency', min: 1, max: 20, default: 6 },
+        threshold: { label: 'Threshold', min: 0, max: 100, default: 70 },
+        depth: { label: 'Depth (mm)', min: -60, max: 60, default: 26 },
+      },
+      apply: ({brickIdx, courseIdx, params}) => {
+        const v = Math.sin(brickIdx * params.freq * 0.04 + courseIdx * 0.05);
+        return v * 100 > params.threshold ? params.depth : 0;
+      },
+    },
+    { id: 'pixel_arch',
+      name: 'Pixel arch',
+      params: {
+        height: { label: 'Arch height', min: 2, max: 20, default: 6 },
+        period: { label: 'Period', min: 4, max: 24, default: 10 },
+        depth: { label: 'Depth (mm)', min: -60, max: 60, default: 32 },
+      },
+      apply: ({courseIdx, brickIdx, params}) => {
+        // arched relief band: bricks form rounded relief blobs
+        const cx = (brickIdx % params.period) - params.period / 2;
+        const cy = (courseIdx % (params.height * 2)) - params.height;
+        const inside = (cx * cx) / ((params.period / 2) ** 2) + (cy * cy) / (params.height ** 2) < 1;
+        return inside ? params.depth : 0;
+      },
+    },
+    { id: 'random',
+      name: 'Random',
+      params: {
+        density: { label: 'Density', min: 1, max: 70, default: 18 },
+        depth: { label: 'Depth (mm)', min: -60, max: 60, default: 28 },
+      },
+      apply: ({courseIdx, brickIdx, params}) =>
+        seededRand(courseIdx, brickIdx, 11) < params.density / 100 ? params.depth : 0,
+    },
+  ];
+
+  // ============ Decorative bands (insertable belt courses) ============
+  const BAND_RULES = [
+    { id: 'none', name: 'No band', params: {} },
+    {
+      id: 'header',
+      name: 'Header band',
+      desc: 'A single course of headers as a decorative belt — emphasise with an accent colour.',
+      params: { stride: { label: 'Every N courses', min: 4, max: 24, default: 8 } },
+      courseDef: () => ({ pattern: ['H'], offset: 'half_header' }),
+    },
+    {
+      id: 'soldier',
+      name: 'Soldier course',
+      desc: 'Upright bricks (narrow face out) — tall string course, Victorian & Edwardian facade staple.',
+      params: { stride: { label: 'Every N courses', min: 4, max: 24, default: 10 } },
+      courseDef: () => ({ pattern: ['soldier'], offset: 'none' }),
+    },
+    {
+      id: 'sailor',
+      name: 'Sailor course',
+      desc: 'Upright bricks with wide face out — bolder than soldier. Common as decorative banding.',
+      params: { stride: { label: 'Every N courses', min: 4, max: 24, default: 10 } },
+      courseDef: () => ({ pattern: ['sailor'], offset: 'none' }),
+    },
+    {
+      id: 'dogtooth',
+      name: "Dogtooth (hound's tooth)",
+      desc: 'Bricks rotated 45° in plan so a corner projects from the wall plane. Forms a sawtooth band — medieval & Tudor masonry, and a Victorian Gothic favourite.',
+      params: {
+        stride: { label: 'Every N courses', min: 4, max: 24, default: 9 },
+        depth:  { label: 'Projection (mm)', min: 10, max: 80, default: 45 },
+      },
+      courseDef: (p) => ({ pattern: ['dogtooth'], offset: 'none', projection: p.depth }),
+    },
+    {
+      id: 'dentil',
+      name: 'Dentil row',
+      desc: 'Small projecting blocks with regular gaps — classical-derived ornament; common as cornice trim.',
+      params: {
+        stride: { label: 'Every N courses', min: 4, max: 24, default: 11 },
+        depth:  { label: 'Projection (mm)', min: 10, max: 70, default: 38 },
+      },
+      courseDef: (p) => ({ pattern: ['dentil'], offset: 'none', projection: p.depth }),
+    },
+    {
+      id: 'mousetooth',
+      name: 'Mouse-tooth (muizentand)',
+      desc: 'Dutch decorative band — small projecting headers at regular intervals. Subtler than dogtooth; common on Hanseatic gable ends.',
+      params: {
+        stride: { label: 'Every N courses', min: 4, max: 24, default: 10 },
+        depth:  { label: 'Projection (mm)', min: 8, max: 50, default: 22 },
+      },
+      courseDef: (p) => ({ pattern: ['dentil'], offset: 'none', projection: p.depth }),
+    },
+  ];
+
+  // ============ Edge quoins (corner brick accents) ============
+  const QUOIN_OPTIONS = [
+    { id: 'none',    name: 'No quoins',          color: false, project: false },
+    { id: 'color',   name: 'Accent colour',      color: true,  project: false,
+      desc: 'Edge columns rendered in the accent palette colour — emulates the larger / contrasting corner stones of classical quoining.' },
+    { id: 'project', name: 'Projecting',         color: false, project: true,
+      desc: 'Edge columns project out from the wall plane — chunky pilaster effect.' },
+    { id: 'both',    name: 'Accent + projecting', color: true,  project: true,
+      desc: 'Full classical quoin: corner bricks change colour AND project out, like a stone quoin pattern set against brick infill.' },
+  ];
+
+  // ============ Wall crowns (decorative top courses) ============
+  const CROWN_OPTIONS = [
+    { id: 'none', name: 'No crown', courses: [] },
+    {
+      id: 'corbel3',
+      name: 'Corbel (3-step)',
+      desc: 'Three successive courses each projecting further out — classic stepped overhang for eaves & chimney caps.',
+      courses: [
+        { pattern: ['S'], offset: 'half_stretcher', projection: 18 },
+        { pattern: ['S'], offset: 'none',           projection: 36 },
+        { pattern: ['S'], offset: 'half_stretcher', projection: 56 },
+      ],
+    },
+    {
+      id: 'corbel5',
+      name: 'Corbel (5-step)',
+      desc: 'Five-step stepped overhang — dramatic eaves.',
+      courses: [
+        { pattern: ['S'], offset: 'half_stretcher', projection: 10 },
+        { pattern: ['S'], offset: 'none',           projection: 22 },
+        { pattern: ['S'], offset: 'half_stretcher', projection: 36 },
+        { pattern: ['S'], offset: 'none',           projection: 50 },
+        { pattern: ['S'], offset: 'half_stretcher', projection: 66 },
+      ],
+    },
+    {
+      id: 'dogtooth_cornice',
+      name: 'Dogtooth cornice',
+      desc: 'Dogtooth course crowned by a stepped corbel — Tudor / late-medieval cornice profile.',
+      courses: [
+        { pattern: ['dogtooth'], offset: 'none',           projection: 32 },
+        { pattern: ['S'],        offset: 'none',           projection: 46 },
+        { pattern: ['S'],        offset: 'half_stretcher', projection: 62 },
+      ],
+    },
+    {
+      id: 'classical_cornice',
+      name: 'Classical cornice',
+      desc: 'Dentil row over corbel — a brick rendering of the classical entablature.',
+      courses: [
+        { pattern: ['dentil'], offset: 'none',           projection: 30 },
+        { pattern: ['H'],      offset: 'half_header',    projection: 20 },
+        { pattern: ['S'],      offset: 'none',           projection: 42 },
+        { pattern: ['S'],      offset: 'half_stretcher', projection: 58 },
+      ],
+    },
+    {
+      id: 'soldier_crown',
+      name: 'Soldier crown',
+      desc: 'A single projecting soldier course finishing the wall — minimal decorative top.',
+      courses: [
+        { pattern: ['soldier'], offset: 'none', projection: 22 },
+      ],
+    },
+    {
+      id: 'mousetooth_crown',
+      name: 'Mouse-tooth crown',
+      desc: 'Mouse-tooth band finished by a single corbel — Dutch gable-end profile.',
+      courses: [
+        { pattern: ['dentil'], offset: 'none',           projection: 18 },
+        { pattern: ['S'],      offset: 'half_stretcher', projection: 35 },
+      ],
+    },
+  ];
+
+  // ============ Seeded random ============
+  function seededRand(a, b, salt = 0) {
+    let x = ((a + 1) * 2654435761 + (b + 1) * 1597463007 + salt * 374761393) | 0;
+    x = (x ^ (x << 13)) | 0;
+    x = (x ^ (x >>> 17)) | 0;
+    x = (x ^ (x << 5)) | 0;
+    return ((x >>> 0) / 4294967295);
+  }
+
+  // ============ State ============
+  let state = {
+    bondId: 'flemish',
+    colorRuleId: 'natural_variation',
+    colorParams: {},
+    projRuleId: 'flush',
+    projParams: {},
+    bandRuleId: 'none',
+    bandParams: {},
+    crownId: 'none',
+    quoinId: 'none',
+    quoinWidth: 2,
+    quoinProjection: 24,
+    palette: ['#a8593a', '#2c1f1d', '#c8956a', '#7d3f2a'],
+    mortarColor: '#d4cab0',
+    light: 'NW',
+    cols: 22,
+    rows: 26,
+  };
+
+  // ============ Wall building ============
+  function getCourseDef(courseIdx) {
+    const crown = CROWN_OPTIONS.find(c => c.id === state.crownId);
+    const crownLen = crown.courses.length;
+
+    // Crown sits at the top (low courseIdx)
+    if (crownLen > 0 && courseIdx < crownLen) {
+      return { ...crown.courses[courseIdx], isCrown: true };
+    }
+
+    const adjIdx = courseIdx - crownLen;
+    const bond = BONDS.find(b => b.id === state.bondId);
+
+    // Band insertion at regular intervals (skipping the very first row)
+    if (state.bandRuleId !== 'none') {
+      const band = BAND_RULES.find(r => r.id === state.bandRuleId);
+      const stride = state.bandParams.stride || 8;
+      if (adjIdx > 0 && adjIdx % stride === 0) {
+        return { ...band.courseDef(state.bandParams || {}), isBand: true };
+      }
+    }
+
+    return bond.courses[adjIdx % bond.courses.length];
+  }
+
+  function buildWall() {
+    const colorRule = COLOR_RULES.find(r => r.id === state.colorRuleId);
+    const projRule  = PROJECTION_RULES.find(r => r.id === state.projRuleId);
+
+    const wallWidthMm = state.cols * (STRETCHER_LEN + MORTAR);
+    let yMm = MORTAR;
+    const bricks = [];
+
+    for (let courseIdx = 0; courseIdx < state.rows; courseIdx++) {
+      const courseDef = getCourseDef(courseIdx);
+
+      // Course height derives from contained brick types
+      let courseHeight = BRICK_HEIGHT;
+      if (courseDef.pattern.some(t => t === 'soldier' || t === 'sailor')) courseHeight = SOLDIER_H;
+      else if (courseDef.pattern.some(t => t === 'dogtooth'))               courseHeight = DOGTOOTH_W;
+
+      const offsetMm = off[courseDef.offset || 'none']();
+      const isSpecial = !!(courseDef.isBand || courseDef.isCrown);
+
+      let xMm = -offsetMm;
+      let brickIdx = 0;
+      while (xMm < wallWidthMm + 50) {
+        for (const type of courseDef.pattern) {
+          if (xMm > wallWidthMm) break;
+          const w = brickWidth(type);
+          const h = brickHeight(type);
+
+          const ctx = { courseIdx, brickIdx, brickType: type };
+          let colorIdx, projection;
+
+          if (isSpecial) {
+            // Ornamental belt courses use accent palette; structural crown courses
+            // (stretcher/header in corbel) use base palette.
+            colorIdx = (type === 'dogtooth' || type === 'dentil' || type === 'soldier' || type === 'sailor') ? 1 : 0;
+            projection = courseDef.projection || 0;
+          } else {
+            colorIdx = colorRule.apply({ ...ctx, params: state.colorParams }) | 0;
+            projection = projRule.apply({ ...ctx, params: state.projParams }) || 0;
+          }
+
+          // Quoin override: bricks in the left/right edge columns get accent treatment.
+          if (state.quoinId !== 'none' && state.quoinWidth > 0) {
+            const q = QUOIN_OPTIONS.find(o => o.id === state.quoinId);
+            const zoneMm = state.quoinWidth * (STRETCHER_LEN + MORTAR);
+            const isLeftEdge  = xMm + w <= zoneMm + MORTAR;
+            const isRightEdge = xMm     >= wallWidthMm - zoneMm;
+            if (isLeftEdge || isRightEdge) {
+              if (q.color)   colorIdx = 1;
+              if (q.project) projection = Math.max(projection, state.quoinProjection);
+            }
+          }
+
+          if (xMm + w > 0 && xMm < wallWidthMm) {
+            bricks.push({
+              x: xMm, y: yMm, w, h,
+              type,
+              colorIdx: Math.min(state.palette.length - 1, Math.max(0, colorIdx)),
+              projection,
+              courseIdx, brickIdx,
+            });
+          }
+
+          xMm += w + MORTAR;
+          brickIdx++;
+        }
+      }
+      yMm += courseHeight + MORTAR;
+    }
+
+    const wallHeightMm = yMm;
+    return { bricks, wallWidthMm, wallHeightMm };
+  }
+
+  // ============ Rendering (SVG) ============
+  const svg = document.getElementById('wall');
+  const SVG_NS = 'http://www.w3.org/2000/svg';
+  function svgEl(name, attrs = {}) {
+    const el = document.createElementNS(SVG_NS, name);
+    for (const k in attrs) el.setAttribute(k, attrs[k]);
+    return el;
+  }
+
+  // ----- per-brick render helpers -----
+  function drawRect(brick, baseColor, projection, lightSign) {
+    if (projection < 0) {
+      // RECESSED — darker fill + inset shadows on light-facing edges
+      const darkAmount = Math.min(0.5, Math.abs(projection) / 90);
+      svg.appendChild(svgEl('rect', {
+        x: brick.x, y: brick.y, width: brick.w, height: brick.h,
+        fill: mixColor(baseColor, '#000', darkAmount),
+      }));
+      const insetDx = Math.abs(projection) * 0.30 * lightSign;
+      const insetDy = Math.abs(projection) * 0.30;
+      svg.appendChild(svgEl('rect', {
+        x: brick.x, y: brick.y, width: brick.w, height: Math.min(brick.h, insetDy),
+        fill: 'rgba(0,0,0,0.42)',
+      }));
+      const sideX = lightSign > 0 ? brick.x : brick.x + brick.w - insetDx;
+      svg.appendChild(svgEl('rect', {
+        x: sideX, y: brick.y, width: Math.min(brick.w, insetDx), height: brick.h,
+        fill: 'rgba(0,0,0,0.34)',
+      }));
+      return;
+    }
+    if (projection === 0) {
+      svg.appendChild(svgEl('rect', {
+        x: brick.x, y: brick.y, width: brick.w, height: brick.h,
+        fill: baseColor,
+      }));
+      return;
+    }
+    // PROJECTING
+    const shadowDx = projection * 0.35 * -lightSign;
+    const shadowDy = projection * 0.35;
+    const shadowAlpha = Math.min(0.55, projection / 70);
+    svg.appendChild(svgEl('rect', {
+      x: brick.x + shadowDx, y: brick.y + shadowDy,
+      width: brick.w, height: brick.h,
+      fill: `rgba(16, 10, 4, ${shadowAlpha.toFixed(3)})`,
+    }));
+    const litAmount = Math.min(0.18, projection / 200);
+    svg.appendChild(svgEl('rect', {
+      x: brick.x, y: brick.y, width: brick.w, height: brick.h,
+      fill: mixColor(baseColor, '#fff', litAmount),
+    }));
+    const hH = Math.max(1.2, Math.min(3.5, projection * 0.04 + 1.2));
+    svg.appendChild(svgEl('rect', {
+      x: brick.x, y: brick.y, width: brick.w, height: hH,
+      fill: 'rgba(255, 240, 215, 0.55)',
+    }));
+    const sideW = Math.max(0.6, hH * 0.5);
+    const sideX = lightSign > 0 ? brick.x : brick.x + brick.w - sideW;
+    svg.appendChild(svgEl('rect', {
+      x: sideX, y: brick.y, width: sideW, height: brick.h,
+      fill: 'rgba(255, 240, 215, 0.32)',
+    }));
+  }
+
+  function drawDogtooth(brick, baseColor, projection, lightSign) {
+    // Diamond pointing out (corner-toward-viewer); render as 45° rhombus in elevation.
+    const cx = brick.x + brick.w / 2;
+    const cy = brick.y + brick.h / 2;
+    const halfW = brick.w * 0.50;
+    const halfH = brick.h * 0.50;
+    const path = (dx, dy) =>
+      `M${cx - halfW + dx} ${cy + dy} L${cx + dx} ${cy - halfH + dy} L${cx + halfW + dx} ${cy + dy} L${cx + dx} ${cy + halfH + dy} Z`;
+
+    const proj = Math.max(0, projection);
+    if (proj > 0) {
+      const sdx = -lightSign * proj * 0.35;
+      const sdy = proj * 0.35;
+      const sAlpha = Math.min(0.55, proj / 70);
+      svg.appendChild(svgEl('path', { d: path(sdx, sdy), fill: `rgba(16,10,4,${sAlpha.toFixed(3)})` }));
+    }
+    const litAmount = Math.min(0.18, proj / 200);
+    const fill = proj > 0 ? mixColor(baseColor, '#fff', litAmount) : baseColor;
+    svg.appendChild(svgEl('path', { d: path(0, 0), fill }));
+
+    if (proj > 0) {
+      // lit triangle on the side facing the light (top + light-side)
+      const hx = lightSign > 0 ? -halfW : halfW;
+      const litPath = `M${cx} ${cy - halfH} L${cx + hx} ${cy} L${cx + hx * 0.45} ${cy - halfH * 0.45} Z`;
+      svg.appendChild(svgEl('path', { d: litPath, fill: 'rgba(255,240,215,0.50)' }));
+    }
+  }
+
+  function drawDentil(brick, baseColor, projection, lightSign) {
+    // brick.w includes the gap; the actual block is DENTIL_W wide, left-aligned.
+    const blockW = DENTIL_W;
+    const proj = Math.max(0, projection);
+    if (proj > 0) {
+      const sdx = -lightSign * proj * 0.35;
+      const sdy = proj * 0.35;
+      const sAlpha = Math.min(0.55, proj / 70);
+      svg.appendChild(svgEl('rect', {
+        x: brick.x + sdx, y: brick.y + sdy,
+        width: blockW, height: brick.h,
+        fill: `rgba(16,10,4,${sAlpha.toFixed(3)})`,
+      }));
+    }
+    const litAmount = Math.min(0.18, proj / 200);
+    const fill = proj > 0 ? mixColor(baseColor, '#fff', litAmount) : baseColor;
+    svg.appendChild(svgEl('rect', { x: brick.x, y: brick.y, width: blockW, height: brick.h, fill }));
+    if (proj > 0) {
+      const hH = Math.max(1.2, Math.min(3.5, proj * 0.04 + 1.2));
+      svg.appendChild(svgEl('rect', { x: brick.x, y: brick.y, width: blockW, height: hH, fill: 'rgba(255,240,215,0.55)' }));
+      const sideW = Math.max(0.8, hH * 0.55);
+      const sideX = lightSign > 0 ? brick.x : brick.x + blockW - sideW;
+      svg.appendChild(svgEl('rect', { x: sideX, y: brick.y, width: sideW, height: brick.h, fill: 'rgba(255,240,215,0.32)' }));
+    }
+  }
+
+  function render() {
+    const { bricks, wallWidthMm, wallHeightMm } = buildWall();
+
+    // viewbox with a little padding
+    const pad = MORTAR * 2;
+    const vbW = wallWidthMm + pad * 2;
+    const vbH = wallHeightMm + pad;
+    svg.setAttribute('viewBox', `${-pad} 0 ${vbW} ${vbH}`);
+    svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+
+    // clear
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+
+    // mortar bg
+    svg.appendChild(svgEl('rect', {
+      x: -pad, y: 0, width: vbW, height: vbH,
+      fill: state.mortarColor,
+    }));
+
+    // Sort: draw recessed bricks first (so they sit "behind"),
+    // then flush, then projecting in order of depth (lower projection first)
+    const sorted = bricks.slice().sort((a, b) => a.projection - b.projection);
+
+    const lightSign = state.light === 'NW' ? 1 : -1;
+
+    for (const brick of sorted) {
+      const baseColor = state.palette[brick.colorIdx] || state.palette[0];
+      if (brick.type === 'dogtooth')      drawDogtooth(brick, baseColor, brick.projection, lightSign);
+      else if (brick.type === 'dentil')   drawDentil(brick, baseColor, brick.projection, lightSign);
+      else                                drawRect(brick, baseColor, brick.projection, lightSign);
+    }
+
+    // meta
+    const bond = BONDS.find(b => b.id === state.bondId);
+    const meta = document.getElementById('meta');
+    meta.innerHTML = `<strong>${bond.name}</strong> · ${state.cols}w × ${state.rows}h · ${bricks.length} bricks`;
+  }
+
+  // mix two hex colors. amount 0..1
+  function mixColor(c1, c2, amount) {
+    const [r1, g1, b1] = hexToRgb(c1);
+    const [r2, g2, b2] = hexToRgb(c2);
+    const r = Math.round(r1 + (r2 - r1) * amount);
+    const g = Math.round(g1 + (g2 - g1) * amount);
+    const b = Math.round(b1 + (b2 - b1) * amount);
+    return `rgb(${r}, ${g}, ${b})`;
+  }
+  function hexToRgb(hex) {
+    if (hex.startsWith('rgb')) {
+      const m = hex.match(/(\d+)/g);
+      return [+m[0], +m[1], +m[2]];
+    }
+    let h = hex.replace('#', '');
+    if (h.length === 3) h = h.split('').map(c => c + c).join('');
+    return [parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)];
+  }
+
+  // ============ UI Setup ============
+  function populateBonds() {
+    const sel = document.getElementById('bond');
+    sel.innerHTML = '';
+    BONDS.forEach(b => {
+      const opt = document.createElement('option');
+      opt.value = b.id;
+      opt.textContent = b.name;
+      sel.appendChild(opt);
+    });
+    sel.value = state.bondId;
+    updateBondDesc();
+  }
+  function updateBondDesc() {
+    const bond = BONDS.find(b => b.id === state.bondId);
+    document.getElementById('bond-desc').innerHTML = bond.desc;
+  }
+
+  function populateRuleSelect(selId, paramContainerId, rules, ruleIdKey, paramsKey) {
+    const sel = document.getElementById(selId);
+    sel.innerHTML = '';
+    rules.forEach(r => {
+      const opt = document.createElement('option');
+      opt.value = r.id;
+      opt.textContent = r.name;
+      sel.appendChild(opt);
+    });
+    sel.value = state[ruleIdKey];
+    sel.addEventListener('change', () => {
+      state[ruleIdKey] = sel.value;
+      // reset params to defaults
+      const rule = rules.find(r => r.id === sel.value);
+      state[paramsKey] = {};
+      for (const k in rule.params) state[paramsKey][k] = rule.params[k].default;
+      renderRuleParams(paramContainerId, rule, paramsKey);
+      render();
+    });
+    // initial params
+    const rule = rules.find(r => r.id === sel.value);
+    for (const k in rule.params) {
+      if (state[paramsKey][k] === undefined) state[paramsKey][k] = rule.params[k].default;
+    }
+    renderRuleParams(paramContainerId, rule, paramsKey);
+  }
+
+  function renderRuleParams(containerId, rule, paramsKey) {
+    const container = document.getElementById(containerId);
+    container.innerHTML = '';
+    for (const k in rule.params) {
+      const param = rule.params[k];
+      const wrap = document.createElement('div');
+      wrap.className = 'control';
+      const label = document.createElement('label');
+      label.innerHTML = `${param.label} <span class="v">${state[paramsKey][k]}</span>`;
+      wrap.appendChild(label);
+      const input = document.createElement('input');
+      input.type = 'range';
+      input.min = param.min;
+      input.max = param.max;
+      input.step = param.step || 1;
+      input.value = state[paramsKey][k];
+      input.addEventListener('input', () => {
+        state[paramsKey][k] = +input.value;
+        label.querySelector('.v').textContent = input.value;
+        render();
+      });
+      wrap.appendChild(input);
+      container.appendChild(wrap);
+    }
+  }
+
+  function setupPalette() {
+    const container = document.getElementById('palette');
+    container.innerHTML = '';
+    const labels = ['Base', 'Accent', 'Light', 'Glaze'];
+    state.palette.forEach((color, idx) => {
+      const sw = document.createElement('div');
+      sw.className = 'swatch';
+      sw.style.background = color;
+      sw.title = labels[idx] || `Color ${idx+1}`;
+      const input = document.createElement('input');
+      input.type = 'color';
+      input.value = color;
+      input.addEventListener('input', () => {
+        state.palette[idx] = input.value;
+        sw.style.background = input.value;
+        render();
+      });
+      sw.appendChild(input);
+      container.appendChild(sw);
+    });
+    // mortar
+    const sw = document.createElement('div');
+    sw.className = 'swatch mortar';
+    sw.style.background = state.mortarColor;
+    sw.title = 'Mortar';
+    const input = document.createElement('input');
+    input.type = 'color';
+    input.value = state.mortarColor;
+    input.addEventListener('input', () => {
+      state.mortarColor = input.value;
+      sw.style.background = input.value;
+      render();
+    });
+    sw.appendChild(input);
+    container.appendChild(sw);
+  }
+
+  // ============ Wire up controls ============
+  function bindRanges() {
+    const bindings = [
+      ['cols', 'cols-v'],
+      ['rows', 'rows-v'],
+      ['mortar', 'mortar-v'],
+      ['bh', 'bh-v'],
+    ];
+    for (const [id, vid] of bindings) {
+      const el = document.getElementById(id);
+      const v = document.getElementById(vid);
+      el.addEventListener('input', () => {
+        const value = +el.value;
+        v.textContent = value;
+        if (id === 'cols') state.cols = value;
+        else if (id === 'rows') state.rows = value;
+        else if (id === 'mortar') MORTAR = value;
+        else if (id === 'bh') BRICK_HEIGHT = value;
+        render();
+      });
+    }
+  }
+
+  document.getElementById('bond').addEventListener('change', e => {
+    state.bondId = e.target.value;
+    const bond = BONDS.find(b => b.id === state.bondId);
+    updateBondDesc();
+    // auto-apply hinted color rule
+    if (bond.hint) {
+      if (bond.hint.colorRule) {
+        state.colorRuleId = bond.hint.colorRule;
+        document.getElementById('color-rule').value = state.colorRuleId;
+        const rule = COLOR_RULES.find(r => r.id === state.colorRuleId);
+        state.colorParams = {};
+        for (const k in rule.params) state.colorParams[k] = rule.params[k].default;
+        renderRuleParams('color-params', rule, 'colorParams');
+      }
+      if (bond.hint.palette) {
+        for (let i = 0; i < bond.hint.palette.length && i < state.palette.length; i++) {
+          state.palette[i] = bond.hint.palette[i];
+        }
+        setupPalette();
+      }
+    }
+    render();
+  });
+
+  document.getElementById('light').addEventListener('change', (e) => {
+    state.light = e.target.value;
+    render();
+  });
+
+  document.getElementById('randomize').addEventListener('click', () => {
+    const bond = BONDS[Math.floor(Math.random() * BONDS.length)];
+    state.bondId = bond.id;
+    document.getElementById('bond').value = bond.id;
+    updateBondDesc();
+
+    const cr = COLOR_RULES[Math.floor(Math.random() * COLOR_RULES.length)];
+    state.colorRuleId = cr.id;
+    state.colorParams = {};
+    for (const k in cr.params) state.colorParams[k] = cr.params[k].min + Math.floor(Math.random() * (cr.params[k].max - cr.params[k].min + 1));
+    document.getElementById('color-rule').value = cr.id;
+    renderRuleParams('color-params', cr, 'colorParams');
+
+    const pr = PROJECTION_RULES[Math.floor(Math.random() * PROJECTION_RULES.length)];
+    state.projRuleId = pr.id;
+    state.projParams = {};
+    for (const k in pr.params) state.projParams[k] = pr.params[k].min + Math.floor(Math.random() * (pr.params[k].max - pr.params[k].min + 1));
+    document.getElementById('proj-rule').value = pr.id;
+    renderRuleParams('proj-params', pr, 'projParams');
+
+    // 50% chance of a decorative band
+    const bandPick = Math.random() < 0.5
+      ? BAND_RULES[1 + Math.floor(Math.random() * (BAND_RULES.length - 1))]
+      : BAND_RULES[0];
+    state.bandRuleId = bandPick.id;
+    state.bandParams = {};
+    for (const k in bandPick.params) state.bandParams[k] = bandPick.params[k].min + Math.floor(Math.random() * (bandPick.params[k].max - bandPick.params[k].min + 1));
+    document.getElementById('band-rule').value = bandPick.id;
+    renderRuleParams('band-params', bandPick, 'bandParams');
+    updateBandDesc();
+
+    // 35% chance of a crown
+    const crownPick = Math.random() < 0.35
+      ? CROWN_OPTIONS[1 + Math.floor(Math.random() * (CROWN_OPTIONS.length - 1))]
+      : CROWN_OPTIONS[0];
+    state.crownId = crownPick.id;
+    document.getElementById('crown').value = crownPick.id;
+    updateCrownDesc();
+
+    // 30% chance of quoining
+    const quoinPick = Math.random() < 0.30
+      ? QUOIN_OPTIONS[1 + Math.floor(Math.random() * (QUOIN_OPTIONS.length - 1))]
+      : QUOIN_OPTIONS[0];
+    state.quoinId = quoinPick.id;
+    state.quoinWidth = 1 + Math.floor(Math.random() * 4);
+    document.getElementById('quoin').value = quoinPick.id;
+    document.getElementById('quoin-w').value = state.quoinWidth;
+    document.getElementById('quoin-w-v').textContent = state.quoinWidth;
+    updateQuoinDesc();
+
+    render();
+  });
+
+  // ============ Export ============
+  function exportSVG() {
+    const clone = svg.cloneNode(true);
+    clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+    const data = new XMLSerializer().serializeToString(clone);
+    const blob = new Blob([data], { type: 'image/svg+xml;charset=utf-8' });
+    downloadBlob(blob, 'bondwork.svg');
+  }
+  function exportPNG() {
+    const clone = svg.cloneNode(true);
+    clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+    const vb = svg.getAttribute('viewBox').split(' ').map(Number);
+    const wallW = vb[2], wallH = vb[3];
+    clone.setAttribute('width', wallW);
+    clone.setAttribute('height', wallH);
+    const data = new XMLSerializer().serializeToString(clone);
+    const blob = new Blob([data], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const img = new Image();
+    img.onload = () => {
+      const scale = 2;
+      const canvas = document.createElement('canvas');
+      canvas.width = wallW * scale;
+      canvas.height = wallH * scale;
+      const ctx = canvas.getContext('2d');
+      ctx.imageSmoothingEnabled = true;
+      ctx.scale(scale, scale);
+      ctx.drawImage(img, 0, 0);
+      canvas.toBlob((pngBlob) => {
+        downloadBlob(pngBlob, 'bondwork.png');
+        URL.revokeObjectURL(url);
+      });
+    };
+    img.src = url;
+  }
+  function downloadBlob(blob, filename) {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }
+  document.getElementById('export-svg').addEventListener('click', exportSVG);
+  document.getElementById('export-png').addEventListener('click', exportPNG);
+
+  // ============ Crown setup ============
+  function populateCrown() {
+    const sel = document.getElementById('crown');
+    sel.innerHTML = '';
+    CROWN_OPTIONS.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.id;
+      opt.textContent = c.name;
+      sel.appendChild(opt);
+    });
+    sel.value = state.crownId;
+    sel.addEventListener('change', () => {
+      state.crownId = sel.value;
+      updateCrownDesc();
+      render();
+    });
+    updateCrownDesc();
+  }
+  function updateCrownDesc() {
+    const c = CROWN_OPTIONS.find(o => o.id === state.crownId);
+    const el = document.getElementById('crown-desc');
+    if (c && c.desc) { el.textContent = c.desc; el.style.display = 'block'; }
+    else             { el.style.display = 'none'; }
+  }
+
+  function updateBandDesc() {
+    const r = BAND_RULES.find(b => b.id === state.bandRuleId);
+    const el = document.getElementById('band-desc');
+    if (r && r.desc) { el.textContent = r.desc; el.style.display = 'block'; }
+    else             { el.style.display = 'none'; }
+  }
+
+  // ============ Quoin setup ============
+  function populateQuoin() {
+    const sel = document.getElementById('quoin');
+    sel.innerHTML = '';
+    QUOIN_OPTIONS.forEach(q => {
+      const opt = document.createElement('option');
+      opt.value = q.id;
+      opt.textContent = q.name;
+      sel.appendChild(opt);
+    });
+    sel.value = state.quoinId;
+    sel.addEventListener('change', () => {
+      state.quoinId = sel.value;
+      updateQuoinDesc();
+      render();
+    });
+    document.getElementById('quoin-w').addEventListener('input', (e) => {
+      state.quoinWidth = +e.target.value;
+      document.getElementById('quoin-w-v').textContent = e.target.value;
+      render();
+    });
+    document.getElementById('quoin-p').addEventListener('input', (e) => {
+      state.quoinProjection = +e.target.value;
+      document.getElementById('quoin-p-v').textContent = e.target.value;
+      render();
+    });
+    updateQuoinDesc();
+  }
+  function updateQuoinDesc() {
+    const q = QUOIN_OPTIONS.find(o => o.id === state.quoinId);
+    const el = document.getElementById('quoin-desc');
+    if (q && q.desc) { el.textContent = q.desc; el.style.display = 'block'; }
+    else             { el.style.display = 'none'; }
+  }
+
+  // ============ Init ============
+  populateBonds();
+  populateRuleSelect('color-rule', 'color-params', COLOR_RULES, 'colorRuleId', 'colorParams');
+  populateRuleSelect('proj-rule', 'proj-params', PROJECTION_RULES, 'projRuleId', 'projParams');
+  populateRuleSelect('band-rule', 'band-params', BAND_RULES, 'bandRuleId', 'bandParams');
+  document.getElementById('band-rule').addEventListener('change', updateBandDesc);
+  updateBandDesc();
+  populateCrown();
+  populateQuoin();
+  setupPalette();
+  bindRanges();
+  render();
+})();
+</script>
+</body>
+</html>
