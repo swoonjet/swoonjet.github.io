@@ -462,6 +462,74 @@
       ],
       // simplified visually — same pattern as Flemish but indicate cavity via color rule
     },
+
+    // ===== EXPERIMENTAL BONDS =====
+    // These change the actual brick placement (not just colour/projection).
+    // They use a generateCourse(idx) function instead of a static courses array.
+    { id: 'fibonacci_spiral',
+      name: 'Fibonacci spiral',
+      experimental: true,
+      desc: 'Every course is offset from the wall edge by an irrational multiple of one stretcher pitch — specifically the golden ratio φ ≈ 1.618. Because φ is irrational, the offset sequence never exactly repeats; diagonal joint lines precess slowly across the wall, tracing a logarithmic spiral.',
+      generateCourse: (courseIdx) => {
+        const phi = 1.6180339887498949;
+        const unit = STRETCHER_LEN + MORTAR;
+        const frac = (((courseIdx * phi) % 1) + 1) % 1;
+        return { pattern: ['S'], offsetMm: frac * unit };
+      },
+    },
+    { id: 'thue_morse',
+      name: 'Thue-Morse',
+      experimental: true,
+      desc: 'Header / stretcher placement in each course follows the Thue-Morse sequence — T(n) is the parity of the number of 1-bits in n. The sequence is cube-free (no three identical adjacent triples appear) and is the canonical "most balanced" aperiodic binary string. Discovered in 1851; rediscovered in chess (a draw rule) and combinatorics.',
+      generateCourse: (courseIdx) => {
+        const pattern = [];
+        for (let i = 0; i < 140; i++) {
+          let n = courseIdx * 13 + i, bits = 0;
+          while (n) { bits += n & 1; n >>>= 1; }
+          pattern.push((bits & 1) ? 'H' : 'S');
+        }
+        return { pattern };
+      },
+    },
+    { id: 'sierpinski',
+      name: 'Sierpinski (Wolfram 90)',
+      experimental: true,
+      desc: 'Header positions per course are the rows of Wolfram\'s elementary cellular automaton, rule 90, seeded from a single header at the wall\'s top-left. The headers descend in a true Sierpinski-triangle fractal — a brick analogue of the most famous CA pattern.',
+      generateCourse: (courseIdx) => {
+        const pattern = [];
+        for (let i = 0; i < 140; i++) {
+          pattern.push(caGet(90, courseIdx, i) ? 'H' : 'S');
+        }
+        return { pattern };
+      },
+    },
+    { id: 'prime_bond',
+      name: 'Prime indices',
+      experimental: true,
+      desc: 'Header bricks appear at brick positions whose index is prime. Each course shifts the index offset so the prime distribution slides across the wall. Gaps between primes grow logarithmically — the pattern never settles into a rhythm.',
+      generateCourse: (courseIdx) => {
+        const pattern = [];
+        for (let i = 0; i < 140; i++) {
+          const n = courseIdx * 7 + i + 2;
+          pattern.push(isPrime(n) ? 'H' : 'S');
+        }
+        return { pattern };
+      },
+    },
+    { id: 'dither_gradient',
+      name: 'Dithered gradient',
+      experimental: true,
+      desc: 'Header density follows a vertical gradient — sparse stretchers at the top, packed headers at the bottom — dithered through an 8×8 Bayer threshold matrix. A halftone-like rendering of a continuous-tone gradient at brick resolution.',
+      generateCourse: (courseIdx) => {
+        const pattern = [];
+        const density = courseIdx / 24;
+        for (let i = 0; i < 140; i++) {
+          const t = BAYER_8[courseIdx & 7][i & 7] / 64;
+          pattern.push(density > t ? 'H' : 'S');
+        }
+        return { pattern };
+      },
+    },
   ];
 
   // ============ Color rules ============
@@ -876,15 +944,35 @@
     return ((x >>> 0) / 4294967295);
   }
 
-  // ============ Cellular-automaton cache (for the Wolfram CA color rule) ============
-  const CA_W = 120;
-  const CA_H = 120;
+  // ============ Helpers for experimental bonds ============
+  function isPrime(n) {
+    if (n < 2) return false;
+    if (n < 4) return true;
+    if ((n & 1) === 0) return false;
+    for (let i = 3; i * i <= n; i += 2) if (n % i === 0) return false;
+    return true;
+  }
+  // 8×8 Bayer matrix for ordered dithering (values 0–63)
+  const BAYER_8 = [
+    [ 0,32, 8,40, 2,34,10,42],
+    [48,16,56,24,50,18,58,26],
+    [12,44, 4,36,14,46, 6,38],
+    [60,28,52,20,62,30,54,22],
+    [ 3,35,11,43, 1,33, 9,41],
+    [51,19,59,27,49,17,57,25],
+    [15,47, 7,39,13,45, 5,37],
+    [63,31,55,23,61,29,53,21],
+  ];
+
+  // ============ Cellular-automaton cache (Wolfram CA — used by both color rule and Sierpinski bond) ============
+  const CA_W = 160;
+  const CA_H = 160;
   const _caCache = new Map();
   function caGet(rule, courseIdx, brickIdx) {
     let grid = _caCache.get(rule);
     if (!grid) {
       grid = new Uint8Array(CA_W * CA_H);
-      grid[CA_W >> 1] = 1; // single seed at top centre
+      grid[0] = 1; // single seed at the top-left so the pattern is visible from any wall edge
       for (let r = 1; r < CA_H; r++) {
         const rowBase = r * CA_W;
         const prevBase = (r - 1) * CA_W;
@@ -971,6 +1059,10 @@
       }
     }
 
+    // Experimental bonds generate each course dynamically
+    if (bond.generateCourse) {
+      return bond.generateCourse(adjIdx);
+    }
     return bond.courses[adjIdx % bond.courses.length];
   }
 
@@ -990,7 +1082,9 @@
       if (courseDef.pattern.some(t => t === 'soldier' || t === 'sailor')) courseHeight = SOLDIER_H;
       else if (courseDef.pattern.some(t => t === 'dogtooth'))               courseHeight = DOGTOOTH_W;
 
-      const offsetMm = off[courseDef.offset || 'none']();
+      const offsetMm = (typeof courseDef.offsetMm === 'number')
+        ? courseDef.offsetMm
+        : off[courseDef.offset || 'none']();
       const isSpecial = !!(courseDef.isBand || courseDef.isCrown);
 
       let xMm = -offsetMm;
@@ -1243,12 +1337,22 @@
   function populateBonds() {
     const sel = document.getElementById('bond');
     sel.innerHTML = '';
-    BONDS.forEach(b => {
-      const opt = document.createElement('option');
-      opt.value = b.id;
-      opt.textContent = b.name;
-      sel.appendChild(opt);
-    });
+    const classical    = BONDS.filter(b => !b.experimental);
+    const experimental = BONDS.filter(b =>  b.experimental);
+    const addGroup = (label, items) => {
+      if (!items.length) return;
+      const g = document.createElement('optgroup');
+      g.label = label;
+      items.forEach(b => {
+        const opt = document.createElement('option');
+        opt.value = b.id;
+        opt.textContent = b.name;
+        g.appendChild(opt);
+      });
+      sel.appendChild(g);
+    };
+    addGroup('Classical', classical);
+    addGroup('— Experimental —', experimental);
     sel.value = state.bondId;
     updateBondDesc();
   }
