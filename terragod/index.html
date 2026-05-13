@@ -310,7 +310,7 @@ body {
 </div>
 
 <div id="panel">
-  <h2>Terragod</h2>
+  <h2>Controls</h2>
 
   <div class="sec-hdr">Mode</div>
   <div class="row">
@@ -1666,6 +1666,22 @@ function renderTerrain() {
   const openStrokeD = openStrokeParts.join(' ');
   const fillD     = (closedD + ' ' + openFillD).trim();
   const allCoastD = (closedD + ' ' + openStrokeD).trim();
+
+  // Shallow-water halo — a wide light-blue stroke along every coastline,
+  // drawn beneath the land fill. The cream fill on top covers the half
+  // of the stroke that's inside the land, leaving only the outside half
+  // visible as a soft band of lighter water around each landform.
+  // Non-scaling-stroke keeps the halo a consistent visual width at any
+  // zoom level. allCoastD is used (not fillD) so the halo doesn't run
+  // along the canvas-edge boundary corners of bleed-off continents.
+  if (allCoastD) {
+    out.push(
+      `<path d="${allCoastD}" fill="none" stroke="#c3d2dc" ` +
+      `stroke-width="12" stroke-opacity="0.80" ` +
+      `stroke-linejoin="round" stroke-linecap="round" ` +
+      `vector-effect="non-scaling-stroke"/>`
+    );
+  }
 
   // Land fill — warm paper, contrasting with the cooler ocean.
   if (fillD) out.push(`<path d="${fillD}" fill="#efe6cf" fill-rule="evenodd" stroke="none"/>`);
