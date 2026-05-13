@@ -1579,14 +1579,70 @@ function renderTerrain() {
 
   // Build coast path data.
   // - Closed coasts: same path used for fill + stroke.
-  // - Open coasts (continents clipped by the canvas edge): the fill
-  //   path appends "Z" so the polyline closes to its start point, which
-  //   keeps the land filled even when it bleeds off the page. The stroke
-  //   path leaves them open so no false coastline is drawn across the
-  //   ocean.
+  // - Open coasts (continents clipped by the canvas edge): only those
+  //   with BOTH endpoints on the canvas boundary get filled — anything
+  //   else is a numerical/saddle artifact and would punch wedge-shaped
+  //   holes in the fill via evenodd overlap. Filled open coasts get the
+  //   shorter boundary corners appended (sharp L segments) so the close
+  //   traces along the canvas edge instead of cutting diagonally.
+  const bEps = 2.5;
+  const sideOf = p => {
+    if (p.y <= bEps)         return 0; // T
+    if (p.x >= W - bEps)     return 1; // R
+    if (p.y >= H - bEps)     return 2; // B
+    if (p.x <= bEps)         return 3; // L
+    return -1;
+  };
+  // Corner encountered going CW from side i (T→R→B→L→T):
+  // T(0) → R-side via top-right; R(1) → B via bottom-right; etc.
+  const cornerCW = [
+    { x: W, y: 0 }, { x: W, y: H }, { x: 0, y: H }, { x: 0, y: 0 }
+  ];
+  // Corner encountered going CCW from side i (T→L→B→R→T):
+  const cornerCCW = [
+    { x: 0, y: 0 }, { x: W, y: 0 }, { x: W, y: H }, { x: 0, y: H }
+  ];
+  // Map: cornerCCW[i] = corner you cross when leaving side i CCW.
+  // From T(0) going CCW → top-left (0,0). From R(1) going CCW → top-right (W,0). Etc.
+  const closeAlongBoundary = (pts) => {
+    if (pts.length < 2) return null;
+    const s = sideOf(pts[0]);
+    const e = sideOf(pts[pts.length - 1]);
+    if (s < 0 || e < 0) return null;
+    const cs = [];
+    if (s !== e) {
+      const stepsCW  = (s - e + 4) % 4;
+      const stepsCCW = (e - s + 4) % 4;
+      let cur = e;
+      if (stepsCW <= stepsCCW) {
+        for (let i = 0; i < stepsCW; i++) {
+          cs.push(cornerCW[cur]);
+          cur = (cur + 1) % 4;
+        }
+      } else {
+        for (let i = 0; i < stepsCCW; i++) {
+          cs.push(cornerCCW[cur]);
+          cur = (cur + 3) % 4;
+        }
+      }
+    }
+    return { coast: pts, corners: cs };
+  };
+
   const closedD = closedSmoothed.map(p => polyToPath(scalePoly(p, sxf), true)).join(' ');
   const openD   = openSmoothed.map(p   => polyToPath(scalePoly(p, sxf), false)).join(' ');
-  const openD_filled = openSmoothed.map(p => polyToPath(scalePoly(p, sxf), false) + ' Z').join(' ');
+
+  const openD_filled = openSmoothed
+    .map(p => closeAlongBoundary(p))
+    .filter(c => c != null)
+    .map(c => {
+      let d = polyToPath(scalePoly(c.coast, sxf), false);
+      for (const corner of c.corners) {
+        d += `L${(corner.x * sxf).toFixed(2)} ${(corner.y * sxf).toFixed(2)}`;
+      }
+      return d + ' Z';
+    }).join(' ');
+
   const allCoastD = (closedD + ' ' + openD).trim();
   const fillD     = (closedD + ' ' + openD_filled).trim();
 
