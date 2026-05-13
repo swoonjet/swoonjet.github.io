@@ -1,0 +1,1880 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Terragod — Terrain Generator</title>
+<style>
+:root {
+  --paper:       #efe6cf;
+  --paper-warm:  #e6dcc0;
+  --paper-edge:  #d4c8a4;
+  /* Ocean — pale dusky blue. Low saturation keeps it minimal and lets
+     the warm cream land read as a clear contrasting silhouette. */
+  --ocean:       #a8b8c4;
+  --ocean-dk:    #8a9aa6;
+  --ink:         #1c1610;
+  --ink-mid:     #5a4a30;
+  --ink-light:   #8a7656;
+  --ink-faint:   #b8a880;
+  --ui-bg:       #1c1610;
+  --ui-fg:       #efe6cf;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; }
+body {
+  background: var(--ocean);
+  color: var(--ink);
+  font-family: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
+  /* Block layout so #stage can fill the full viewport. Panel floats
+     on top as a translucent overlay (see #panel below). */
+  display: block;
+}
+#stage {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--ocean);
+}
+#stage-canvas {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  cursor: grab;
+  background: var(--ocean);
+}
+#stage-canvas.dragging { cursor: grabbing; }
+#stage-header {
+  flex-shrink: 0;
+  /* Right padding leaves room for the floating panel so the centered
+     title doesn't slide under it. */
+  padding: 28px 360px 18px 32px;
+  text-align: center;
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+  background: linear-gradient(to bottom, var(--paper) 0%, var(--paper-warm) 100%);
+  user-select: none;
+}
+#stage-header .ttl {
+  font-family: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
+  font-size: 34px;
+  font-weight: 600;
+  color: var(--ink);
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+#stage-header .subline {
+  font-family: 'IBM Plex Mono', ui-monospace, Menlo, monospace;
+  font-size: 10px;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--ink-mid);
+  margin-bottom: 8px;
+}
+#stage-header .seed {
+  font-family: 'IBM Plex Mono', ui-monospace, Menlo, monospace;
+  font-size: 9px;
+  letter-spacing: 0.20em;
+  color: var(--ink-faint);
+}
+#svg-wrap {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#map {
+  display: block;
+  width: 100%;
+  height: 100%;
+  user-select: none;
+}
+#svg-wrap {
+  position: absolute;
+  inset: 0;
+}
+
+/* ─── Control panel — fixed overlay so ocean extends behind it ─── */
+#panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 320px;
+  background: rgba(28, 22, 16, 0.82);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: var(--ui-fg);
+  padding: 22px 22px 22px 22px;
+  overflow-y: auto;
+  font-family: 'IBM Plex Mono', ui-monospace, Menlo, monospace;
+  font-size: 11px;
+  border-left: 1px solid rgba(255,255,255,0.06);
+  z-index: 50;
+}
+#panel h2 {
+  font-family: 'Iowan Old Style', Palatino, Georgia, serif;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ui-fg);
+  margin-bottom: 18px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #3a3022;
+}
+#panel .sec-hdr {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.20em;
+  text-transform: uppercase;
+  color: #8a7656;
+  margin: 18px 0 8px 0;
+  padding-bottom: 4px;
+  border-bottom: 1px solid #2c241a;
+}
+#panel .sec-hdr:first-of-type { margin-top: 4px; }
+.row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 7px;
+}
+.row label {
+  flex: 1;
+  font-size: 10px;
+  color: #c9bea0;
+  letter-spacing: 0.05em;
+  text-transform: lowercase;
+}
+.row .val {
+  font-size: 10px;
+  color: var(--ui-fg);
+  font-weight: 600;
+  width: 40px;
+  text-align: right;
+}
+.row input[type=range] {
+  flex: 2;
+  accent-color: #c9a962;
+  cursor: pointer;
+  height: 14px;
+}
+.row select, .row input[type=text], .row input[type=number] {
+  flex: 2;
+  background: #2a2218;
+  color: var(--ui-fg);
+  border: 1px solid #3a3022;
+  padding: 5px 8px;
+  font-family: inherit;
+  font-size: 10px;
+  outline: none;
+  letter-spacing: 0.04em;
+}
+.row select:focus, .row input:focus { border-color: #c9a962; }
+.row select {
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23c9a962'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  padding-right: 24px;
+}
+.panel-btns {
+  display: flex;
+  gap: 6px;
+  margin-top: 14px;
+}
+.pbtn {
+  flex: 1;
+  font-family: inherit;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 9px 6px;
+  background: transparent;
+  color: var(--ui-fg);
+  border: 1px solid #3a3022;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+.pbtn:hover { background: #c9a962; color: var(--ui-bg); border-color: #c9a962; }
+.pbtn-pri { background: #c9a962; color: var(--ui-bg); border-color: #c9a962; }
+.pbtn-pri:hover { background: #d8b66e; }
+.hint {
+  font-size: 9px;
+  color: #6e5e44;
+  margin-top: 4px;
+  letter-spacing: 0.04em;
+  line-height: 1.4;
+}
+#status {
+  position: absolute;
+  top: 22px;
+  right: 26px;
+  font-size: 10px;
+  font-family: 'IBM Plex Mono', ui-monospace, Menlo, monospace;
+  color: var(--ink-mid);
+  letter-spacing: 0.06em;
+  text-align: right;
+}
+#zoom-bar {
+  position: absolute;
+  bottom: 22px;
+  left: 26px;
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  font-size: 10px;
+  font-family: 'IBM Plex Mono', ui-monospace, Menlo, monospace;
+  color: var(--ink-mid);
+  letter-spacing: 0.05em;
+}
+.zbtn {
+  width: 26px; height: 26px;
+  display: flex; align-items: center; justify-content: center;
+  background: transparent;
+  border: 1px solid var(--ink-mid);
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 14px;
+  user-select: none;
+  transition: background 0.12s, color 0.12s;
+}
+.zbtn:hover { background: var(--ink); color: var(--paper); }
+#zlev { min-width: 44px; text-align: center; padding: 0 6px; }
+#controls {
+  position: absolute;
+  bottom: 22px;
+  right: 26px;
+  display: flex;
+  gap: 8px;
+}
+.btn {
+  font-family: inherit;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  padding: 9px 18px;
+  background: var(--ui-bg);
+  color: var(--ui-fg);
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.btn:hover { opacity: 0.85; }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn-sec { background: transparent; color: var(--ink); border: 1px solid var(--ink); }
+.btn-sec:hover { background: var(--ink); color: var(--paper); opacity: 1; }
+#seed-input {
+  font-family: 'IBM Plex Mono', ui-monospace, Menlo, monospace;
+  font-size: 11px;
+  background: transparent;
+  border: 1px solid var(--ink-mid);
+  color: var(--ink);
+  padding: 8px 10px;
+  width: 80px;
+  outline: none;
+  letter-spacing: 0.05em;
+}
+#seed-input:focus { border-color: var(--ink); }
+
+</style>
+</head>
+<body>
+
+<div id="stage">
+  <div id="stage-header">
+    <div class="ttl">Terragod</div>
+    <div class="subline">Terrain Generator</div>
+    <div class="seed">SEED <span id="seed-display">0000</span></div>
+  </div>
+
+  <div id="stage-canvas">
+    <div id="svg-wrap">
+      <svg id="map" xmlns="http://www.w3.org/2000/svg"></svg>
+    </div>
+
+    <div id="status">—</div>
+
+    <div id="zoom-bar">
+      <div class="zbtn" id="zout" title="Zoom out">−</div>
+      <div id="zlev">100%</div>
+      <div class="zbtn" id="zin" title="Zoom in">+</div>
+      <div class="zbtn" id="zrst" title="Reset view">⊙</div>
+      <span style="margin-left:10px; color: var(--ink-faint); font-size:9px;">drag · dbl-click reset</span>
+    </div>
+  </div>
+</div>
+
+<div id="panel">
+  <h2>Terragod</h2>
+
+  <div class="sec-hdr">Mode</div>
+  <div class="row">
+    <label>category</label>
+    <select id="mode-sel">
+      <option value="world">World</option>
+      <option value="continent">Continent</option>
+      <option value="island">Island</option>
+      <option value="atoll">Atoll</option>
+    </select>
+  </div>
+  <div class="row">
+    <label>archetype</label>
+    <select id="arch-sel"></select>
+  </div>
+
+  <div class="sec-hdr">Morphology</div>
+  <div class="row">
+    <label>size</label>
+    <input type="range" id="s-size" min="0.20" max="0.95" step="0.005" value="0.55">
+    <span class="val" id="v-size">0.55</span>
+  </div>
+  <div class="row">
+    <label>width</label>
+    <input type="range" id="s-width" min="0.40" max="2.50" step="0.02" value="1.00">
+    <span class="val" id="v-width">1.00</span>
+  </div>
+  <div class="row">
+    <label>height</label>
+    <input type="range" id="s-height" min="0.40" max="2.50" step="0.02" value="1.00">
+    <span class="val" id="v-height">1.00</span>
+  </div>
+
+  <div class="sec-hdr">Coast Character</div>
+  <div class="row">
+    <label>warp</label>
+    <input type="range" id="s-warp" min="0.00" max="1.80" step="0.02" value="0.40">
+    <span class="val" id="v-warp">0.40</span>
+  </div>
+  <div class="row">
+    <label>roughness</label>
+    <input type="range" id="s-rough" min="0.30" max="0.75" step="0.01" value="0.50">
+    <span class="val" id="v-rough">0.50</span>
+  </div>
+  <div class="row">
+    <label>scale</label>
+    <input type="range" id="s-scale" min="1.50" max="7.00" step="0.05" value="3.50">
+    <span class="val" id="v-scale">3.50</span>
+  </div>
+  <div class="row">
+    <label>erosion</label>
+    <input type="range" id="s-erosion" min="0" max="14" step="1" value="3">
+    <span class="val" id="v-erosion">3</span>
+  </div>
+  <div class="row">
+    <label>sea level</label>
+    <input type="range" id="s-sea" min="-0.15" max="0.15" step="0.005" value="0.00">
+    <span class="val" id="v-sea">0.00</span>
+  </div>
+
+  <div class="sec-hdr">Interior Terrain</div>
+  <div class="row">
+    <label>mountain ridges</label>
+    <input type="range" id="s-ridges" min="0" max="12" step="1" value="2">
+    <span class="val" id="v-ridges">2</span>
+  </div>
+  <div class="row">
+    <label>ridge height</label>
+    <input type="range" id="s-ridgeh" min="0.00" max="1.20" step="0.02" value="0.55">
+    <span class="val" id="v-ridgeh">0.55</span>
+  </div>
+  <div class="row">
+    <label>inland seas</label>
+    <input type="range" id="s-lakes" min="0" max="4" step="1" value="0">
+    <span class="val" id="v-lakes">0</span>
+  </div>
+  <div class="row">
+    <label>sea size</label>
+    <input type="range" id="s-lakesz" min="0.05" max="0.30" step="0.005" value="0.12">
+    <span class="val" id="v-lakesz">0.12</span>
+  </div>
+
+  <div class="sec-hdr">Children</div>
+  <div class="row">
+    <label>peninsulas</label>
+    <input type="range" id="s-peninsulas" min="0" max="20" step="1" value="2">
+    <span class="val" id="v-peninsulas">2</span>
+  </div>
+  <div class="row">
+    <label>offshoots</label>
+    <input type="range" id="s-offshoots" min="0" max="20" step="1" value="2">
+    <span class="val" id="v-offshoots">2</span>
+  </div>
+
+  <div class="sec-hdr">Topography</div>
+  <div class="row">
+    <label>contour count</label>
+    <input type="range" id="s-contours" min="3" max="10" step="1" value="6">
+    <span class="val" id="v-contours">6</span>
+  </div>
+  <div class="row">
+    <label>coast detail</label>
+    <input type="range" id="s-detail" min="3" max="7" step="1" value="5">
+    <span class="val" id="v-detail">5</span>
+  </div>
+
+  <div class="sec-hdr">Variability</div>
+  <div class="row">
+    <label>spread</label>
+    <input type="range" id="s-spread" min="0.10" max="1.00" step="0.02" value="0.55">
+    <span class="val" id="v-spread">0.55</span>
+  </div>
+  <div class="row">
+    <label>size variance</label>
+    <input type="range" id="s-variance" min="0.00" max="1.00" step="0.02" value="0.30">
+    <span class="val" id="v-variance">0.30</span>
+  </div>
+  <div class="hint">Spread pushes landmasses toward the canvas corners (1.0 = full bleed). Size variance lets some continents dwarf others. Both mostly affect World mode.</div>
+
+  <div class="sec-hdr">Seed</div>
+  <div class="row">
+    <input type="text" id="seed-input" value="7919">
+  </div>
+
+  <div class="panel-btns">
+    <button class="pbtn pbtn-pri" id="btn-new">New Terrain</button>
+    <button class="pbtn" id="btn-reroll-placement">Re-roll Layout</button>
+  </div>
+  <div class="hint">"New Terrain" rolls everything inside the archetype's envelope. "Re-roll Layout" keeps your sliders but rolls a new seed. Move any slider to fine-tune.</div>
+
+  <div class="sec-hdr">Export</div>
+  <div class="panel-btns">
+    <button class="pbtn" id="btn-save-svg">Save SVG</button>
+    <button class="pbtn" id="btn-save-png">Save PNG</button>
+  </div>
+  <div class="hint">SVG is full vector. PNG renders at 2400 × 2400 from the unzoomed full canvas.</div>
+</div>
+
+<script>
+'use strict';
+
+// ═══════════════════════════════════════════════════════════════
+//  SEEDED SIMPLEX NOISE
+// ═══════════════════════════════════════════════════════════════
+class SimplexNoise {
+  constructor(seed = 1) {
+    const p = new Uint8Array(256);
+    for (let i = 0; i < 256; i++) p[i] = i;
+    let s = ((seed ^ (seed >>> 16)) * 0x45d9f3b) >>> 0;
+    const rng = () => { s ^= s << 13; s ^= s >>> 17; s ^= s << 5; return (s >>> 0) / 0x100000000; };
+    for (let i = 255; i > 0; i--) { const j = (rng() * (i + 1)) | 0; const t = p[i]; p[i] = p[j]; p[j] = t; }
+    this.perm = new Uint8Array(512);
+    for (let i = 0; i < 512; i++) this.perm[i] = p[i & 255];
+    this.G2 = [[1,1],[-1,1],[1,-1],[-1,-1],[1,0],[-1,0],[1,0],[-1,0],[0,1],[0,-1],[0,1],[0,-1]];
+  }
+  noise(xin, yin) {
+    const { perm: P, G2 } = this;
+    const F = 0.5 * (Math.sqrt(3) - 1), G = (3 - Math.sqrt(3)) / 6;
+    const s = (xin + yin) * F, i = Math.floor(xin + s), j = Math.floor(yin + s), t = (i + j) * G;
+    const x0 = xin - (i - t), y0 = yin - (j - t);
+    const i1 = x0 > y0 ? 1 : 0, j1 = x0 > y0 ? 0 : 1;
+    const x1 = x0 - i1 + G, y1 = y0 - j1 + G, x2 = x0 - 1 + 2 * G, y2 = y0 - 1 + 2 * G;
+    const ii = i & 255, jj = j & 255;
+    const dot = (g, x, y) => g[0] * x + g[1] * y;
+    let n = 0;
+    let t0 = 0.5 - x0 * x0 - y0 * y0; if (t0 > 0) { t0 *= t0; n += t0 * t0 * dot(G2[P[ii + P[jj]] % 12], x0, y0); }
+    let t1 = 0.5 - x1 * x1 - y1 * y1; if (t1 > 0) { t1 *= t1; n += t1 * t1 * dot(G2[P[ii + i1 + P[jj + j1]] % 12], x1, y1); }
+    let t2 = 0.5 - x2 * x2 - y2 * y2; if (t2 > 0) { t2 *= t2; n += t2 * t2 * dot(G2[P[ii + 1 + P[jj + 1]] % 12], x2, y2); }
+    return 70 * n;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  UTILS
+// ═══════════════════════════════════════════════════════════════
+const lerp  = (a, b, t) => a + (b - a) * t;
+const clamp = (x, lo, hi) => x < lo ? lo : x > hi ? hi : x;
+const sss   = t => t * t * t * (t * (t * 6 - 15) + 10);
+
+function fbm(noise, x, y, oct, gain) {
+  let v = 0, a = 1, f = 1, nm = 0;
+  for (let o = 0; o < oct; o++) { v += noise.noise(x * f, y * f) * a; nm += a; a *= gain; f *= 2; }
+  return v / nm;
+}
+
+// Mulberry32 — deterministic PRNG
+function makeRng(seed) {
+  let s = seed >>> 0;
+  return () => {
+    s = (s + 0x6D2B79F5) >>> 0;
+    let t = s;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  ISLAND CONFIG
+// ═══════════════════════════════════════════════════════════════
+const W = 512;          // heightmap resolution (per axis) — higher = finer coast detail
+const H = 512;
+const SVG_VIEW = 1000;  // SVG viewBox size (vector — scales infinitely from this)
+
+// Sea level — anything above this is land. Offset per-seed in buildParams.
+// Calibrated from old map-generator setting seaLevel=0.61 with mode=island,
+// which gave a small island with healthy water margin around it.
+const SEA_BASE = 0.46;
+
+// Contour offsets above sea level — computed dynamically each render based
+// on the contour-count slider. Continents reveal more relief at higher
+// contour counts; islands stay readable at lower counts.
+function buildContours(n) {
+  const out = [];
+  // Distribute n contours between sea level + 0.05 and 0.65 above.
+  // Power curve so lower contours are closer to the coast (denser near
+  // shore where elevation changes fastest), and higher contours space out.
+  for (let i = 0; i < n; i++) {
+    const t = (i + 1) / (n + 1);
+    out.push(0.05 + Math.pow(t, 0.85) * 0.60);
+  }
+  return out;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  MODES + ARCHETYPES
+//  3 modes (continent, island, atoll), each with its own archetype
+//  list and parameter envelopes. The mode selector swaps which
+//  archetypes are exposed in the dropdown.
+// ═══════════════════════════════════════════════════════════════
+const ARCHETYPES_BY_MODE = {
+  world:     ['twin_continents', 'three_continents', 'archipelago_world', 'wide_sea'],
+  continent: ['landmass', 'rifted', 'elongated_continent', 'peninsular_continent'],
+  island:    ['compact', 'elongated', 'peninsular', 'skerry', 'crescent', 'lobed', 'tadpole', 'ragged'],
+  atoll:     ['atoll', 'horseshoe'],
+};
+
+const ARCHETYPE_LABELS = {
+  twin_continents:     'Twin Continents',
+  three_continents:    'Three Continents',
+  archipelago_world:   'World Archipelago',
+  wide_sea:            'Wide Sea',
+  landmass:              'Landmass',
+  rifted:                'Rifted Continent',
+  elongated_continent:   'Elongated Continent',
+  peninsular_continent:  'Peninsular Continent',
+  compact:    'Compact Island',
+  elongated:  'Elongated Island',
+  peninsular: 'Peninsular Island',
+  skerry:     'Skerry Cluster',
+  crescent:   'Crescent Island',
+  lobed:      'Lobed Island',
+  tadpole:    'Tadpole Island',
+  ragged:     'Ragged Island',
+  atoll:      'Ring Atoll',
+  horseshoe:  'Horseshoe Atoll',
+};
+
+// Map every archetype name to its mode (used when the dropdown selects
+// an archetype directly via deep link / panel preset).
+const MODE_OF = {};
+for (const [mode, list] of Object.entries(ARCHETYPES_BY_MODE)) {
+  for (const a of list) MODE_OF[a] = mode;
+}
+
+const ALL_ARCHETYPES = Object.keys(ARCHETYPE_LABELS);
+
+// New fields: ridges (count), ridgeh (peak height), lakes (count), lakesz
+// (relative size), landmassCount (how many independent main masses).
+const ARCHETYPE_DEFAULTS = {
+  // ── World — sections of a whole world with multiple continents/islands. ──
+  twin_continents:    { size:0.62, width:1.10, height:1.00, warp:1.25, rough:0.52, scale:3.30, erosion:3, sea:0.00, peninsulas:10, offshoots:5, ridges:6, ridgeh:0.55, lakes:2, lakesz:0.12, landmassCount:2 },
+  three_continents:   { size:0.55, width:1.05, height:1.00, warp:1.25, rough:0.52, scale:3.30, erosion:3, sea:0.00, peninsulas:12, offshoots:6, ridges:7, ridgeh:0.50, lakes:2, lakesz:0.10, landmassCount:3 },
+  archipelago_world:  { size:0.48, width:1.05, height:1.00, warp:1.20, rough:0.50, scale:3.50, erosion:3, sea:0.00, peninsulas:10, offshoots:9, ridges:5, ridgeh:0.40, lakes:1, lakesz:0.10, landmassCount:5 },
+  wide_sea:           { size:0.42, width:1.05, height:1.00, warp:1.10, rough:0.50, scale:3.80, erosion:3, sea:0.00, peninsulas:8, offshoots:12,ridges:4, ridgeh:0.35, lakes:0, lakesz:0.08, landmassCount:7 },
+  // ── Continents — large landmass, prominent interior terrain.
+  landmass:              { size:0.70, width:1.10, height:0.95, warp:1.20, rough:0.50, scale:3.50, erosion:3, sea:0.00, peninsulas:2, offshoots:2, ridges:3, ridgeh:0.55, lakes:1, lakesz:0.12 },
+  rifted:                { size:0.65, width:1.05, height:1.00, warp:1.20, rough:0.55, scale:3.30, erosion:3, sea:0.00, peninsulas:2, offshoots:2, ridges:4, ridgeh:0.70, lakes:2, lakesz:0.16 },
+  elongated_continent:   { size:0.65, width:1.85, height:0.60, warp:1.20, rough:0.50, scale:3.50, erosion:3, sea:0.00, peninsulas:2, offshoots:3, ridges:4, ridgeh:0.55, lakes:1, lakesz:0.12 },
+  peninsular_continent:  { size:0.65, width:1.30, height:0.95, warp:1.30, rough:0.55, scale:3.30, erosion:2, sea:0.00, peninsulas:4, offshoots:3, ridges:2, ridgeh:0.50, lakes:0, lakesz:0.12 },
+  // ── Islands — the original 8, with modest ridge defaults.
+  compact:    { size:0.34, width:1.05, height:0.95, warp:1.30, rough:0.45, scale:4.00, erosion:3, sea:0.00, peninsulas:1, offshoots:1, ridges:1, ridgeh:0.35, lakes:0, lakesz:0.10 },
+  elongated:  { size:0.34, width:1.85, height:0.55, warp:1.30, rough:0.48, scale:4.00, erosion:3, sea:0.00, peninsulas:1, offshoots:2, ridges:2, ridgeh:0.35, lakes:0, lakesz:0.10 },
+  peninsular: { size:0.34, width:1.30, height:0.90, warp:1.30, rough:0.55, scale:3.50, erosion:2, sea:0.00, peninsulas:3, offshoots:2, ridges:1, ridgeh:0.30, lakes:0, lakesz:0.10 },
+  skerry:     { size:0.32, width:1.00, height:1.00, warp:1.30, rough:0.52, scale:4.00, erosion:3, sea:0.00, peninsulas:0, offshoots:5, ridges:0, ridgeh:0.20, lakes:0, lakesz:0.10 },
+  crescent:   { size:0.34, width:1.30, height:1.05, warp:1.30, rough:0.45, scale:4.00, erosion:3, sea:0.00, peninsulas:0, offshoots:1, ridges:1, ridgeh:0.30, lakes:0, lakesz:0.10 },
+  lobed:      { size:0.34, width:1.00, height:1.00, warp:1.30, rough:0.45, scale:4.00, erosion:3, sea:0.00, peninsulas:0, offshoots:1, ridges:1, ridgeh:0.30, lakes:0, lakesz:0.10 },
+  tadpole:    { size:0.34, width:1.10, height:0.95, warp:1.30, rough:0.45, scale:4.00, erosion:3, sea:0.00, peninsulas:1, offshoots:1, ridges:1, ridgeh:0.30, lakes:0, lakesz:0.10 },
+  ragged:     { size:0.34, width:1.05, height:0.95, warp:1.30, rough:0.55, scale:2.80, erosion:7, sea:0.00, peninsulas:2, offshoots:3, ridges:1, ridgeh:0.30, lakes:0, lakesz:0.10 },
+  // ── Atolls — ring-shaped land around an inner lagoon. The "lagoon"
+  // is implemented as a large subtractive bite (handled in buildLandCenters).
+  atoll:      { size:0.45, width:1.10, height:1.00, warp:0.60, rough:0.45, scale:3.50, erosion:3, sea:0.00, peninsulas:0, offshoots:2, ridges:0, ridgeh:0.15, lakes:0, lakesz:0.20 },
+  horseshoe:  { size:0.45, width:1.20, height:1.10, warp:0.55, rough:0.45, scale:3.50, erosion:3, sea:0.00, peninsulas:0, offshoots:2, ridges:0, ridgeh:0.15, lakes:0, lakesz:0.20 },
+};
+
+const ARCHETYPE_RANGES = {
+  // ── World ──
+  twin_continents:    { size:[0.55,0.72], width:[0.95,1.20], height:[0.90,1.10], warp:[1.10,1.45], rough:[0.48,0.62], scale:[3.0,4.0], erosion:[0,5], sea:[-0.05,0.05], peninsulas:[8,14], offshoots:[4,7], ridges:[5,8], ridgeh:[0.45,0.70], lakes:[1,3], lakesz:[0.10,0.16] },
+  three_continents:   { size:[0.48,0.65], width:[0.95,1.15], height:[0.90,1.10], warp:[1.10,1.45], rough:[0.48,0.62], scale:[3.0,4.0], erosion:[0,5], sea:[-0.05,0.05], peninsulas:[10,16],offshoots:[5,8], ridges:[6,10],ridgeh:[0.40,0.65], lakes:[1,3], lakesz:[0.08,0.14] },
+  archipelago_world:  { size:[0.42,0.58], width:[0.95,1.15], height:[0.90,1.10], warp:[1.05,1.35], rough:[0.45,0.60], scale:[3.2,4.5], erosion:[0,5], sea:[-0.05,0.05], peninsulas:[8,14], offshoots:[7,12], ridges:[4,8], ridgeh:[0.30,0.55], lakes:[0,2], lakesz:[0.08,0.12] },
+  wide_sea:           { size:[0.36,0.50], width:[0.95,1.15], height:[0.90,1.10], warp:[0.95,1.25], rough:[0.45,0.60], scale:[3.5,4.8], erosion:[0,5], sea:[-0.05,0.05], peninsulas:[6,11], offshoots:[10,15], ridges:[3,6], ridgeh:[0.25,0.45], lakes:[0,1], lakesz:[0.06,0.10] },
+  // ── Continents ──
+  landmass:              { size:[0.55,0.85], width:[0.85,1.30], height:[0.85,1.30], warp:[1.00,1.40], rough:[0.42,0.62], scale:[3.0,4.5], erosion:[0,6], sea:[-0.05,0.07], peninsulas:[1,4], offshoots:[1,4], ridges:[2,5], ridgeh:[0.40,0.75], lakes:[0,2], lakesz:[0.10,0.18] },
+  rifted:                { size:[0.55,0.80], width:[0.90,1.20], height:[0.90,1.20], warp:[1.00,1.50], rough:[0.48,0.65], scale:[2.8,4.0], erosion:[0,6], sea:[-0.05,0.07], peninsulas:[1,3], offshoots:[1,3], ridges:[3,6], ridgeh:[0.55,0.95], lakes:[1,3], lakesz:[0.12,0.22] },
+  elongated_continent:   { size:[0.55,0.80], width:[1.60,2.20], height:[0.55,0.80], warp:[1.00,1.50], rough:[0.42,0.62], scale:[3.0,4.5], erosion:[0,6], sea:[-0.05,0.07], peninsulas:[1,3], offshoots:[2,5], ridges:[3,6], ridgeh:[0.40,0.70], lakes:[0,2], lakesz:[0.08,0.16] },
+  peninsular_continent:  { size:[0.55,0.80], width:[1.10,1.50], height:[0.85,1.10], warp:[1.10,1.60], rough:[0.45,0.65], scale:[2.8,4.0], erosion:[0,5], sea:[-0.05,0.07], peninsulas:[3,6], offshoots:[2,4], ridges:[1,4], ridgeh:[0.35,0.65], lakes:[0,1], lakesz:[0.10,0.18] },
+  // ── Islands ──
+  compact:    { size:[0.30,0.40], width:[0.80,1.30], height:[0.80,1.30], warp:[1.10,1.50], rough:[0.40,0.65], scale:[3.0,5.2], erosion:[0,7], sea:[-0.04,0.07], peninsulas:[0,2], offshoots:[0,2], ridges:[0,2], ridgeh:[0.25,0.50], lakes:[0,0], lakesz:[0.08,0.14] },
+  elongated:  { size:[0.30,0.40], width:[1.50,2.40], height:[0.35,0.62], warp:[1.10,1.50], rough:[0.40,0.62], scale:[3.0,5.0], erosion:[0,7], sea:[-0.04,0.07], peninsulas:[0,2], offshoots:[1,3], ridges:[1,3], ridgeh:[0.25,0.50], lakes:[0,0], lakesz:[0.08,0.14] },
+  peninsular: { size:[0.30,0.40], width:[1.10,1.70], height:[0.60,1.05], warp:[1.10,1.50], rough:[0.45,0.65], scale:[2.6,4.5], erosion:[0,5], sea:[-0.04,0.07], peninsulas:[2,5], offshoots:[1,3], ridges:[0,2], ridgeh:[0.20,0.40], lakes:[0,0], lakesz:[0.08,0.14] },
+  skerry:     { size:[0.30,0.40], width:[0.85,1.10], height:[0.85,1.10], warp:[1.10,1.50], rough:[0.42,0.62], scale:[3.0,5.2], erosion:[0,7], sea:[-0.04,0.07], peninsulas:[0,1], offshoots:[4,7], ridges:[0,1], ridgeh:[0.10,0.30], lakes:[0,0], lakesz:[0.08,0.14] },
+  crescent:   { size:[0.30,0.40], width:[1.10,1.55], height:[0.85,1.25], warp:[1.10,1.50], rough:[0.40,0.55], scale:[3.0,5.0], erosion:[0,7], sea:[-0.04,0.07], peninsulas:[0,1], offshoots:[0,2], ridges:[0,2], ridgeh:[0.20,0.40], lakes:[0,0], lakesz:[0.08,0.14] },
+  lobed:      { size:[0.30,0.40], width:[0.85,1.20], height:[0.85,1.20], warp:[1.10,1.50], rough:[0.40,0.60], scale:[3.0,5.0], erosion:[0,7], sea:[-0.04,0.07], peninsulas:[0,1], offshoots:[0,1], ridges:[0,2], ridgeh:[0.20,0.40], lakes:[0,0], lakesz:[0.08,0.14] },
+  tadpole:    { size:[0.30,0.40], width:[0.95,1.35], height:[0.80,1.15], warp:[1.10,1.50], rough:[0.40,0.60], scale:[3.0,5.0], erosion:[0,7], sea:[-0.04,0.07], peninsulas:[0,2], offshoots:[0,2], ridges:[0,2], ridgeh:[0.20,0.40], lakes:[0,0], lakesz:[0.08,0.14] },
+  ragged:     { size:[0.30,0.40], width:[0.85,1.20], height:[0.85,1.20], warp:[1.10,1.50], rough:[0.50,0.68], scale:[2.5,3.6], erosion:[4,9], sea:[-0.04,0.07], peninsulas:[1,3], offshoots:[2,5], ridges:[0,2], ridgeh:[0.20,0.40], lakes:[0,0], lakesz:[0.08,0.14] },
+  // ── Atolls ──
+  atoll:      { size:[0.40,0.55], width:[1.00,1.20], height:[0.90,1.10], warp:[0.40,0.80], rough:[0.40,0.55], scale:[3.0,4.5], erosion:[0,5], sea:[-0.04,0.05], peninsulas:[0,1], offshoots:[1,4], ridges:[0,0], ridgeh:[0.10,0.20], lakes:[0,0], lakesz:[0.18,0.30] },
+  horseshoe:  { size:[0.40,0.55], width:[1.10,1.40], height:[1.00,1.20], warp:[0.40,0.75], rough:[0.40,0.55], scale:[3.0,4.5], erosion:[0,5], sea:[-0.04,0.05], peninsulas:[0,1], offshoots:[1,3], ridges:[0,0], ridgeh:[0.10,0.20], lakes:[0,0], lakesz:[0.18,0.28] },
+};
+
+// Slider <-> value-display helpers
+function setSliderValues(v) {
+  const setRange = (id, val, fmt) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.value = val;
+    const dis = document.getElementById(id.replace('s-', 'v-'));
+    if (dis) dis.textContent = fmt(val);
+  };
+  const f2 = x => parseFloat(x).toFixed(2);
+  const f3 = x => parseFloat(x).toFixed(3);
+  const fi = x => String(parseInt(x));
+  setRange('s-size',       v.size,       f2);
+  setRange('s-width',      v.width,      f2);
+  setRange('s-height',     v.height,     f2);
+  setRange('s-warp',       v.warp,       f2);
+  setRange('s-rough',      v.rough,      f2);
+  setRange('s-scale',      v.scale,      f2);
+  setRange('s-erosion',    v.erosion,    fi);
+  setRange('s-sea',        v.sea,        f3);
+  setRange('s-peninsulas', v.peninsulas, fi);
+  setRange('s-offshoots',  v.offshoots,  fi);
+  setRange('s-ridges',     v.ridges,     fi);
+  setRange('s-ridgeh',     v.ridgeh,     f2);
+  setRange('s-lakes',      v.lakes,      fi);
+  setRange('s-lakesz',     v.lakesz,     f3);
+  if (v.spread   != null) setRange('s-spread',   v.spread,   f2);
+  if (v.variance != null) setRange('s-variance', v.variance, f2);
+  if (v.detail   != null) setRange('s-detail',   v.detail,   fi);
+}
+
+// Build the params object from the panel's current state.
+function getParams() {
+  const arch = document.getElementById('arch-sel').value;
+  const archDef = ARCHETYPE_DEFAULTS[arch] || {};
+  return {
+    archetype: ALL_ARCHETYPES.indexOf(arch),
+    archName:  arch,
+    mode:      MODE_OF[arch] || 'island',
+    // landmassCount is intrinsic to the archetype (world archetypes set
+    // it to 2-7; everything else implicitly 1). No slider — switching
+    // archetypes within World mode is how you change it.
+    landmassCount: archDef.landmassCount || 1,
+    baseR:     parseFloat(document.getElementById('s-size').value),
+    rxMul:     parseFloat(document.getElementById('s-width').value),
+    ryMul:     parseFloat(document.getElementById('s-height').value),
+    warp:      parseFloat(document.getElementById('s-warp').value),
+    roughness: parseFloat(document.getElementById('s-rough').value),
+    scale:     parseFloat(document.getElementById('s-scale').value),
+    erosion:   parseInt(document.getElementById('s-erosion').value),
+    seaOffset: parseFloat(document.getElementById('s-sea').value),
+    peninsulaCount: parseInt(document.getElementById('s-peninsulas').value),
+    offshootCount:  parseInt(document.getElementById('s-offshoots').value),
+    ridgeCount:     parseInt(document.getElementById('s-ridges').value),
+    ridgeHeight:    parseFloat(document.getElementById('s-ridgeh').value),
+    lakeCount:      parseInt(document.getElementById('s-lakes').value),
+    lakeSize:       parseFloat(document.getElementById('s-lakesz').value),
+    contourCount:   parseInt(document.getElementById('s-contours').value),
+    coastDetail:    parseInt(document.getElementById('s-detail').value),
+    spread:         parseFloat(document.getElementById('s-spread').value),
+    sizeVariance:   parseFloat(document.getElementById('s-variance').value),
+    offshootRange: arch === 'skerry' ? [0.92, 1.50] : [0.90, 1.30],
+    offshootSize:  arch === 'skerry' ? [0.04, 0.09] : [0.06, 0.13],
+    chain:    arch === 'peninsular',
+    crescent: arch === 'crescent',
+    lobed:    arch === 'lobed',
+    tadpole:  arch === 'tadpole',
+    atoll:        arch === 'atoll',
+    horseshoe:    arch === 'horseshoe',
+    rifted:       arch === 'rifted',
+    lobeCount: 2,
+  };
+}
+
+// Roll random values within the archetype's allowed ranges, applied to
+// the sliders. Driven by the current seed so it's reproducible.
+function randomizeFromArchetype(archName, seed) {
+  const r = makeRng(seed * 7919 + 41);
+  const rng = ARCHETYPE_RANGES[archName];
+  const pick = (lo, hi) => lo + (hi - lo) * r();
+  // Variability sliders are global (not per-archetype). Roll them within
+  // sensible ranges so a "New Terrain" press feels varied, without
+  // requiring every archetype range to specify them.
+  const isWorld = MODE_OF[archName] === 'world';
+  setSliderValues({
+    size:       pick(rng.size[0],       rng.size[1]),
+    width:      pick(rng.width[0],      rng.width[1]),
+    height:     pick(rng.height[0],     rng.height[1]),
+    warp:       pick(rng.warp[0],       rng.warp[1]),
+    rough:      pick(rng.rough[0],      rng.rough[1]),
+    scale:      pick(rng.scale[0],      rng.scale[1]),
+    erosion:    Math.round(pick(rng.erosion[0],    rng.erosion[1])),
+    sea:        pick(rng.sea[0],        rng.sea[1]),
+    peninsulas: Math.round(pick(rng.peninsulas[0], rng.peninsulas[1])),
+    offshoots:  Math.round(pick(rng.offshoots[0],  rng.offshoots[1])),
+    ridges:     Math.round(pick(rng.ridges[0],     rng.ridges[1])),
+    ridgeh:     pick(rng.ridgeh[0],     rng.ridgeh[1]),
+    lakes:      Math.round(pick(rng.lakes[0],      rng.lakes[1])),
+    lakesz:     pick(rng.lakesz[0],     rng.lakesz[1]),
+    spread:     isWorld ? pick(0.50, 0.95) : pick(0.40, 0.65),
+    variance:   isWorld ? pick(0.10, 0.55) : pick(0.00, 0.20),
+    detail:     Math.round(pick(4, 6)),
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  HEIGHTMAP — multi-centered island mask + warped fbm
+// ═══════════════════════════════════════════════════════════════
+
+// Scatter N main landmass positions across the canvas using a jittered
+// grid. `spread` (0..1) interpolates between center-clustered (0) and
+// canvas-edges (1); 0.5 leaves positions at their natural cell centers.
+function scatterMainPositions(r, N, spread = 0.5) {
+  const sp = clamp(spread != null ? spread : 0.5, 0, 1);
+  const cols = Math.ceil(Math.sqrt(N));
+  const rows = Math.ceil(N / cols);
+  const positions = [];
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
+      if (positions.length >= N) break;
+      const cellX = (col + 0.5) / cols;
+      const cellY = (row + 0.5) / rows;
+      // Lerp toward / past cell centers. spread=0 → all at (0.5,0.5);
+      // spread=0.5 → natural cell centers; spread=1 → pushed to corners.
+      const px = 0.5 + (cellX - 0.5) * sp * 2;
+      const py = 0.5 + (cellY - 0.5) * sp * 2;
+      const jitter = 0.4 / Math.max(cols, rows);
+      positions.push({
+        x: clamp(px + (r() - 0.5) * jitter * 1.4, 0.05, 0.95),
+        y: clamp(py + (r() - 0.5) * jitter * 1.4, 0.05, 0.95),
+      });
+    }
+  }
+  // Shuffle so "first" main isn't always top-left
+  for (let i = positions.length - 1; i > 0; i--) {
+    const j = (r() * (i + 1)) | 0;
+    const t = positions[i]; positions[i] = positions[j]; positions[j] = t;
+  }
+  return positions.slice(0, N);
+}
+
+// Top-level: dispatch to single-mass or multi-mass builder based on
+// the archetype's landmassCount. Returns { centers, mains } — callers
+// need mains separately so ridges can place per-landmass.
+function buildIslandCenters(seed, params) {
+  const N = Math.max(1, params.landmassCount || 1);
+  if (N > 1) return buildMultiMassCenters(seed, params, N);
+  const centers = buildSingleMassCenters(seed, params);
+  return { centers: fitCentersToCanvas(centers), mains: [centers[0]] };
+}
+
+// World mode: N main landmasses sprawling across the canvas. Per-main
+// peninsulas + inland seas; offshoots scattered globally. Archetype-
+// specific extras (lobed, crescent, atoll, etc.) are skipped — those
+// belong to the single-mass archetypes.
+// sizeScale is generous (1.55/√N) and the fit margin is negative
+// (-0.12) so continents bleed off the canvas like landforms running
+// past an atlas page edge.
+function buildMultiMassCenters(seed, params, N) {
+  const r = makeRng(seed * 13 + 1009);
+  const positions = scatterMainPositions(r, N, params.spread);
+  const sizeScale = 1.55 / Math.sqrt(N);
+  const baseR = params.baseR;
+  const variance = params.sizeVariance || 0;
+  const centers = [];
+  const mains = [];
+
+  for (let i = 0; i < N; i++) {
+    const pos = positions[i];
+    // Per-main random size multiplier — high variance gives mixed
+    // continents (some sprawling, some smaller).
+    const sizeMult = 1 + (r() - 0.5) * variance;
+    const main = {
+      x: pos.x, y: pos.y,
+      rx: baseR * params.rxMul * sizeScale * sizeMult,
+      ry: baseR * params.ryMul * sizeScale * sizeMult,
+      angle: r() * Math.PI,
+    };
+    mains.push(main);
+    centers.push(main);
+  }
+
+  // Distribute peninsulas across mains (extras handed out one-per-main
+  // from the top of the list).
+  const pPerMain = Math.floor((params.peninsulaCount || 0) / N);
+  const pRem     = (params.peninsulaCount || 0) % N;
+  const lPerMain = Math.floor((params.lakeCount || 0) / N);
+  const lRem     = (params.lakeCount || 0) % N;
+
+  for (let mi = 0; mi < N; mi++) {
+    const main  = mains[mi];
+    const meanR = (main.rx + main.ry) * 0.5;
+    const refR  = Math.max(main.rx, main.ry);
+    const myPenins = pPerMain + (mi < pRem ? 1 : 0);
+    const myLakes  = lPerMain + (mi < lRem ? 1 : 0);
+
+    for (let i = 0; i < myPenins; i++) {
+      const angle    = r() * Math.PI * 2;
+      const sizeRoll = r();
+      const sz       = meanR * (0.12 + sizeRoll * 0.48);
+      const dist     = 0.40 + sizeRoll * 0.25 + r() * 0.10;
+      const rxFactor = 0.55 + r() * 1.40;
+      const ryFactor = 0.55 + r() * 1.40;
+      const rot      = r() < 0.60 ? angle : r() * Math.PI;
+      const cx = main.x + Math.cos(angle) * refR * dist;
+      const cy = main.y + Math.sin(angle) * refR * dist;
+      if (cx < 0.06 || cx > 0.94 || cy < 0.06 || cy > 0.94) continue;
+      centers.push({ x:cx, y:cy, rx: sz*rxFactor, ry: sz*ryFactor, angle: rot });
+    }
+
+    for (let i = 0; i < myLakes; i++) {
+      const angle = r() * Math.PI * 2;
+      const dist  = meanR * (0.15 + r() * 0.45);
+      const sz    = meanR * params.lakeSize * (0.85 + r() * 0.40);
+      centers.push({
+        x: main.x + Math.cos(angle) * dist,
+        y: main.y + Math.sin(angle) * dist,
+        rx: sz * (0.85 + r() * 0.45),
+        ry: sz * (0.85 + r() * 0.45),
+        angle: r() * Math.PI,
+        subtract: true,
+      });
+    }
+  }
+
+  // Offshoots — scattered around random mains. Read as sea-tossed islets
+  // dotted between the larger landmasses.
+  for (let i = 0; i < params.offshootCount; i++) {
+    const main = mains[(r() * N) | 0];
+    const refR = Math.max(main.rx, main.ry);
+    const meanR = (main.rx + main.ry) * 0.5;
+    const angle = r() * Math.PI * 2;
+    const dist  = params.offshootRange[0] + r() * (params.offshootRange[1] - params.offshootRange[0]);
+    const ox = main.x + Math.cos(angle) * refR * dist;
+    const oy = main.y + Math.sin(angle) * refR * dist;
+    if (ox < 0.07 || ox > 0.93 || oy < 0.07 || oy > 0.93) continue;
+    const sz = meanR * (params.offshootSize[0] + r() * (params.offshootSize[1] - params.offshootSize[0]));
+    centers.push({
+      x: ox, y: oy,
+      rx: sz * (0.85 + r() * 0.4),
+      ry: sz * (0.85 + r() * 0.4),
+      angle: r() * Math.PI,
+    });
+  }
+
+  return { centers: fitCentersToCanvas(centers, -0.12), mains };
+}
+
+// Single-mass builder (the original path). 1 main + archetype-specific
+// extras (lobed, tadpole, crescent, atoll, horseshoe, rifted) + N
+// peninsulas + lakes + offshoots. Does NOT fit-to-canvas — caller wraps.
+function buildSingleMassCenters(seed, params) {
+  const r = makeRng(seed * 13 + 1009);
+
+  const baseR = params.baseR;
+  const main = {
+    x: 0.5 + (r() - 0.5) * 0.06,
+    y: 0.5 + (r() - 0.5) * 0.06,
+    rx: baseR * params.rxMul,
+    ry: baseR * params.ryMul,
+    angle: r() * Math.PI,
+  };
+  const meanR = (main.rx + main.ry) * 0.5;
+  const centers = [main];
+
+  // ── Archetype-specific large centers ──
+  if (params.lobed) {
+    // Add (lobeCount - 1) more lobes overlapping the main.
+    // Lobe distance/size scaled down so total extent fits at baseR=0.30-0.40.
+    const startAngle = r() * Math.PI * 2;
+    for (let i = 1; i < params.lobeCount; i++) {
+      const angle = startAngle + (i / params.lobeCount) * Math.PI * 2 + (r() - 0.5) * 0.6;
+      const dist = baseR * (0.42 + r() * 0.20);
+      centers.push({
+        x: main.x + Math.cos(angle) * dist,
+        y: main.y + Math.sin(angle) * dist,
+        rx: baseR * (0.50 + r() * 0.18),
+        ry: baseR * (0.50 + r() * 0.18),
+        angle: r() * Math.PI,
+      });
+    }
+  } else if (params.tadpole) {
+    // One large companion on one side, the "tail."
+    const angle = r() * Math.PI * 2;
+    const dist = baseR * (0.62 + r() * 0.20);
+    const tailSz = baseR * (0.38 + r() * 0.18);
+    centers.push({
+      x: main.x + Math.cos(angle) * dist,
+      y: main.y + Math.sin(angle) * dist,
+      rx: tailSz * (0.85 + r() * 0.30),
+      ry: tailSz * (0.85 + r() * 0.30),
+      angle: r() * Math.PI,
+    });
+  }
+
+  if (params.crescent) {
+    // Subtractive bite — a smaller ellipse offset toward one side.
+    const angle = r() * Math.PI * 2;
+    const offset = meanR * (0.50 + r() * 0.25);
+    centers.push({
+      x: main.x + Math.cos(angle) * offset,
+      y: main.y + Math.sin(angle) * offset,
+      rx: meanR * (0.75 + r() * 0.30),
+      ry: meanR * (0.75 + r() * 0.30),
+      angle: r() * Math.PI,
+      subtract: true,
+    });
+  }
+
+  // ── Atoll: large centered subtractive bite → ring-shaped land. ──
+  if (params.atoll) {
+    centers.push({
+      x: main.x, y: main.y,
+      rx: main.rx * (0.62 + r() * 0.10),
+      ry: main.ry * (0.62 + r() * 0.10),
+      angle: 0,
+      subtract: true,
+    });
+  }
+
+  // ── Horseshoe: offset subtractive bite that still mostly hollows out
+  //    the interior, leaving a C-shaped land. ──
+  if (params.horseshoe) {
+    const angle = r() * Math.PI * 2;
+    const off   = meanR * (0.22 + r() * 0.18);
+    centers.push({
+      x: main.x + Math.cos(angle) * off,
+      y: main.y + Math.sin(angle) * off,
+      rx: main.rx * (0.60 + r() * 0.10),
+      ry: main.ry * (0.60 + r() * 0.10),
+      angle: 0,
+      subtract: true,
+    });
+  }
+
+  // ── Rifted continent: a long subtractive trough across the middle,
+  //    suggesting a great inland fissure. ──
+  if (params.rifted) {
+    const angle = r() * Math.PI * 2;
+    centers.push({
+      x: main.x, y: main.y,
+      rx: main.rx * 0.85,
+      ry: main.ry * 0.12,
+      angle,
+      subtract: true,
+    });
+  }
+
+  // ── Inland seas: subtractive ellipses placed inside the main mass.
+  //    Distinct from peninsulas (additive bulges); these carve lakes
+  //    and inland coastlines into continental interiors. ──
+  const lakes = params.lakeCount || 0;
+  for (let i = 0; i < lakes; i++) {
+    const angle = r() * Math.PI * 2;
+    const dist  = meanR * (0.15 + r() * 0.45);
+    const sz    = meanR * params.lakeSize * (0.85 + r() * 0.40);
+    centers.push({
+      x: main.x + Math.cos(angle) * dist,
+      y: main.y + Math.sin(angle) * dist,
+      rx: sz * (0.85 + r() * 0.45),
+      ry: sz * (0.85 + r() * 0.45),
+      angle: r() * Math.PI,
+      subtract: true,
+    });
+  }
+
+  // ── Peninsular extensions ──
+  // Attached bulges that overlap the main mask at its edge — they create
+  // finger-like protrusions in the silhouette. Now varied widely:
+  //   - size 12-60% of meanR (some are tiny nubs, others large lobes)
+  //   - rx and ry rolled independently → round, flat, or elongated shapes
+  //   - 60% chance the long axis points outward from main (finger-like)
+  //   - distance pulled inward (0.45-0.80 × refR) so they overlap main
+  //     enough to merge cleanly (avoids hairline disconnections that
+  //     left some peninsulas as separate floating bodies).
+  const peninsulas = params.peninsulaCount || 0;
+  const refR = Math.max(main.rx, main.ry);
+  for (let i = 0; i < peninsulas; i++) {
+    const angle = r() * Math.PI * 2;
+    // Smaller peninsulas placed closer (low end of dist), larger ones can
+    // venture further. Correlating size with distance keeps the connection
+    // to the main mass solid — small mask centers far away tend to leave a
+    // gap where the heightmap dips below sea level.
+    const sizeRoll = r();
+    const sz       = meanR * (0.12 + sizeRoll * 0.48);
+    const dist     = 0.40 + sizeRoll * 0.25 + r() * 0.10;
+
+    // Independent rx and ry → some round, some flat, some elongated.
+    const rxFactor = 0.55 + r() * 1.40;
+    const ryFactor = 0.55 + r() * 1.40;
+
+    // Most peninsulas point their long axis outward (radial), giving
+    // the finger/jut look. The rest stay rotated freely.
+    const pointsOutward = r() < 0.60;
+    const rot = pointsOutward ? angle : r() * Math.PI;
+
+    const cx = main.x + Math.cos(angle) * refR * dist;
+    const cy = main.y + Math.sin(angle) * refR * dist;
+    if (cx < 0.06 || cx > 0.94 || cy < 0.06 || cy > 0.94) continue;
+    centers.push({
+      x: cx, y: cy,
+      rx: sz * rxFactor,
+      ry: sz * ryFactor,
+      angle: rot,
+    });
+  }
+
+  // ── Standard small detached offshoots ──
+  const chainAngle = r() * Math.PI * 2;
+  const chainStep  = (params.offshootRange[0] + params.offshootRange[1]) * 0.5;
+
+  for (let i = 0; i < params.offshootCount; i++) {
+    let angle, dist;
+    if (params.chain) {
+      angle = chainAngle + (r() - 0.5) * 0.5;
+      dist  = chainStep + i * 0.45 + (r() - 0.5) * 0.25;
+    } else {
+      angle = r() * Math.PI * 2;
+      dist  = params.offshootRange[0] + r() * (params.offshootRange[1] - params.offshootRange[0]);
+    }
+
+    const ox = main.x + Math.cos(angle) * refR * dist;
+    const oy = main.y + Math.sin(angle) * refR * dist;
+    if (ox < 0.07 || ox > 0.93 || oy < 0.07 || oy > 0.93) continue;
+
+    const sz = meanR * (params.offshootSize[0] + r() * (params.offshootSize[1] - params.offshootSize[0]));
+    centers.push({
+      x: ox, y: oy,
+      rx: sz * (0.85 + r() * 0.4),
+      ry: sz * (0.85 + r() * 0.4),
+      angle: r() * Math.PI,
+    });
+  }
+
+  return centers;
+}
+
+// Ensure every additive mask center fits inside the canvas with a margin.
+// Computes the bounding box (using max(rx,ry) as a worst-case for rotated
+// ellipses), scales everything down to fit if too big, and shifts to
+// re-center if just off-positioned. Subtractive centers (crescent bites)
+// don't extend the silhouette so they're scaled along but ignored for bbox.
+function fitCentersToCanvas(centers, margin = 0.16) {
+  if (!centers.length) return centers;
+
+  let xMin = Infinity, xMax = -Infinity, yMin = Infinity, yMax = -Infinity;
+  for (const c of centers) {
+    if (c.subtract) continue;
+    const r = Math.max(c.rx, c.ry);
+    if (c.x - r < xMin) xMin = c.x - r;
+    if (c.x + r > xMax) xMax = c.x + r;
+    if (c.y - r < yMin) yMin = c.y - r;
+    if (c.y + r > yMax) yMax = c.y + r;
+  }
+
+  const targetMin  = margin;
+  const targetMax  = 1 - margin;
+  const targetSize = targetMax - targetMin;
+  const w = xMax - xMin;
+  const h = yMax - yMin;
+
+  let scale = 1;
+  if (w > targetSize) scale = Math.min(scale, targetSize / w);
+  if (h > targetSize) scale = Math.min(scale, targetSize / h);
+
+  const cx = (xMin + xMax) * 0.5;
+  const cy = (yMin + yMax) * 0.5;
+
+  if (scale < 1) {
+    // Too big — scale uniformly around bbox centroid, recenter on canvas.
+    for (const c of centers) {
+      c.x = 0.5 + (c.x - cx) * scale;
+      c.y = 0.5 + (c.y - cy) * scale;
+      c.rx *= scale;
+      c.ry *= scale;
+    }
+  } else {
+    // Fits, but might be off-center against the margins. Shift if needed.
+    let dx = 0, dy = 0;
+    if (xMin < targetMin)      dx = targetMin - xMin;
+    else if (xMax > targetMax) dx = targetMax - xMax;
+    if (yMin < targetMin)      dy = targetMin - yMin;
+    else if (yMax > targetMax) dy = targetMax - yMax;
+    if (dx !== 0 || dy !== 0) {
+      for (const c of centers) { c.x += dx; c.y += dy; }
+    }
+  }
+
+  return centers;
+}
+
+// Mask value at (u, v) ∈ [0,1]². Additive centers contribute to land via max();
+// subtractive centers (crescent bite) carve out their max-pooled value from
+// the additive max. Bite is attenuated by 0.85 so a thin connector survives
+// instead of fully bisecting the shape.
+function maskAt(centers, u, v) {
+  let addMax = 0, subMax = 0;
+  for (const c of centers) {
+    const dx = u - c.x, dy = v - c.y;
+    const cs = Math.cos(-c.angle), sn = Math.sin(-c.angle);
+    const rx = dx * cs - dy * sn;
+    const ry = dx * sn + dy * cs;
+    const d = Math.sqrt((rx / c.rx) ** 2 + (ry / c.ry) ** 2);
+    if (d >= 1) continue;
+    const v2 = 1 - sss(d);
+    if (c.subtract) { if (v2 > subMax) subMax = v2; }
+    else            { if (v2 > addMax) addMax = v2; }
+  }
+  const m = addMax - subMax * 0.85;
+  return m > 0 ? m : 0;
+}
+
+// Build N mountain-ridge segments inside the main landmasses. Each ridge
+// becomes a line segment with a Gaussian falloff perpendicular to its
+// length, raising elevation in a band along the line. Ridges are
+// distributed across mains (in world mode each landmass gets its own
+// range, with a fresh primary axis per main so they don't all align).
+function buildRidges(seed, params, mains) {
+  if (!params.ridgeCount || !params.ridgeHeight) return [];
+  const r = makeRng(seed * 53 + 2017);
+  const ridges = [];
+  const N = mains.length || 1;
+  const perMain = Math.floor(params.ridgeCount / N);
+  const rem     = params.ridgeCount % N;
+
+  for (let mi = 0; mi < N; mi++) {
+    const mainCenter = mains[mi];
+    const count = perMain + (mi < rem ? 1 : 0);
+    if (count <= 0) continue;
+    const meanR = (mainCenter.rx + mainCenter.ry) * 0.5;
+    const primary = r() * Math.PI * 2;
+    for (let i = 0; i < count; i++) {
+      const cx = mainCenter.x + (r() - 0.5) * meanR * 0.85;
+      const cy = mainCenter.y + (r() - 0.5) * meanR * 0.85;
+      const angle = primary + (r() - 0.5) * 1.4;
+      const len = meanR * (0.45 + r() * 0.70);
+      const dx = Math.cos(angle) * len * 0.5;
+      const dy = Math.sin(angle) * len * 0.5;
+      ridges.push({
+        x1: cx - dx, y1: cy - dy,
+        x2: cx + dx, y2: cy + dy,
+        // Width of the elevation band. Narrower for taller ridges so they
+        // read as crests rather than plateaus.
+        sigma: 0.025 + r() * 0.018,
+        height: params.ridgeHeight,
+      });
+    }
+  }
+  return ridges;
+}
+
+// Squared min distance from (u,v) to a line segment.
+function distToSegSq(u, v, x1, y1, x2, y2) {
+  const dx = x2 - x1, dy = y2 - y1;
+  const len2 = dx * dx + dy * dy;
+  if (len2 < 1e-8) { const ax = u - x1, ay = v - y1; return ax * ax + ay * ay; }
+  let t = ((u - x1) * dx + (v - y1) * dy) / len2;
+  if (t < 0) t = 0; else if (t > 1) t = 1;
+  const px = x1 + t * dx, py = y1 + t * dy;
+  const ex = u - px, ey = v - py;
+  return ex * ex + ey * ey;
+}
+
+// Ridge elevation contribution at (u,v). Sum of Gaussian falloffs.
+function ridgeAt(ridges, u, v) {
+  let h = 0;
+  for (const r of ridges) {
+    const d2 = distToSegSq(u, v, r.x1, r.y1, r.x2, r.y2);
+    h += r.height * Math.exp(-d2 / (2 * r.sigma * r.sigma));
+  }
+  return h;
+}
+
+function generateHeightmap(seed, params) {
+  const n1 = new SimplexNoise(seed);
+  const n2 = new SimplexNoise(seed * 1031 + 7);
+  const n3 = new SimplexNoise(seed * 2053 + 13);
+  const { centers, mains } = buildIslandCenters(seed, params);
+  const ridges = buildRidges(seed, params, mains);
+
+  const { scale, roughness, warp } = params;
+  // Octave count comes from the coast-detail slider (default 5). Above
+  // ~6 octaves at small `scale`, sub-cell aliasing starts to show up
+  // as squiggly contours.
+  const coastDetail = Math.max(3, Math.min(7, params.coastDetail || 5));
+
+  const map = new Float32Array(W * H);
+
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const u = x / W, v = y / H;
+      let nx = u * scale, ny = v * scale;
+
+      // Domain warp — single stage with 3 octaves keeps the macro shape
+      // organic without injecting sub-cell wiggle that would alias into the
+      // contour lines.
+      const w  = warp * 0.6;
+      const wx = fbm(n2, nx,        ny,        3, roughness) * w;
+      const wy = fbm(n2, nx + 5.2,  ny + 1.3,  3, roughness) * w;
+      nx += wx; ny += wy;
+      // (n3 reserved for future use; harmless to keep the noise instance)
+      void n3;
+
+      let h = fbm(n1, nx, ny, coastDetail, roughness);  // ~[-1, 1]
+      h = (h + 1) * 0.5;                          // [0, 1]
+
+      const m = maskAt(centers, u, v);            // [0, 1]
+
+      // Tuned so noise has enough authority near the mask edge (m ≈ 0.1-0.3)
+      // to spawn small fragments and detach pieces from the main mass —
+      // this is what produces the "ragged shore + scatter of islets" look
+      // at high warp. Cells fully outside any mask center (m=0) max out at
+      // combined = 0.44, just below sea level (0.46), so no land appears in
+      // open water no matter how high the noise rolls.
+      let combined = m * 0.50 + h * 0.50 - 0.06 + (m * h) * 0.18;
+
+      // Add mountain-ridge elevation, attenuated by the land mask so
+      // ridges fade off coast instead of bumping the sea floor.
+      if (ridges.length) combined += ridgeAt(ridges, u, v) * m;
+
+      map[y * W + x] = clamp(combined, 0, 1);
+    }
+  }
+
+  // Single blur pass — preserves spiky coast detail at high warp.
+  // The 5-octave fbm cap means there's no sub-cell aliasing to fight,
+  // so we don't need multiple passes anymore.
+  let out = blur3(map);
+
+  // Thermal erosion — softens sharp ridges, age-like settling.
+  out = thermalErosion(out, params.erosion);
+
+  // Renormalize after erosion so sea level threshold remains meaningful.
+  let lo = Infinity, hi = -Infinity;
+  for (let i = 0; i < out.length; i++) { if (out[i] < lo) lo = out[i]; if (out[i] > hi) hi = out[i]; }
+  const range = (hi - lo) || 1;
+  for (let i = 0; i < out.length; i++) out[i] = (out[i] - lo) / range;
+
+  return out;
+}
+
+function blur3(map) {
+  const out = new Float32Array(map.length);
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      let s = 0, n = 0;
+      for (let dy = -1; dy <= 1; dy++) {
+        const yy = y + dy;
+        if (yy < 0 || yy >= H) continue;
+        for (let dx = -1; dx <= 1; dx++) {
+          const xx = x + dx;
+          if (xx < 0 || xx >= W) continue;
+          s += map[yy * W + xx]; n++;
+        }
+      }
+      out[y * W + x] = s / n;
+    }
+  }
+  return out;
+}
+
+// Thermal erosion — material flows downhill above a stability threshold.
+// Softens jagged peaks and produces more naturalistic terrain.
+function thermalErosion(map, passes) {
+  if (!passes) return map;
+  const out = new Float32Array(map);
+  const T = 0.038;
+  for (let p = 0; p < passes; p++) {
+    for (let y = 1; y < H - 1; y++) {
+      for (let x = 1; x < W - 1; x++) {
+        const i = y * W + x, h = out[i];
+        const nb = [i - W - 1, i - W, i - W + 1, i - 1, i + 1, i + W - 1, i + W, i + W + 1];
+        const dg = [1, 0, 1, 0, 0, 1, 0, 1];   // diagonals need higher threshold
+        let tot = 0;
+        const act = [];
+        for (let k = 0; k < 8; k++) {
+          const d = h - out[nb[k]];
+          const thr = dg[k] ? T * 1.414 : T;
+          if (d > thr) { act.push(nb[k]); tot += d; }
+        }
+        if (tot > 0) {
+          const mv = tot * 0.2 / act.length;
+          for (const ni of act) { out[i] -= mv; out[ni] += mv; }
+        }
+      }
+    }
+  }
+  return out;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  MARCHING SQUARES
+//  Returns [{x1,y1,x2,y2}, ...] in heightmap coords.
+//  Convention: segments oriented CCW around inside (above threshold).
+// ═══════════════════════════════════════════════════════════════
+function marchingSquares(map, threshold) {
+  const segs = [];
+
+  for (let y = 0; y < H - 1; y++) {
+    for (let x = 0; x < W - 1; x++) {
+      const a = map[y * W + x];                 // top-left
+      const b = map[y * W + (x + 1)];           // top-right
+      const c = map[(y + 1) * W + (x + 1)];     // bottom-right
+      const d = map[(y + 1) * W + x];           // bottom-left
+
+      const tl = a >= threshold ? 1 : 0;
+      const tr = b >= threshold ? 1 : 0;
+      const br = c >= threshold ? 1 : 0;
+      const bl = d >= threshold ? 1 : 0;
+      const idx = (tl << 3) | (tr << 2) | (br << 1) | bl;
+
+      if (idx === 0 || idx === 15) continue;
+
+      // Linear-interp along each edge to get sub-cell precision.
+      const T = (v1, v2) => (threshold - v1) / (v2 - v1);
+      const top    = { x: x + T(a, b),     y: y                 };
+      const right  = { x: x + 1,            y: y + T(b, c)       };
+      const bottom = { x: x + T(d, c),     y: y + 1             };
+      const left   = { x: x,                y: y + T(a, d)       };
+
+      // Standard CCW table (inside on the left when walking forward).
+      switch (idx) {
+        case 1:  segs.push([bottom, left]);  break;
+        case 2:  segs.push([right,  bottom]); break;
+        case 3:  segs.push([right,  left]);   break;
+        case 4:  segs.push([top,    right]);  break;
+        case 5: { // saddle
+          const ctr = (a + b + c + d) * 0.25;
+          if (ctr >= threshold) { segs.push([top, left]);    segs.push([bottom, right]); }
+          else                  { segs.push([bottom, left]); segs.push([top,    right]); }
+          break;
+        }
+        case 6:  segs.push([top,    bottom]); break;
+        case 7:  segs.push([top,    left]);   break;
+        case 8:  segs.push([left,   top]);    break;
+        case 9:  segs.push([bottom, top]);    break;
+        case 10: { // saddle
+          const ctr = (a + b + c + d) * 0.25;
+          if (ctr >= threshold) { segs.push([right, top]); segs.push([left, bottom]); }
+          else                  { segs.push([left, top]);  segs.push([right, bottom]); }
+          break;
+        }
+        case 11: segs.push([right,  top]);    break;
+        case 12: segs.push([left,   right]);  break;
+        case 13: segs.push([bottom, right]);  break;
+        case 14: segs.push([left,   bottom]); break;
+      }
+    }
+  }
+  return segs;
+}
+
+// Stitch oriented segments into polylines (closed where possible).
+function stitchSegments(segs) {
+  // Hash points to fixed precision for matching adjacent edge intersections.
+  const KEY = p => `${(p.x * 10000) | 0},${(p.y * 10000) | 0}`;
+
+  // Build start-key → segment indices index.
+  const startMap = new Map();
+  for (let i = 0; i < segs.length; i++) {
+    const k = KEY(segs[i][0]);
+    if (!startMap.has(k)) startMap.set(k, []);
+    startMap.get(k).push(i);
+  }
+
+  const used = new Uint8Array(segs.length);
+  const polys = [];
+
+  for (let i = 0; i < segs.length; i++) {
+    if (used[i]) continue;
+    const poly = [segs[i][0], segs[i][1]];
+    used[i] = 1;
+    let last = segs[i][1];
+    let closed = false;
+
+    while (true) {
+      const k = KEY(last);
+      const cands = startMap.get(k);
+      if (!cands) break;
+      let nxt = -1;
+      for (const ci of cands) { if (!used[ci]) { nxt = ci; break; } }
+      if (nxt < 0) break;
+      used[nxt] = 1;
+      const ep = segs[nxt][1];
+      poly.push(ep);
+      last = ep;
+      if (KEY(last) === KEY(poly[0])) { closed = true; break; }
+    }
+    poly.closed = closed;
+    polys.push(poly);
+  }
+  return polys;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  CHAIKIN SMOOTHING — corner-cutting; converges to B-spline
+// ═══════════════════════════════════════════════════════════════
+function chaikin(points, iterations = 3, closed = false) {
+  let pts = points;
+  for (let it = 0; it < iterations; it++) {
+    const N = pts.length;
+    const next = [];
+    if (!closed) next.push(pts[0]);
+    const limit = closed ? N : N - 1;
+    for (let i = 0; i < limit; i++) {
+      const p = pts[i];
+      const q = pts[(i + 1) % N];
+      next.push({ x: p.x * 0.75 + q.x * 0.25, y: p.y * 0.75 + q.y * 0.25 });
+      next.push({ x: p.x * 0.25 + q.x * 0.75, y: p.y * 0.25 + q.y * 0.75 });
+    }
+    if (!closed) next.push(pts[N - 1]);
+    pts = next;
+  }
+  return pts;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  POLYGON UTILITIES
+// ═══════════════════════════════════════════════════════════════
+function polyArea(pts) {
+  let a = 0;
+  const N = pts.length;
+  for (let i = 0; i < N; i++) {
+    const p = pts[i], q = pts[(i + 1) % N];
+    a += p.x * q.y - q.x * p.y;
+  }
+  return Math.abs(a) * 0.5;
+}
+
+function scalePoly(pts, k) {
+  const out = new Array(pts.length);
+  for (let i = 0; i < pts.length; i++) out[i] = { x: pts[i].x * k, y: pts[i].y * k };
+  return out;
+}
+
+// Build SVG path "d" string from a polyline using Catmull-Rom cubic
+// Béziers. The resulting curve passes through every input point with
+// C² continuity (curvature continuous), so it stays mathematically
+// smooth at any zoom — no facets, no flat-spotting at joints.
+//
+// Conversion: for each segment P1→P2 with neighbours P0, P3:
+//   C1 = P1 + (P2 - P0) / 6
+//   C2 = P2 - (P3 - P1) / 6
+function polyToPath(pts, closed) {
+  const N = pts.length;
+  if (N === 0) return '';
+  if (N < 4) {
+    let d = `M${pts[0].x.toFixed(2)} ${pts[0].y.toFixed(2)}`;
+    for (let i = 1; i < N; i++) d += `L${pts[i].x.toFixed(2)} ${pts[i].y.toFixed(2)}`;
+    if (closed) d += 'Z';
+    return d;
+  }
+
+  const get = closed
+    ? (i) => pts[((i % N) + N) % N]
+    : (i) => pts[Math.max(0, Math.min(N - 1, i))];
+
+  const start = pts[0];
+  let d = `M${start.x.toFixed(2)} ${start.y.toFixed(2)}`;
+
+  const limit = closed ? N : N - 1;
+  for (let i = 0; i < limit; i++) {
+    const p0 = get(i - 1);
+    const p1 = get(i);
+    const p2 = get(i + 1);
+    const p3 = get(i + 2);
+    const c1x = p1.x + (p2.x - p0.x) / 6;
+    const c1y = p1.y + (p2.y - p0.y) / 6;
+    const c2x = p2.x - (p3.x - p1.x) / 6;
+    const c2y = p2.y - (p3.y - p1.y) / 6;
+    d += `C${c1x.toFixed(2)} ${c1y.toFixed(2)} ${c2x.toFixed(2)} ${c2y.toFixed(2)} ${p2.x.toFixed(2)} ${p2.y.toFixed(2)}`;
+  }
+  if (closed) d += 'Z';
+  return d;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  RENDER ISLAND TO SVG
+// ═══════════════════════════════════════════════════════════════
+function renderTerrain() {
+  const seedVal = parseInt(document.getElementById('seed-input').value);
+  const seed = Number.isFinite(seedVal) && seedVal > 0 ? seedVal : 1;
+  const params = getParams();
+  const t0 = performance.now();
+  const map = generateHeightmap(seed, params);
+
+  const sxf = SVG_VIEW / W;          // heightmap → SVG scale factor
+  const seaLevel = SEA_BASE + params.seaOffset;
+
+  // Coastline (sea level) — defines island bodies.
+  const coastSegs   = marchingSquares(map, seaLevel);
+  const coastPolys  = stitchSegments(coastSegs);
+
+  // Drop only obvious noise specks. Closed polygons are the proper islands
+  // (will be filled + stroked). Open polylines come from polygons that
+  // failed to fully stitch (numerical edge cases, contours that touch the
+  // canvas edge) — render them stroke-only so the user always sees a
+  // complete coast outline instead of a missing chunk.
+  // Open-polyline threshold raised to 24 points so atoll/horseshoe noise
+  // specks around the periphery (tiny "outline only" fragments where the
+  // heightmap dips just below sea level) get dropped without losing
+  // genuine partially-clipped coastlines.
+  const MIN_AREA_COAST   = 4;
+  const MIN_POINTS_OPEN  = 24;
+  const closedCoasts = coastPolys.filter(p =>  p.closed && polyArea(p) >= MIN_AREA_COAST);
+  const openCoasts   = coastPolys.filter(p => !p.closed && p.length    >= MIN_POINTS_OPEN);
+
+  // 3 Chaikin passes — averages out residual high-frequency point jitter
+  // before Catmull-Rom interpolates through them. Without this, the
+  // Bézier curves faithfully reproduce sub-cell noise as visible squiggle.
+  const closedSmoothed = closedCoasts.map(p => chaikin(p, 3, true));
+  const openSmoothed   = openCoasts.map(p => chaikin(p, 3, false));
+
+  // Contour stack — drop micro-rings aggressively (they cluster around
+  // local maxima and produce visual dotting), but allow normal-size rings.
+  // Contour count comes from the panel slider — more contours = denser
+  // topographic banding (good for continental relief, busy for small islands).
+  const MIN_AREA_INNER = 35;
+  const contourOffsets = buildContours(params.contourCount);
+  const contourLayers = contourOffsets.map(off => {
+    const segs = marchingSquares(map, seaLevel + off);
+    const polys = stitchSegments(segs);
+    return polys
+      .filter(p => polyArea(p) >= MIN_AREA_INNER)
+      .map(p => chaikin(p, 2, p.closed));
+  });
+
+  // ── Build SVG ──
+  const svg = document.getElementById('map');
+  svg.setAttribute('viewBox', `0 0 ${SVG_VIEW} ${SVG_VIEW}`);
+  svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+
+  const out = [];
+
+  // <defs> intentionally minimal — no stipple, no vignette, no grain.
+  // The ocean is one flat color matching the body background, so the
+  // SVG boundary is invisible and zoom reveals only the island sitting
+  // in a uniform sea.
+  out.push(`<defs></defs>`);
+
+  // Ocean background — vastly bigger than the viewBox so panning at
+  // any zoom level never reaches the rect's edge. Painted from
+  // (-5×SVG_VIEW) to (+6×SVG_VIEW) on each axis = 11,000 × 11,000 unit
+  // sea, with the [0, 1000] island region in the middle.
+  out.push(`<rect x="${-5 * SVG_VIEW}" y="${-5 * SVG_VIEW}" width="${11 * SVG_VIEW}" height="${11 * SVG_VIEW}" fill="#a8b8c4"/>`);
+
+  // Build coast path data.
+  // - Closed coasts: same path used for fill + stroke.
+  // - Open coasts (continents clipped by the canvas edge): the fill
+  //   path appends "Z" so the polyline closes to its start point, which
+  //   keeps the land filled even when it bleeds off the page. The stroke
+  //   path leaves them open so no false coastline is drawn across the
+  //   ocean.
+  const closedD = closedSmoothed.map(p => polyToPath(scalePoly(p, sxf), true)).join(' ');
+  const openD   = openSmoothed.map(p   => polyToPath(scalePoly(p, sxf), false)).join(' ');
+  const openD_filled = openSmoothed.map(p => polyToPath(scalePoly(p, sxf), false) + ' Z').join(' ');
+  const allCoastD = (closedD + ' ' + openD).trim();
+  const fillD     = (closedD + ' ' + openD_filled).trim();
+
+  // Land fill — warm paper, contrasting with the cooler ocean.
+  if (fillD) out.push(`<path d="${fillD}" fill="#efe6cf" fill-rule="evenodd" stroke="none"/>`);
+
+  // Inner contour lines — single warm-sepia tone, opacity gradient from
+  // the coast (most prominent) to the highest elevation (faintest).
+  // Lighter overall than v0 so the topo lines don't compete with the
+  // coastline for visual weight.
+  contourLayers.forEach((polys, i) => {
+    const widthPx = Math.max(0.45, 1.05 - i * 0.12);
+    const opacity = Math.max(0.14, 0.36 - i * 0.05);
+    const paths = polys.map(p => polyToPath(scalePoly(p, sxf), p.closed));
+    if (!paths.length) return;
+    out.push(
+      `<path d="${paths.join(' ')}" ` +
+      `fill="none" stroke="#5a4a30" stroke-width="${widthPx.toFixed(2)}" ` +
+      `stroke-opacity="${opacity.toFixed(2)}" ` +
+      `stroke-linejoin="round" stroke-linecap="round" ` +
+      `vector-effect="non-scaling-stroke"/>`
+    );
+  });
+
+  // Coastline stroke (thicker, on top). Combined closed+open paths so
+  // any partially-stitched coastline still gets its outline drawn.
+  if (allCoastD) {
+    out.push(
+      `<path d="${allCoastD}" fill="none" stroke="#1c1610" ` +
+      `stroke-width="2.0" ` +
+      `stroke-linejoin="round" stroke-linecap="round" ` +
+      `vector-effect="non-scaling-stroke"/>`
+    );
+  }
+
+  // (paper grain + vignette removed — flat ocean only)
+
+  // Compass — small N marker, top-right
+  out.push(buildCompass(SVG_VIEW - 64, 64, 22));
+
+  svg.innerHTML = out.join('\n');
+
+  const t1 = performance.now();
+  const landCount = closedCoasts.length;
+  const archLabel = ARCHETYPE_LABELS[params.archName] || params.archName;
+  document.getElementById('seed-display').textContent = String(seed).padStart(4, '0');
+  document.getElementById('status').innerHTML =
+    `${archLabel.toUpperCase()}<br>` +
+    `${landCount} land${landCount === 1 ? '' : 's'} · ${(t1 - t0) | 0}ms`;
+}
+
+function buildCompass(cx, cy, r) {
+  const rotateMark = (a, len, color, w) => {
+    const rad = (a - 90) * Math.PI / 180;
+    return `<line x1="${cx + Math.cos(rad) * r * 0.55}" y1="${cy + Math.sin(rad) * r * 0.55}" x2="${cx + Math.cos(rad) * r * 0.85}" y2="${cy + Math.sin(rad) * r * 0.85}" stroke="${color}" stroke-width="${w}"/>`;
+  };
+  return `<g opacity="0.7" font-family="Iowan Old Style, Palatino, Georgia, serif">
+    <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#5a4a30" stroke-width="0.5"/>
+    <circle cx="${cx}" cy="${cy}" r="${r * 0.55}" fill="none" stroke="#5a4a30" stroke-width="0.4"/>
+    ${rotateMark(45, 1, '#5a4a30', 0.5)}${rotateMark(135, 1, '#5a4a30', 0.5)}${rotateMark(225, 1, '#5a4a30', 0.5)}${rotateMark(315, 1, '#5a4a30', 0.5)}
+    <polygon points="${cx},${cy - r * 1.05} ${cx - 4},${cy - r * 0.45} ${cx + 4},${cy - r * 0.45}" fill="#1c1610"/>
+    <polygon points="${cx},${cy + r * 0.95} ${cx - 3},${cy + r * 0.45} ${cx + 3},${cy + r * 0.45}" fill="#5a4a30"/>
+    <text x="${cx}" y="${cy - r * 1.18}" text-anchor="middle" font-size="10" fill="#1c1610" font-weight="600">N</text>
+    <circle cx="${cx}" cy="${cy}" r="1.6" fill="#1c1610"/>
+  </g>`;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  DRIVE / UI
+// ═══════════════════════════════════════════════════════════════
+function rerender() {
+  renderTerrain();
+  if (typeof applyViewBox === 'function') applyViewBox();
+}
+
+// Repopulate the archetype dropdown when the mode changes. Each mode
+// (continent/island/atoll) exposes a different set of archetypes.
+function populateArchetypes(mode, selected) {
+  const sel = document.getElementById('arch-sel');
+  const list = ARCHETYPES_BY_MODE[mode] || ARCHETYPES_BY_MODE.island;
+  sel.innerHTML = '';
+  for (const a of list) {
+    const opt = document.createElement('option');
+    opt.value = a;
+    opt.textContent = ARCHETYPE_LABELS[a] || a;
+    sel.appendChild(opt);
+  }
+  if (selected && list.includes(selected)) {
+    sel.value = selected;
+  } else {
+    sel.value = list[0];
+  }
+}
+
+// "New Terrain" — rolls a new seed, picks a random archetype within the
+// CURRENT mode, and re-rolls every slider within that archetype's envelope.
+function newTerrain() {
+  const seed = (Math.random() * 99991 + 1) | 0;
+  document.getElementById('seed-input').value = seed;
+  const mode = document.getElementById('mode-sel').value;
+  const list = ARCHETYPES_BY_MODE[mode];
+  const arch = list[(Math.random() * list.length) | 0];
+  document.getElementById('arch-sel').value = arch;
+  randomizeFromArchetype(arch, seed);
+  rerender();
+}
+
+// "Re-roll Layout" — same archetype + sliders, different seed (the seed
+// drives placement RNG so the layout shifts while the look stays similar).
+function rerollLayout() {
+  document.getElementById('seed-input').value = (Math.random() * 99991 + 1) | 0;
+  rerender();
+}
+
+document.getElementById('btn-new').addEventListener('click', newTerrain);
+document.getElementById('btn-reroll-placement').addEventListener('click', rerollLayout);
+
+// Mode change → swap archetype list and roll fresh params.
+document.getElementById('mode-sel').addEventListener('change', e => {
+  populateArchetypes(e.target.value);
+  const seed = parseInt(document.getElementById('seed-input').value) || 1;
+  const arch = document.getElementById('arch-sel').value;
+  randomizeFromArchetype(arch, seed);
+  rerender();
+});
+
+// Archetype change → re-roll within that archetype's envelope.
+document.getElementById('arch-sel').addEventListener('change', e => {
+  const seed = parseInt(document.getElementById('seed-input').value) || 1;
+  randomizeFromArchetype(e.target.value, seed);
+  rerender();
+});
+
+// Seed input — typing or pasting a seed re-renders.
+const seedInputEl = document.getElementById('seed-input');
+seedInputEl.addEventListener('change', rerender);
+seedInputEl.addEventListener('keydown', e => { if (e.key === 'Enter') rerender(); });
+
+// Live slider changes — update the value display and re-render.
+document.querySelectorAll('#panel input[type=range]').forEach(el => {
+  el.addEventListener('input', () => {
+    const dis = document.getElementById(el.id.replace('s-', 'v-'));
+    if (dis) {
+      const step = parseFloat(el.step);
+      const v = parseFloat(el.value);
+      dis.textContent = step >= 1 ? String(v | 0) : v.toFixed(step < 0.01 ? 3 : 2);
+    }
+    rerender();
+  });
+});
+
+// ── Zoom & pan via SVG viewBox (true vector zoom — re-rasterized at every level) ──
+const VB_FULL = SVG_VIEW;
+let vb = { x: 0, y: 0, w: VB_FULL, h: VB_FULL };
+let drag = false, dsx = 0, dsy = 0, dvbx = 0, dvby = 0;
+
+const stage = document.getElementById('stage-canvas');
+const svgEl = document.getElementById('map');
+
+function applyViewBox() {
+  svgEl.setAttribute('viewBox', `${vb.x.toFixed(3)} ${vb.y.toFixed(3)} ${vb.w.toFixed(3)} ${vb.h.toFixed(3)}`);
+  document.getElementById('zlev').textContent = Math.round(VB_FULL / vb.w * 100) + '%';
+}
+
+function resetView() {
+  vb = { x: 0, y: 0, w: VB_FULL, h: VB_FULL };
+  applyViewBox();
+}
+
+function zoomAt(factor, clientX, clientY) {
+  const r = svgEl.getBoundingClientRect();
+  if (clientX == null) clientX = r.left + r.width  / 2;
+  if (clientY == null) clientY = r.top  + r.height / 2;
+  const mx = vb.x + (clientX - r.left) / r.width  * vb.w;
+  const my = vb.y + (clientY - r.top)  / r.height * vb.h;
+  const minW = VB_FULL / 256, maxW = VB_FULL * 2;
+  let newW = clamp(vb.w / factor, minW, maxW);
+  let newH = clamp(vb.h / factor, minW, maxW);
+  vb.x = mx - (clientX - r.left) / r.width  * newW;
+  vb.y = my - (clientY - r.top)  / r.height * newH;
+  vb.w = newW;
+  vb.h = newH;
+  applyViewBox();
+}
+
+stage.addEventListener('mousedown', e => {
+  if (e.button !== 0) return;
+  const tag = e.target.tagName;
+  if (tag === 'INPUT' || tag === 'BUTTON') return;
+  drag = true;
+  dsx = e.clientX; dsy = e.clientY;
+  dvbx = vb.x; dvby = vb.y;
+  stage.classList.add('dragging');
+});
+window.addEventListener('mousemove', e => {
+  if (!drag) return;
+  const r = svgEl.getBoundingClientRect();
+  vb.x = dvbx - (e.clientX - dsx) / r.width  * vb.w;
+  vb.y = dvby - (e.clientY - dsy) / r.height * vb.h;
+  applyViewBox();
+});
+window.addEventListener('mouseup', () => { drag = false; stage.classList.remove('dragging'); });
+stage.addEventListener('dblclick', resetView);
+
+document.getElementById('zin').addEventListener('click',  () => zoomAt(1.5));
+document.getElementById('zout').addEventListener('click', () => zoomAt(1 / 1.5));
+document.getElementById('zrst').addEventListener('click', resetView);
+
+// ═══════════════════════════════════════════════════════════════
+//  EXPORT — SVG and PNG
+//  Both export at the full unzoomed canvas (viewBox 0 0 SVG_VIEW
+//  SVG_VIEW) regardless of the user's current zoom level.
+// ═══════════════════════════════════════════════════════════════
+function currentSeedString() {
+  const s = (document.getElementById('seed-input').value || '0').trim();
+  return s.padStart(4, '0');
+}
+
+function buildExportSVGString() {
+  const svg = document.getElementById('map');
+  const clone = svg.cloneNode(true);
+  clone.setAttribute('viewBox', `0 0 ${SVG_VIEW} ${SVG_VIEW}`);
+  clone.setAttribute('width',  SVG_VIEW);
+  clone.setAttribute('height', SVG_VIEW);
+  clone.setAttribute('xmlns',       'http://www.w3.org/2000/svg');
+  clone.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
+  return '<?xml version="1.0" encoding="UTF-8"?>\n' +
+         new XMLSerializer().serializeToString(clone);
+}
+
+function triggerDownload(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 200);
+}
+
+function downloadSVG() {
+  const xml = buildExportSVGString();
+  triggerDownload(
+    new Blob([xml], { type: 'image/svg+xml;charset=utf-8' }),
+    `terragod-${currentSeedString()}.svg`
+  );
+}
+
+function downloadPNG() {
+  const xml = buildExportSVGString();
+  const svgBlob = new Blob([xml], { type: 'image/svg+xml;charset=utf-8' });
+  const svgURL  = URL.createObjectURL(svgBlob);
+  const img = new Image();
+  img.onload = () => {
+    const PNG_SIZE = 2400;
+    const canvas = document.createElement('canvas');
+    canvas.width = PNG_SIZE;
+    canvas.height = PNG_SIZE;
+    const ctx = canvas.getContext('2d');
+    // Ocean background — guards against any transparent corner area.
+    ctx.fillStyle = '#a8b8c4';
+    ctx.fillRect(0, 0, PNG_SIZE, PNG_SIZE);
+    ctx.drawImage(img, 0, 0, PNG_SIZE, PNG_SIZE);
+    canvas.toBlob(blob => {
+      triggerDownload(blob, `terragod-${currentSeedString()}.png`);
+      URL.revokeObjectURL(svgURL);
+    }, 'image/png');
+  };
+  img.onerror = () => { URL.revokeObjectURL(svgURL); };
+  img.src = svgURL;
+}
+
+document.getElementById('btn-save-svg').addEventListener('click', downloadSVG);
+document.getElementById('btn-save-png').addEventListener('click', downloadPNG);
+
+// ── Init ──
+// Populate the dropdown for the default mode, randomize within the chosen
+// archetype, then render.
+(function init() {
+  const initialMode = document.getElementById('mode-sel').value || 'continent';
+  populateArchetypes(initialMode);
+  const seed = parseInt(document.getElementById('seed-input').value) || 7919;
+  randomizeFromArchetype(document.getElementById('arch-sel').value, seed);
+  rerender();
+})();
+</script>
+</body>
+</html>
+</content>
+</invoke>
