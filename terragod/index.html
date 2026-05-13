@@ -1577,15 +1577,26 @@ function renderTerrain() {
   // sea, with the [0, 1000] island region in the middle.
   out.push(`<rect x="${-5 * SVG_VIEW}" y="${-5 * SVG_VIEW}" width="${11 * SVG_VIEW}" height="${11 * SVG_VIEW}" fill="#a8b8c4"/>`);
 
-  // Build coast path data.
-  // - Closed coasts: same path used for fill + stroke.
-  // - Open coasts (continents clipped by the canvas edge): only those
-  //   with BOTH endpoints on the canvas boundary get filled — anything
-  //   else is a numerical/saddle artifact and would punch wedge-shaped
-  //   holes in the fill via evenodd overlap. Filled open coasts get the
-  //   shorter boundary corners appended (sharp L segments) so the close
-  //   traces along the canvas edge instead of cutting diagonally.
-  const bEps = 2.5;
+  // Build coast path data — open polylines get classified into three
+  // buckets to avoid the floating-outline + wedge artifacts that come
+  // from marching-squares stitching failures:
+  //
+  //   1. boundary-touching — both endpoints on the canvas edge. Real
+  //      continent bleed-off. Fill with shorter-path corner trace +
+  //      sharp L segments + Z. Stroke as the open polyline so no false
+  //      coastline is drawn along the canvas edge.
+  //
+  //   2. almost-closed — endpoints within ALMOST_CLOSED_THRESHOLD of
+  //      each other. Small islands whose coast didn't quite stitch
+  //      because of saddle ambiguity or numerical drift. Treat as a
+  //      proper closed coast: Catmull-Rom around the loop, fill + stroke.
+  //
+  //   3. anything else → drop entirely. These are the noise specks +
+  //      saddle artifacts that floated as unfilled outlines before.
+  const bEps = 5.0;                       // heightmap units; ~1% from edge
+  const ALMOST_CLOSED_THRESHOLD = 14.0;   // heightmap units (~2.7% of W)
+  const MIN_AREA_RECOVERED      = 6;      // drop sub-speck recovered closes
+
   const sideOf = p => {
     if (p.y <= bEps)         return 0; // T
     if (p.x >= W - bEps)     return 1; // R
@@ -1593,17 +1604,11 @@ function renderTerrain() {
     if (p.x <= bEps)         return 3; // L
     return -1;
   };
-  // Corner encountered going CW from side i (T→R→B→L→T):
-  // T(0) → R-side via top-right; R(1) → B via bottom-right; etc.
-  const cornerCW = [
-    { x: W, y: 0 }, { x: W, y: H }, { x: 0, y: H }, { x: 0, y: 0 }
-  ];
-  // Corner encountered going CCW from side i (T→L→B→R→T):
-  const cornerCCW = [
-    { x: 0, y: 0 }, { x: W, y: 0 }, { x: W, y: H }, { x: 0, y: H }
-  ];
-  // Map: cornerCCW[i] = corner you cross when leaving side i CCW.
-  // From T(0) going CCW → top-left (0,0). From R(1) going CCW → top-right (W,0). Etc.
+  // CW order T→R→B→L: corner after side i (going CW)
+  const cornerCW  = [{x:W,y:0},{x:W,y:H},{x:0,y:H},{x:0,y:0}];
+  // CCW order T→L→B→R: corner after side i (going CCW)
+  const cornerCCW = [{x:0,y:0},{x:W,y:0},{x:W,y:H},{x:0,y:H}];
+
   const closeAlongBoundary = (pts) => {
     if (pts.length < 2) return null;
     const s = sideOf(pts[0]);
@@ -1630,21 +1635,37 @@ function renderTerrain() {
   };
 
   const closedD = closedSmoothed.map(p => polyToPath(scalePoly(p, sxf), true)).join(' ');
-  const openD   = openSmoothed.map(p   => polyToPath(scalePoly(p, sxf), false)).join(' ');
 
-  const openD_filled = openSmoothed
-    .map(p => closeAlongBoundary(p))
-    .filter(c => c != null)
-    .map(c => {
-      let d = polyToPath(scalePoly(c.coast, sxf), false);
-      for (const corner of c.corners) {
+  const openFillParts   = [];
+  const openStrokeParts = [];
+  for (const p of openSmoothed) {
+    const bc = closeAlongBoundary(p);
+    if (bc) {
+      // Continent bleed-off — fill with corner trace, stroke as polyline.
+      let d = polyToPath(scalePoly(bc.coast, sxf), false);
+      for (const corner of bc.corners) {
         d += `L${(corner.x * sxf).toFixed(2)} ${(corner.y * sxf).toFixed(2)}`;
       }
-      return d + ' Z';
-    }).join(' ');
-
-  const allCoastD = (closedD + ' ' + openD).trim();
-  const fillD     = (closedD + ' ' + openD_filled).trim();
+      openFillParts.push(d + ' Z');
+      openStrokeParts.push(polyToPath(scalePoly(p, sxf), false));
+      continue;
+    }
+    const startP = p[0];
+    const endP   = p[p.length - 1];
+    const gap = Math.hypot(startP.x - endP.x, startP.y - endP.y);
+    if (gap <= ALMOST_CLOSED_THRESHOLD && polyArea(p) >= MIN_AREA_RECOVERED) {
+      // Tiny stitch gap — recover as a proper closed coast.
+      const d = polyToPath(scalePoly(p, sxf), true);
+      openFillParts.push(d);
+      openStrokeParts.push(d);
+      continue;
+    }
+    // Drop — saddle/noise artifact. No fill, no stroke.
+  }
+  const openFillD   = openFillParts.join(' ');
+  const openStrokeD = openStrokeParts.join(' ');
+  const fillD     = (closedD + ' ' + openFillD).trim();
+  const allCoastD = (closedD + ' ' + openStrokeD).trim();
 
   // Land fill — warm paper, contrasting with the cooler ocean.
   if (fillD) out.push(`<path d="${fillD}" fill="#efe6cf" fill-rule="evenodd" stroke="none"/>`);
