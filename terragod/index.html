@@ -1577,25 +1577,22 @@ function renderTerrain() {
   // sea, with the [0, 1000] island region in the middle.
   out.push(`<rect x="${-5 * SVG_VIEW}" y="${-5 * SVG_VIEW}" width="${11 * SVG_VIEW}" height="${11 * SVG_VIEW}" fill="#a8b8c4"/>`);
 
-  // Build coast path data — open polylines get classified into three
-  // buckets to avoid the floating-outline + wedge artifacts that come
-  // from marching-squares stitching failures:
+  // Build coast path data. Open polylines from marching-squares can be:
+  //   (a) bleed-off continents (both endpoints on canvas boundary),
+  //   (b) substantial landforms whose coast didn't fully stitch into
+  //       a closed loop because of saddle ambiguity / numerical drift,
+  //   (c) tiny noise specks or interior saddle artifacts that would
+  //       punch wedges out of closed continents via evenodd overlap.
   //
-  //   1. boundary-touching — both endpoints on the canvas edge. Real
-  //      continent bleed-off. Fill with shorter-path corner trace +
-  //      sharp L segments + Z. Stroke as the open polyline so no false
-  //      coastline is drawn along the canvas edge.
-  //
-  //   2. almost-closed — endpoints within ALMOST_CLOSED_THRESHOLD of
-  //      each other. Small islands whose coast didn't quite stitch
-  //      because of saddle ambiguity or numerical drift. Treat as a
-  //      proper closed coast: Catmull-Rom around the loop, fill + stroke.
-  //
-  //   3. anything else → drop entirely. These are the noise specks +
-  //      saddle artifacts that floated as unfilled outlines before.
-  const bEps = 5.0;                       // heightmap units; ~1% from edge
-  const ALMOST_CLOSED_THRESHOLD = 14.0;   // heightmap units (~2.7% of W)
-  const MIN_AREA_RECOVERED      = 6;      // drop sub-speck recovered closes
+  // Classification:
+  //   1. boundary-touching → fill with shorter-path corner trace + L
+  //      segments + Z. Stroke as the open polyline (no false coastline
+  //      along the canvas edge).
+  //   2. substantial area AND not overlapping any closed polygon →
+  //      recover as a closed coast (Catmull-Rom around the loop).
+  //   3. everything else → drop entirely.
+  const bEps = 5.0;
+  const MIN_RECOVER_AREA = 30;   // heightmap units²; small specs filtered
 
   const sideOf = p => {
     if (p.y <= bEps)         return 0; // T
@@ -1604,9 +1601,7 @@ function renderTerrain() {
     if (p.x <= bEps)         return 3; // L
     return -1;
   };
-  // CW order T→R→B→L: corner after side i (going CW)
   const cornerCW  = [{x:W,y:0},{x:W,y:H},{x:0,y:H},{x:0,y:0}];
-  // CCW order T→L→B→R: corner after side i (going CCW)
   const cornerCCW = [{x:0,y:0},{x:W,y:0},{x:W,y:H},{x:0,y:H}];
 
   const closeAlongBoundary = (pts) => {
@@ -1634,6 +1629,36 @@ function renderTerrain() {
     return { coast: pts, corners: cs };
   };
 
+  // Ray-casting point-in-polygon test (standard).
+  const pointInPoly = (px, py, poly) => {
+    let inside = false;
+    const N = poly.length;
+    for (let i = 0, j = N - 1; i < N; j = i++) {
+      const xi = poly[i].x, yi = poly[i].y;
+      const xj = poly[j].x, yj = poly[j].y;
+      if (((yi > py) !== (yj > py)) &&
+          (px < (xj - xi) * (py - yi) / (yj - yi) + xi)) {
+        inside = !inside;
+      }
+    }
+    return inside;
+  };
+
+  // Sample a few points along an open polyline; return true if any
+  // sit inside any closed polygon (i.e., recovering it would cause
+  // an evenodd wedge artifact).
+  const overlapsAnyClosed = (pts) => {
+    const SAMPLES = 5;
+    for (let s = 0; s < SAMPLES; s++) {
+      const idx = ((s + 1) * pts.length / (SAMPLES + 1)) | 0;
+      const pt = pts[idx];
+      for (const cl of closedSmoothed) {
+        if (pointInPoly(pt.x, pt.y, cl)) return true;
+      }
+    }
+    return false;
+  };
+
   const closedD = closedSmoothed.map(p => polyToPath(scalePoly(p, sxf), true)).join(' ');
 
   const openFillParts   = [];
@@ -1641,7 +1666,6 @@ function renderTerrain() {
   for (const p of openSmoothed) {
     const bc = closeAlongBoundary(p);
     if (bc) {
-      // Continent bleed-off — fill with corner trace, stroke as polyline.
       let d = polyToPath(scalePoly(bc.coast, sxf), false);
       for (const corner of bc.corners) {
         d += `L${(corner.x * sxf).toFixed(2)} ${(corner.y * sxf).toFixed(2)}`;
@@ -1650,17 +1674,12 @@ function renderTerrain() {
       openStrokeParts.push(polyToPath(scalePoly(p, sxf), false));
       continue;
     }
-    const startP = p[0];
-    const endP   = p[p.length - 1];
-    const gap = Math.hypot(startP.x - endP.x, startP.y - endP.y);
-    if (gap <= ALMOST_CLOSED_THRESHOLD && polyArea(p) >= MIN_AREA_RECOVERED) {
-      // Tiny stitch gap — recover as a proper closed coast.
-      const d = polyToPath(scalePoly(p, sxf), true);
-      openFillParts.push(d);
-      openStrokeParts.push(d);
-      continue;
-    }
-    // Drop — saddle/noise artifact. No fill, no stroke.
+    if (polyArea(p) < MIN_RECOVER_AREA) continue;          // tiny artifact
+    if (overlapsAnyClosed(p))           continue;          // would cut a wedge
+    // Substantial free-standing open polyline — recover as closed.
+    const d = polyToPath(scalePoly(p, sxf), true);
+    openFillParts.push(d);
+    openStrokeParts.push(d);
   }
   const openFillD   = openFillParts.join(' ');
   const openStrokeD = openStrokeParts.join(' ');
