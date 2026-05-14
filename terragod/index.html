@@ -1425,6 +1425,76 @@ function stitchSegments(segs) {
   return polys;
 }
 
+// Post-process the stitcher output: merge open polylines whose
+// endpoints lie within `threshold` of each other (in heightmap units).
+//
+// Marching-squares stitching can leave a single closed coastline split
+// into two or more open polylines when there's a saddle point or other
+// numerical ambiguity that the first-unused selection got wrong. Those
+// pieces typically meet (or near-meet) at the ambiguous point. Merging
+// them by endpoint proximity recovers the proper closed loop without
+// drawing the visible straight "scar" lines or evenodd wedges that
+// downstream Z-closure produces.
+//
+// Tries all four endpoint-pair orientations (A.end↔B.start, A.end↔B.end,
+// A.start↔B.end, A.start↔B.start), picking the closest match per pass.
+// Iterates until no more merges are possible. After merging, any poly
+// whose endpoints meet is flagged closed=true.
+function mergeOpenPolylines(polys, threshold = 1.5) {
+  const closed = polys.filter(p => p.closed);
+  let opens   = polys.filter(p => !p.closed);
+  const dist = (p, q) => Math.hypot(p.x - q.x, p.y - q.y);
+
+  let progress = true;
+  while (progress) {
+    progress = false;
+    for (let i = 0; i < opens.length; i++) {
+      const A = opens[i];
+      if (!A) continue;
+      const aS = A[0], aE = A[A.length - 1];
+
+      let bestJ = -1, bestKind = '', bestDist = threshold;
+      for (let j = 0; j < opens.length; j++) {
+        if (i === j) continue;
+        const B = opens[j];
+        if (!B) continue;
+        const bS = B[0], bE = B[B.length - 1];
+        const d1 = dist(aE, bS); // A + B
+        const d2 = dist(aE, bE); // A + reverse(B)
+        const d3 = dist(aS, bE); // B + A
+        const d4 = dist(aS, bS); // reverse(A) + B   (or A + reverse-and-prepend)
+        if (d1 < bestDist) { bestDist = d1; bestJ = j; bestKind = 'AB';  }
+        if (d2 < bestDist) { bestDist = d2; bestJ = j; bestKind = 'ArB'; }
+        if (d3 < bestDist) { bestDist = d3; bestJ = j; bestKind = 'BA';  }
+        if (d4 < bestDist) { bestDist = d4; bestJ = j; bestKind = 'rAB'; }
+      }
+      if (bestJ < 0) continue;
+      const B = opens[bestJ];
+      let merged;
+      switch (bestKind) {
+        case 'AB':  merged = A.concat(B.slice(1)); break;
+        case 'ArB': merged = A.concat(B.slice(0, -1).reverse()); break;
+        case 'BA':  merged = B.concat(A.slice(1)); break;
+        case 'rAB': merged = A.slice().reverse().concat(B.slice(1)); break;
+      }
+      opens[i] = merged;
+      opens[bestJ] = null;
+      progress = true;
+    }
+    opens = opens.filter(p => p);
+  }
+
+  // Final pass: any merged polyline whose start ≈ end is now closed.
+  for (const p of opens) {
+    if (dist(p[0], p[p.length - 1]) <= threshold) {
+      p.closed = true;
+      closed.push(p);
+    }
+  }
+  const stillOpen = opens.filter(p => !p.closed);
+  return closed.concat(stillOpen);
+}
+
 // ═══════════════════════════════════════════════════════════════
 //  CHAIKIN SMOOTHING — corner-cutting; converges to B-spline
 // ═══════════════════════════════════════════════════════════════
@@ -1522,7 +1592,9 @@ function renderTerrain() {
 
   // Coastline (sea level) — defines island bodies.
   const coastSegs   = marchingSquares(map, seaLevel);
-  const coastPolys  = stitchSegments(coastSegs);
+  // Merge open polylines whose endpoints are near each other — recovers
+  // closed loops that the stitcher split because of saddle ambiguity.
+  const coastPolys  = mergeOpenPolylines(stitchSegments(coastSegs), 1.5);
 
   // Drop only obvious noise specks. Closed polygons are the proper islands
   // (will be filled + stroked). Open polylines come from polygons that
@@ -1577,23 +1649,18 @@ function renderTerrain() {
   // sea, with the [0, 1000] island region in the middle.
   out.push(`<rect x="${-5 * SVG_VIEW}" y="${-5 * SVG_VIEW}" width="${11 * SVG_VIEW}" height="${11 * SVG_VIEW}" fill="#a8b8c4"/>`);
 
-  // Build coast path data. Open polylines from marching-squares can be:
-  //   (a) bleed-off continents (both endpoints on canvas boundary),
-  //   (b) substantial landforms whose coast didn't fully stitch into
-  //       a closed loop because of saddle ambiguity / numerical drift,
-  //   (c) tiny noise specks or interior saddle artifacts that would
-  //       punch wedges out of closed continents via evenodd overlap.
+  // Build coast path data.
   //
-  // Classification:
-  //   1. boundary-touching → fill with shorter-path corner trace + L
-  //      segments + Z. Stroke as the open polyline (no false coastline
-  //      along the canvas edge).
-  //   2. substantial area AND not overlapping any closed polygon →
-  //      recover as a closed coast (Catmull-Rom around the loop).
-  //   3. everything else → drop entirely.
+  // Closed polygons (after merge-by-proximity) fill + stroke normally.
+  //
+  // Any open polyline still here is either:
+  //   (a) a genuine bleed-off continent whose coast left the canvas
+  //       — handled by the boundary-corner trace (sharp L segments
+  //       along the canvas edge before Z closure);
+  //   (b) a true artifact the merger couldn't reconnect — dropped
+  //       silently (no fill, no stroke). The user sees fewer rendered
+  //       artifacts; nothing draws a fake straight line across land.
   const bEps = 5.0;
-  const MIN_RECOVER_AREA = 30;   // heightmap units²; small specs filtered
-
   const sideOf = p => {
     if (p.y <= bEps)         return 0; // T
     if (p.x >= W - bEps)     return 1; // R
@@ -1629,73 +1696,22 @@ function renderTerrain() {
     return { coast: pts, corners: cs };
   };
 
-  // Ray-casting point-in-polygon test (standard).
-  const pointInPoly = (px, py, poly) => {
-    let inside = false;
-    const N = poly.length;
-    for (let i = 0, j = N - 1; i < N; j = i++) {
-      const xi = poly[i].x, yi = poly[i].y;
-      const xj = poly[j].x, yj = poly[j].y;
-      if (((yi > py) !== (yj > py)) &&
-          (px < (xj - xi) * (py - yi) / (yj - yi) + xi)) {
-        inside = !inside;
-      }
-    }
-    return inside;
-  };
-
-  // Sample points along an open polyline AND along its implicit Z
-  // closing line; return true if any sit inside a closed polygon
-  // (i.e., recovering this polyline would cause evenodd to invert
-  // part of an existing continent's fill).
-  const overlapsAnyClosed = (pts) => {
-    const SAMPLES = 6;
-    for (let s = 0; s < SAMPLES; s++) {
-      const idx = ((s + 1) * pts.length / (SAMPLES + 1)) | 0;
-      const pt = pts[idx];
-      for (const cl of closedSmoothed) {
-        if (pointInPoly(pt.x, pt.y, cl)) return true;
-      }
-    }
-    // Z-line samples between end → start
-    const a = pts[pts.length - 1];
-    const b = pts[0];
-    for (let s = 1; s < SAMPLES; s++) {
-      const t = s / SAMPLES;
-      const px = a.x * (1 - t) + b.x * t;
-      const py = a.y * (1 - t) + b.y * t;
-      for (const cl of closedSmoothed) {
-        if (pointInPoly(px, py, cl)) return true;
-      }
-    }
-    return false;
-  };
-
   const closedD = closedSmoothed.map(p => polyToPath(scalePoly(p, sxf), true)).join(' ');
 
   const openFillParts   = [];
   const openStrokeParts = [];
   for (const p of openSmoothed) {
     const bc = closeAlongBoundary(p);
-    if (bc) {
-      let d = polyToPath(scalePoly(bc.coast, sxf), false);
-      for (const corner of bc.corners) {
-        d += `L${(corner.x * sxf).toFixed(2)} ${(corner.y * sxf).toFixed(2)}`;
-      }
-      openFillParts.push(d + ' Z');
-      openStrokeParts.push(polyToPath(scalePoly(p, sxf), false));
-      continue;
+    if (!bc) continue;  // not a bleed-off — drop (no fill, no stroke)
+    // Continent bleed-off: fill closes along the canvas boundary with
+    // sharp L segments + Z. Stroke draws only the open coast trace so
+    // no false coastline appears along the canvas edge.
+    let d = polyToPath(scalePoly(bc.coast, sxf), false);
+    for (const corner of bc.corners) {
+      d += `L${(corner.x * sxf).toFixed(2)} ${(corner.y * sxf).toFixed(2)}`;
     }
-    if (polyArea(p) < MIN_RECOVER_AREA) continue;          // tiny artifact
-    if (overlapsAnyClosed(p))           continue;          // would cut a wedge
-    // Substantial free-standing open polyline — recover as closed.
-    // Use open Catmull-Rom (no wrap) for both: fill appends a straight
-    // Z that closes the polygon (invisible inside the fill); stroke
-    // uses the same coast trace WITHOUT Z, so no closure line is
-    // rendered as a dark scar across the continent.
-    const dCoast = polyToPath(scalePoly(p, sxf), false);
-    openFillParts.push(dCoast + ' Z');
-    openStrokeParts.push(dCoast);
+    openFillParts.push(d + ' Z');
+    openStrokeParts.push(polyToPath(scalePoly(p, sxf), false));
   }
   const openFillD   = openFillParts.join(' ');
   const openStrokeD = openStrokeParts.join(' ');
