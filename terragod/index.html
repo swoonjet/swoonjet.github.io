@@ -1644,16 +1644,28 @@ function renderTerrain() {
     return inside;
   };
 
-  // Sample a few points along an open polyline; return true if any
-  // sit inside any closed polygon (i.e., recovering it would cause
-  // an evenodd wedge artifact).
+  // Sample points along an open polyline AND along its implicit Z
+  // closing line; return true if any sit inside a closed polygon
+  // (i.e., recovering this polyline would cause evenodd to invert
+  // part of an existing continent's fill).
   const overlapsAnyClosed = (pts) => {
-    const SAMPLES = 5;
+    const SAMPLES = 6;
     for (let s = 0; s < SAMPLES; s++) {
       const idx = ((s + 1) * pts.length / (SAMPLES + 1)) | 0;
       const pt = pts[idx];
       for (const cl of closedSmoothed) {
         if (pointInPoly(pt.x, pt.y, cl)) return true;
+      }
+    }
+    // Z-line samples between end → start
+    const a = pts[pts.length - 1];
+    const b = pts[0];
+    for (let s = 1; s < SAMPLES; s++) {
+      const t = s / SAMPLES;
+      const px = a.x * (1 - t) + b.x * t;
+      const py = a.y * (1 - t) + b.y * t;
+      for (const cl of closedSmoothed) {
+        if (pointInPoly(px, py, cl)) return true;
       }
     }
     return false;
@@ -1677,9 +1689,13 @@ function renderTerrain() {
     if (polyArea(p) < MIN_RECOVER_AREA) continue;          // tiny artifact
     if (overlapsAnyClosed(p))           continue;          // would cut a wedge
     // Substantial free-standing open polyline — recover as closed.
-    const d = polyToPath(scalePoly(p, sxf), true);
-    openFillParts.push(d);
-    openStrokeParts.push(d);
+    // Use open Catmull-Rom (no wrap) for both: fill appends a straight
+    // Z that closes the polygon (invisible inside the fill); stroke
+    // uses the same coast trace WITHOUT Z, so no closure line is
+    // rendered as a dark scar across the continent.
+    const dCoast = polyToPath(scalePoly(p, sxf), false);
+    openFillParts.push(dCoast + ' Z');
+    openStrokeParts.push(dCoast);
   }
   const openFillD   = openFillParts.join(' ');
   const openStrokeD = openStrokeParts.join(' ');
