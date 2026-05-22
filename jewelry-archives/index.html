@@ -1,0 +1,1053 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jewelry Collections Index — Georgian · Victorian · Art Deco</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #0A0A0A;
+    color: #E8E4DE;
+    font-family: 'Space Grotesk', sans-serif;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  a { color: inherit; text-decoration: none; }
+
+  header {
+    padding: 64px 40px 32px;
+    border-bottom: 1px solid #222;
+  }
+
+  header h1 {
+    font-size: 44px;
+    font-weight: 700;
+    letter-spacing: -1.2px;
+    color: #fff;
+    line-height: 1.05;
+    max-width: 880px;
+  }
+
+  header h1 .accent { color: #C9A962; }
+
+  header .lede {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12.5px;
+    color: #888;
+    margin-top: 16px;
+    max-width: 760px;
+    line-height: 1.65;
+  }
+
+  header .stats {
+    margin-top: 24px;
+    display: flex;
+    gap: 32px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  header .stats b { color: #C9A962; font-weight: 500; }
+
+  .toolbar {
+    padding: 18px 40px;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+    border-bottom: 1px solid #1a1a1a;
+    position: sticky;
+    top: 0;
+    background: rgba(10,10,10,0.96);
+    backdrop-filter: blur(8px);
+    z-index: 10;
+  }
+
+  .toolbar .label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: #555;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    margin-right: 4px;
+  }
+
+  .chip {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    padding: 6px 14px;
+    border: 1px solid #2a2a2a;
+    background: transparent;
+    color: #888;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .chip:hover { border-color: #C9A962; color: #C9A962; }
+  .chip.active { border-color: #C9A962; background: #C9A962; color: #0A0A0A; }
+
+  .toolbar .spacer { flex: 1; }
+
+  .search {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    padding: 7px 14px;
+    background: #111;
+    border: 1px solid #2a2a2a;
+    color: #E8E4DE;
+    border-radius: 20px;
+    width: 220px;
+    outline: none;
+    transition: border 0.15s;
+  }
+  .search:focus { border-color: #C9A962; }
+  .search::placeholder { color: #555; }
+
+  section.era {
+    padding: 56px 40px 24px;
+    border-bottom: 1px solid #1a1a1a;
+  }
+
+  .era-head {
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    margin-bottom: 32px;
+    flex-wrap: wrap;
+  }
+
+  .era-head h2 {
+    font-size: 32px;
+    font-weight: 600;
+    letter-spacing: -0.5px;
+    color: #fff;
+  }
+
+  .era-head .dates {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: #C9A962;
+    letter-spacing: 1px;
+  }
+
+  .era-head .desc {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: #777;
+    margin-left: auto;
+    max-width: 480px;
+    text-align: right;
+    line-height: 1.6;
+  }
+
+  .tier-block { margin-bottom: 36px; }
+
+  .tier-head {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 14px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #1a1a1a;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .tier-pip {
+    width: 8px; height: 8px; border-radius: 50%;
+  }
+  .pip-high { background: #C9A962; }
+  .pip-med  { background: #5a7d8a; }
+  .pip-low  { background: #3a3a3a; }
+
+  .tier-head .tier-note {
+    color: #444;
+    text-transform: none;
+    letter-spacing: 0;
+    font-size: 11px;
+    margin-left: 6px;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 1px;
+    background: #1a1a1a;
+    border: 1px solid #1a1a1a;
+  }
+
+  .card {
+    background: #0f0f0f;
+    padding: 20px 22px;
+    display: flex;
+    flex-direction: column;
+    transition: background 0.15s;
+    min-height: 130px;
+    position: relative;
+  }
+
+  .card:hover { background: #141414; }
+  .card:hover .card-title { color: #C9A962; }
+
+  .card-title {
+    font-size: 15.5px;
+    font-weight: 500;
+    color: #fff;
+    line-height: 1.3;
+    letter-spacing: -0.2px;
+    transition: color 0.15s;
+    margin-bottom: 6px;
+    padding-right: 50px;
+  }
+
+  .card-source {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10.5px;
+    color: #C9A962;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 10px;
+  }
+
+  .card-note {
+    font-size: 13px;
+    color: #999;
+    line-height: 1.55;
+    flex: 1;
+  }
+
+  .card-tier {
+    position: absolute;
+    top: 18px;
+    right: 18px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 1.2px;
+    color: #555;
+    text-transform: uppercase;
+  }
+
+  .card-tier.high  { color: #C9A962; }
+  .card-tier.med   { color: #7a9aa8; }
+  .card-tier.low   { color: #555; }
+
+  .card.hidden { display: none; }
+
+  .era.hidden { display: none; }
+
+  .tier-block.hidden { display: none; }
+
+  footer {
+    padding: 40px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: #555;
+    text-align: center;
+    border-top: 1px solid #1a1a1a;
+  }
+
+  footer .note { color: #444; margin-top: 8px; max-width: 720px; margin-left: auto; margin-right: auto; line-height: 1.7; }
+
+  @media (max-width: 720px) {
+    header { padding: 40px 24px 24px; }
+    header h1 { font-size: 32px; }
+    section.era { padding: 40px 20px 16px; }
+    .toolbar { padding: 14px 20px; }
+    .era-head .desc { margin-left: 0; text-align: left; max-width: none; }
+    .search { width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Jewelry Collections Index <span class="accent">— Georgian · Victorian · Art Deco</span></h1>
+  <p class="lede">Curated index of digital catalogs, museum collections, and archive pages with high-resolution imagery of historical jewelry. HIGH tier = downloadable hi-res / IIIF / public domain. MEDIUM = zoomable web only. LOW = thumbnails or watermarked.</p>
+  <div class="stats">
+    <span><b id="stat-total">0</b> sources</span>
+    <span><b id="stat-high">0</b> high-res</span>
+    <span><b id="stat-med">0</b> zoomable</span>
+    <span>compiled <b>2026-05-22</b></span>
+  </div>
+</header>
+
+<div class="toolbar">
+  <span class="label">Era</span>
+  <button class="chip active" data-era="all">All</button>
+  <button class="chip" data-era="georgian">Georgian</button>
+  <button class="chip" data-era="victorian">Victorian</button>
+  <button class="chip" data-era="deco">Art Deco</button>
+  <span style="width:20px"></span>
+  <span class="label">Tier</span>
+  <button class="chip active" data-tier="all">All</button>
+  <button class="chip" data-tier="high">High</button>
+  <button class="chip" data-tier="med">Medium</button>
+  <button class="chip" data-tier="low">Low</button>
+  <span class="spacer"></span>
+  <input class="search" id="search" type="text" placeholder="search source or title…" />
+</div>
+
+<!-- ====================== GEORGIAN ====================== -->
+<section class="era" data-era="georgian">
+  <div class="era-head">
+    <h2>Georgian</h2>
+    <span class="dates">c. 1714 — 1837</span>
+    <span class="desc">Paste, foil-backed gems, mourning lockets, chatelaines, neoclassical settings, Berlin iron work.</span>
+  </div>
+
+  <div class="tier-block" data-tier="high">
+    <div class="tier-head"><span class="tier-pip pip-high"></span> High — Downloadable hi-res / IIIF / public domain</div>
+    <div class="grid">
+      <a class="card" href="https://www.metmuseum.org/art/collection/search?material=Jewelry&era=A.D.+1600-1800" target="_blank" rel="noopener">
+        <div class="card-tier high">High</div>
+        <div class="card-title">Met — Jewelry, Europe 1600–1800</div>
+        <div class="card-source">The Metropolitan Museum of Art</div>
+        <div class="card-note">Filtered search; CC0 Open Access provides downloadable hi-res for public-domain records; IIIF zoom available.</div>
+      </a>
+      <a class="card" href="https://www.metmuseum.org/art/collection/search?material=Jewelry" target="_blank" rel="noopener">
+        <div class="card-tier high">High</div>
+        <div class="card-title">Met — All Jewelry (use date slider)</div>
+        <div class="card-source">The Metropolitan Museum of Art</div>
+        <div class="card-note">Broader entry; refine 1714–1837 in the sidebar to isolate Georgian material.</div>
+      </a>
+      <a class="card" href="https://www.rijksmuseum.nl/en/collection" target="_blank" rel="noopener">
+        <div class="card-tier high">High</div>
+        <div class="card-title">Rijksmuseum — Collection portal</div>
+        <div class="card-source">Rijksmuseum, Amsterdam</div>
+        <div class="card-note">CC0 public-domain TIFF/JPEG downloads via free account; search "sieraad 18de eeuw".</div>
+      </a>
+      <a class="card" href="https://data.rijksmuseum.nl/" target="_blank" rel="noopener">
+        <div class="card-tier high">High</div>
+        <div class="card-title">Rijksmuseum Data Services</div>
+        <div class="card-source">Rijksmuseum, Amsterdam</div>
+        <div class="card-note">Developer-grade open dataset for bulk image/metadata pulls.</div>
+      </a>
+      <a class="card" href="https://art.thewalters.org/browse/category/jewelry/" target="_blank" rel="noopener">
+        <div class="card-tier high">High</div>
+        <div class="card-title">Walters — Jewelry browse</div>
+        <div class="card-source">Walters Art Museum, Baltimore</div>
+        <div class="card-note">CC0 with downloadable hi-res JPEGs; chatelaines, signet rings, gold mounts.</div>
+      </a>
+      <a class="card" href="https://art.thewalters.org/browse/category/18th-and-19th-centuries/" target="_blank" rel="noopener">
+        <div class="card-tier high">High</div>
+        <div class="card-title">Walters — 18th &amp; 19th Centuries</div>
+        <div class="card-source">Walters Art Museum, Baltimore</div>
+        <div class="card-note">Cross-category browse surfacing jewelry alongside related objets.</div>
+      </a>
+      <a class="card" href="https://art.thewalters.org/browse/medium/gold-silver--jewelry/" target="_blank" rel="noopener">
+        <div class="card-tier high">High</div>
+        <div class="card-title">Walters — Gold, Silver &amp; Jewelry medium</div>
+        <div class="card-source">Walters Art Museum, Baltimore</div>
+        <div class="card-note">Medium-filtered view that catches goldsmith work outside the strict jewelry tag.</div>
+      </a>
+      <a class="card" href="https://www.britishmuseum.org/collection/search?object=jewellery" target="_blank" rel="noopener">
+        <div class="card-tier high">High</div>
+        <div class="card-title">British Museum — Object: jewellery</div>
+        <div class="card-source">The British Museum, London</div>
+        <div class="card-note">1M+ object database, IIIF zoom; refine by date 1714–1837. CC BY-NC-SA 4.0 hi-res on most records.</div>
+      </a>
+      <a class="card" href="https://www.britishmuseum.org/collection/search?agent=Anne+Hull+Grundy&object=jewellery&sort=object_name__asc&view=grid&page=1" target="_blank" rel="noopener">
+        <div class="card-tier high">High</div>
+        <div class="card-title">British Museum — Hull Grundy Gift</div>
+        <div class="card-source">The British Museum, London</div>
+        <div class="card-note">1,200+ jewels by Anne Hull Grundy — strong seam of Georgian/Regency mourning, paste, gold pieces.</div>
+      </a>
+      <a class="card" href="https://commons.wikimedia.org/wiki/Category:18th-century_jewellery" target="_blank" rel="noopener">
+        <div class="card-tier high">High</div>
+        <div class="card-title">Wikimedia — 18th-century jewellery</div>
+        <div class="card-source">Wikimedia Commons</div>
+        <div class="card-note">32 subcategories (1760s jewellery, earrings, regional cuts); all free-license, source-resolution downloads.</div>
+      </a>
+      <a class="card" href="https://commons.wikimedia.org/wiki/Category:18th-century_earrings" target="_blank" rel="noopener">
+        <div class="card-tier high">High</div>
+        <div class="card-title">Wikimedia — 18th-century earrings</div>
+        <div class="card-source">Wikimedia Commons</div>
+        <div class="card-note">76 files of 18th-c. earrings; free hi-res.</div>
+      </a>
+      <a class="card" href="https://collections.vam.ac.uk/search/?q=Jewellery" target="_blank" rel="noopener">
+        <div class="card-tier high">High</div>
+        <div class="card-title">V&amp;A — Collections search "Jewellery"</div>
+        <div class="card-source">Victoria &amp; Albert Museum</div>
+        <div class="card-note">3,000+ jewels; filter to 1714–1837. Hi-res IIIF zoom, downloads on most records.</div>
+      </a>
+      <a class="card" href="https://collections.vam.ac.uk/search/?q=Georgian" target="_blank" rel="noopener">
+        <div class="card-tier high">High</div>
+        <div class="card-title">V&amp;A — "Georgian" keyword</div>
+        <div class="card-source">Victoria &amp; Albert Museum</div>
+        <div class="card-note">Cross-collection keyword; combine with object-type filters to surface jewellery, miniatures, accessories.</div>
+      </a>
+      <a class="card" href="https://archive.org/details/jewellersartintr0000brit" target="_blank" rel="noopener">
+        <div class="card-tier high">High</div>
+        <div class="card-title">The Jeweller's Art: Hull Grundy Gift</div>
+        <div class="card-source">Internet Archive / British Museum</div>
+        <div class="card-note">Full book scan of the introductory Hull Grundy catalogue; plates of Georgian/Victorian pieces.</div>
+      </a>
+      <a class="card" href="https://archive.org/details/CatalogueOfTheCollectionOfJewelsAndPreciousWorksOfArtThePropertyOf" target="_blank" rel="noopener">
+        <div class="card-tier high">High</div>
+        <div class="card-title">Pierpont Morgan Jewels — Williamson catalogue</div>
+        <div class="card-source">Internet Archive</div>
+        <div class="card-note">Williamson's catalogue of the Morgan jewel collection; plates incl. 18th-c. mourning and miniature jewelry.</div>
+      </a>
+      <a class="card" href="https://archive.org/details/jewelryinamerica0000fale" target="_blank" rel="noopener">
+        <div class="card-tier high">High</div>
+        <div class="card-title">Jewelry in America, 1600–1900 (Fales)</div>
+        <div class="card-source">Internet Archive</div>
+        <div class="card-note">Plate-rich reference covering colonial/Federal-era US jewelry overlapping the Georgian period.</div>
+      </a>
+      <a class="card" href="https://www.ngv.vic.gov.au/explore/collection/advanced-search/" target="_blank" rel="noopener">
+        <div class="card-tier high">High</div>
+        <div class="card-title">NGV — Collection Advanced Search</div>
+        <div class="card-source">National Gallery of Victoria</div>
+        <div class="card-note">Period/medium filters surface 18th-c. European jewellery; hi-res zoom and download on most decorative-arts records.</div>
+      </a>
+    </div>
+  </div>
+
+  <div class="tier-block" data-tier="med">
+    <div class="tier-head"><span class="tier-pip pip-med"></span> Medium — Zoomable web · no easy download</div>
+    <div class="grid">
+      <a class="card" href="https://www.mfa.org/collections/jewelry" target="_blank" rel="noopener">
+        <div class="card-tier med">Medium</div>
+        <div class="card-title">MFA Boston — Jewelry collection</div>
+        <div class="card-source">Museum of Fine Arts, Boston</div>
+        <div class="card-note">22,000-object jewelry holding; "Beyond Brilliance" online selection; zoomable, image-rights restricted.</div>
+      </a>
+      <a class="card" href="https://www.rct.uk/collection/about-the-collection/decorative-arts/jewels-and-insignia" target="_blank" rel="noopener">
+        <div class="card-tier med">Medium</div>
+        <div class="card-title">Royal Collection — Jewels &amp; Insignia</div>
+        <div class="card-source">Royal Collection Trust, UK</div>
+        <div class="card-note">Queen Charlotte diamonds, mourning lockets, chatelaines; zoomable web images.</div>
+      </a>
+      <a class="card" href="https://collection.cooperhewitt.org/search" target="_blank" rel="noopener">
+        <div class="card-tier med">Medium</div>
+        <div class="card-title">Cooper Hewitt — Collection search</div>
+        <div class="card-source">Cooper Hewitt, Smithsonian Design Museum</div>
+        <div class="card-note">Fully digitized 215k objects; strong in 18th-c. Italian jewelry designs (Piancastelli purchase).</div>
+      </a>
+      <a class="card" href="https://apidocs.cooperhewitt.org/api-home/" target="_blank" rel="noopener">
+        <div class="card-tier med">Medium</div>
+        <div class="card-title">Cooper Hewitt — Collections API</div>
+        <div class="card-source">Cooper Hewitt, Smithsonian</div>
+        <div class="card-note">Programmatic access to records and image URLs for bulk research.</div>
+      </a>
+      <a class="card" href="https://www.schmuckmuseum.de/en/the-museum/the-collection.html" target="_blank" rel="noopener">
+        <div class="card-tier med">Medium</div>
+        <div class="card-title">Schmuckmuseum Pforzheim</div>
+        <div class="card-source">Schmuckmuseum Pforzheim (DE)</div>
+        <div class="card-note">World's only dedicated jewelry museum; 18th-c. hunter/neoclassical pieces in virtual exhibition.</div>
+      </a>
+      <a class="card" href="https://artsandculture.google.com/partner/schmuckmuseum-pforzheim" target="_blank" rel="noopener">
+        <div class="card-tier med">Medium</div>
+        <div class="card-title">Schmuckmuseum on Google Arts &amp; Culture</div>
+        <div class="card-source">Google Arts &amp; Culture</div>
+        <div class="card-note">High-zoom views of selected Pforzheim jewels including Georgian-era European pieces.</div>
+      </a>
+      <a class="card" href="https://www.christies.com/en/results" target="_blank" rel="noopener">
+        <div class="card-tier med">Medium</div>
+        <div class="card-title">Christie's — Past results</div>
+        <div class="card-source">Christie's</div>
+        <div class="card-note">Searchable archive 1998–present; rich lot photography for Georgian sales; watermarked, web-res.</div>
+      </a>
+      <a class="card" href="https://www.sothebys.com/en/results" target="_blank" rel="noopener">
+        <div class="card-tier med">Medium</div>
+        <div class="card-title">Sotheby's — Past results</div>
+        <div class="card-source">Sotheby's</div>
+        <div class="card-note">Filterable past sales incl. landmark Georgian lots (Anglesey diamond necklace, 2024).</div>
+      </a>
+      <a class="card" href="https://www.bonhams.com/auctions/results/" target="_blank" rel="noopener">
+        <div class="card-tier med">Medium</div>
+        <div class="card-title">Bonhams — Auction results</div>
+        <div class="card-source">Bonhams</div>
+        <div class="card-note">Filter by Jewellery; large catalogues including Georgian garnet, mourning, paste pieces.</div>
+      </a>
+      <a class="card" href="https://doyle.com/past-auctions/" target="_blank" rel="noopener">
+        <div class="card-tier med">Medium</div>
+        <div class="card-title">Doyle — Past auctions</div>
+        <div class="card-source">Doyle, New York</div>
+        <div class="card-note">Lot pages incl. Georgian jewelry and silver; web-res images.</div>
+      </a>
+      <a class="card" href="https://www.berganza.com/shop/georgian-jewellery" target="_blank" rel="noopener">
+        <div class="card-tier med">Medium</div>
+        <div class="card-title">Berganza — Georgian jewellery</div>
+        <div class="card-source">Berganza, London</div>
+        <div class="card-note">Specialist Georgian dealer; multi-angle studio photography of stock and sold pieces.</div>
+      </a>
+      <a class="card" href="https://www.langantiques.com/vintage-jewelry/georgian-jewelry.html" target="_blank" rel="noopener">
+        <div class="card-tier med">Medium</div>
+        <div class="card-title">Lang Antiques — Georgian inventory</div>
+        <div class="card-source">Lang Antiques, San Francisco</div>
+        <div class="card-note">Curated Georgian stock with high-quality macro photography and provenance notes.</div>
+      </a>
+      <a class="card" href="https://www.langantiques.com/university/georgian-jewelry-gallery/" target="_blank" rel="noopener">
+        <div class="card-tier med">Medium</div>
+        <div class="card-title">AJU — Georgian Jewelry Gallery</div>
+        <div class="card-source">Antique Jewelry University</div>
+        <div class="card-note">Pictorial reference organized by jewelry type with scholarly captions.</div>
+      </a>
+      <a class="card" href="https://www.langantiques.com/university/georgian-jewelry-1714-1837/" target="_blank" rel="noopener">
+        <div class="card-tier med">Medium</div>
+        <div class="card-title">AJU — Georgian 1714–1837 archive</div>
+        <div class="card-source">Antique Jewelry University</div>
+        <div class="card-note">Period overview with embedded image references; pairs with the gallery above.</div>
+      </a>
+      <a class="card" href="https://www.georgianjewelry.com/collections/archive" target="_blank" rel="noopener">
+        <div class="card-tier med">Medium</div>
+        <div class="card-title">The Three Graces — Sold archive</div>
+        <div class="card-source">The Three Graces</div>
+        <div class="card-note">Sold-piece archive since 2002 — rings, brooches, ferronnières — large visual research pool.</div>
+      </a>
+      <a class="card" href="https://www.masshist.org/features/mourning-jewelry" target="_blank" rel="noopener">
+        <div class="card-tier med">Medium</div>
+        <div class="card-title">Mourning Jewelry feature</div>
+        <div class="card-source">Massachusetts Historical Society</div>
+        <div class="card-note">Curated online feature on 17th–19th-c. mourning jewelry incl. Georgian; zoomable images.</div>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ====================== VICTORIAN ====================== -->
+<section class="era" data-era="victorian">
+  <div class="era-head">
+    <h2>Victorian</h2>
+    <span class="dates">c. 1837 — 1901</span>
+    <span class="desc">Romantic, Grand, and Aesthetic periods. Castellani &amp; Giuliano archaeological revival; jet mourning; hair work; gold cannetille; lockets, lavalières, brooches.</span>
+  </div>
+
+  <div class="tier-block" data-tier="high">
+    <div class="tier-head"><span class="tier-pip pip-high"></span> High — Downloadable hi-res / IIIF / public domain</div>
+    <div class="grid">
+      <a class="card" href="https://www.metmuseum.org/art/collection/search?material=Jewelry&era=A.D.+1800-1900" target="_blank" rel="noopener">
+        <div class="card-tier high">High</div>
+        <div class="card-title">Met — Jewelry, 1800–1900</div>
+        <div class="card-source">The Metropolitan Museum of Art</div>
+        <div class="card-note">CC0 Open Access with IIIF and downloadable hi-res for public-domain works.</div>
+      </a>
+      <a class="card" href="https://collections.vam.ac.uk/search/?q=Jewellery" target="_blank" rel="noopener">
+        <div class="card-tier high">High</div>
+        <div class="card-title">V&amp;A — Jewellery searchable database</div>
+        <div class="card-source">Victoria &amp; Albert Museum</div>
+        <div class="card-note">Deep zoom on object pages; Castellani, Giuliano, Queen Victoria's own jewels.</div>
+      </a>
+      <a class="card" href="https://art.thewalters.org/browse/category/jewelry/" target="_blank" rel="noopener">
+        <div class="card-tier high">High</div>
+        <div class="card-title">Walters — Jewelry browse</div>
+        <div class="card-source">Walters Art Museum, Baltimore</div>
+        <div class="card-note">All images CC0; full hi-res download with metadata.</div>
+      </a>
+      <a class="card" href="https://www.clevelandart.org/art/collection/search" target="_blank" rel="noopener">
+        <div class="card-tier high">High</div>
+        <div class="card-title">Cleveland — Collection search</div>
+        <div class="card-source">Cleveland Museum of Art</div>
+        <div class="card-note">CC0 since 2019; 37,000+ hi-res images. Filter by classification "Jewelry" + 1800s.</div>
+      </a>
+      <a class="card" href="https://www.clevelandart.org/art/1924.364" target="_blank" rel="noopener">
+        <div class="card-tier high">High</div>
+        <div class="card-title">"Jewels at the Great Exhibition" (1851)</div>
+        <div class="card-source">Cleveland Museum of Art</div>
+        <div class="card-note">Iconic visual reference for Victorian jewelry context; CC0 hi-res.</div>
+      </a>
+      <a class="card" href="https://collections.si.edu/search/" target="_blank" rel="noopener">
+        <div class="card-tier high">High</div>
+        <div class="card-title">Smithsonian — Collections Search</div>
+        <div class="card-source">Smithsonian Institution</div>
+        <div class="card-note">Federated search across 17.9M objects (Cooper Hewitt, NMAH); many CC0 hi-res downloads.</div>
+      </a>
+      <a class="card" href="https://collection.cooperhewitt.org/departments/" target="_blank" rel="noopener">
+        <div class="card-tier high">High</div>
+        <div class="card-title">Cooper Hewitt — Departments / online collection</div>
+        <div class="card-source">Cooper Hewitt, Smithsonian Design Museum</div>
+        <div class="card-note">210K+ digitized; strong 19th-c. jewelry design drawings and hair-jewelry pattern books.</div>
+      </a>
+      <a class="card" href="https://library.si.edu/digital-library/book/nineteenthcentur00coop" target="_blank" rel="noopener">
+        <div class="card-tier high">High</div>
+        <div class="card-title">Cooper Union — "Nineteenth Century Jewelry" (1955)</div>
+        <div class="card-source">Smithsonian Libraries</div>
+        <div class="card-note">Full plate book, downloadable PDF, public domain.</div>
+      </a>
+      <a class="card" href="https://archive.org/details/nineteenthcentur00coop" target="_blank" rel="noopener">
+        <div class="card-tier high">High</div>
+        <div class="card-title">19th-c. Jewelry: First Empire to First World War</div>
+        <div class="card-source">Internet Archive</div>
+        <div class="card-note">Direct PDF + JP2 plates downloadable.</div>
+      </a>
+      <a class="card" href="https://archive.org/details/bwb_KS-148-733" target="_blank" rel="noopener">
+        <div class="card-tier high">High</div>
+        <div class="card-title">Margaret Flower — Victorian Jewellery</div>
+        <div class="card-source">Internet Archive</div>
+        <div class="card-note">Standard reference monograph, scanned plates available.</div>
+      </a>
+      <a class="card" href="https://archive.org/details/CatalogueOfTheCollectionOfJewelsAndPreciousWorksOfArtThePropertyOf" target="_blank" rel="noopener">
+        <div class="card-tier high">High</div>
+        <div class="card-title">Pierpont Morgan Jewels — Williamson catalogue</div>
+        <div class="card-source">Internet Archive</div>
+        <div class="card-note">Hand-colored facsimile plates, public domain.</div>
+      </a>
+      <a class="card" href="https://archive.org/details/sourcebookofanti0000horn" target="_blank" rel="noopener">
+        <div class="card-tier high">High</div>
+        <div class="card-title">Hornung — Source Book of Antiques &amp; Jewelry Designs</div>
+        <div class="card-source">Internet Archive</div>
+        <div class="card-note">3,800 Victorian engravings — massive plate compilation of US jewelry/silverware.</div>
+      </a>
+      <a class="card" href="https://archive.org/details/illustratedcatal00fran" target="_blank" rel="noopener">
+        <div class="card-tier high">High</div>
+        <div class="card-title">Franklin Jewelry Co. — Illustrated Catalogue</div>
+        <div class="card-source">Internet Archive</div>
+        <div class="card-note">Late-Victorian US trade catalog plates.</div>
+      </a>
+      <a class="card" href="https://archive.org/details/illustratedcataloguejlynnco" target="_blank" rel="noopener">
+        <div class="card-tier high">High</div>
+        <div class="card-title">J. Lynn &amp; Co. — Illustrated Catalogue</div>
+        <div class="card-source">Internet Archive</div>
+        <div class="card-note">19th-c. jewelry trade catalog.</div>
+      </a>
+      <a class="card" href="https://archive.org/details/catalogueofjewel00soth" target="_blank" rel="noopener">
+        <div class="card-tier high">High</div>
+        <div class="card-title">Sotheby Wilkinson &amp; Hodge — Catalogue of Jewelry, Snuff Boxes</div>
+        <div class="card-source">Internet Archive</div>
+        <div class="card-note">Period auction catalog scan.</div>
+      </a>
+      <a class="card" href="https://commons.wikimedia.org/wiki/Category:19th-century_jewellery" target="_blank" rel="noopener">
+        <div class="card-tier high">High</div>
+        <div class="card-title">Wikimedia — 19th-century jewellery</div>
+        <div class="card-source">Wikimedia Commons</div>
+        <div class="card-note">Canonical parent category — memorial, micro-mosaic, mourning, lockets. (No standalone "Victorian" category exists.)</div>
+      </a>
+      <a class="card" href="https://commons.wikimedia.org/wiki/Category:Mourning_jewellery" target="_blank" rel="noopener">
+        <div class="card-tier high">High</div>
+        <div class="card-title">Wikimedia — Mourning jewellery</div>
+        <div class="card-source">Wikimedia Commons</div>
+        <div class="card-note">Strong Victorian subset (jet, hair work, lockets), all free-license.</div>
+      </a>
+      <a class="card" href="https://www.getty.edu/projects/open-content-program/" target="_blank" rel="noopener">
+        <div class="card-tier high">High</div>
+        <div class="card-title">Getty — Open Content Program</div>
+        <div class="card-source">J. Paul Getty Museum</div>
+        <div class="card-note">160K+ CC0 images; modest decorative-arts holdings — search jewelry + 19th c.</div>
+      </a>
+      <a class="card" href="https://www.artic.edu/collection?classification_ids=jewelry&is_on_view=1&is_public_domain=1" target="_blank" rel="noopener">
+        <div class="card-tier high">High</div>
+        <div class="card-title">Art Institute Chicago — Public-domain jewelry on view</div>
+        <div class="card-source">Art Institute of Chicago</div>
+        <div class="card-note">CC0 hi-res, IIIF; 19th-c. pieces filterable.</div>
+      </a>
+      <a class="card" href="https://risdmuseum.org/art-design/collection" target="_blank" rel="noopener">
+        <div class="card-tier high">High</div>
+        <div class="card-title">RISD Museum — Collection</div>
+        <div class="card-source">RISD Museum</div>
+        <div class="card-note">85K+ objects online; Victorian-era brooches were the museum's founding jewelry acquisitions.</div>
+      </a>
+      <a class="card" href="https://images.nga.gov/" target="_blank" rel="noopener">
+        <div class="card-tier high">High</div>
+        <div class="card-title">NGA Images — Open images</div>
+        <div class="card-source">National Gallery of Art, Washington</div>
+        <div class="card-note">51K+ CC0 hi-res (up to 4000px); thin on jewelry but rich for portraits showing Victorian jewels.</div>
+      </a>
+    </div>
+  </div>
+
+  <div class="tier-block" data-tier="med">
+    <div class="tier-head"><span class="tier-pip pip-med"></span> Medium — Zoomable web · no easy download</div>
+    <div class="grid">
+      <a class="card" href="https://www.mfa.org/collections/jewelry" target="_blank" rel="noopener">
+        <div class="card-tier med">Medium</div>
+        <div class="card-title">MFA Boston — Jewelry collection</div>
+        <div class="card-source">Museum of Fine Arts, Boston</div>
+        <div class="card-note">22,000-object holding incl. Castellani/Giuliano; zoomable web, no CC0.</div>
+      </a>
+      <a class="card" href="https://www.mfa.org/gallery/beyond-brilliance" target="_blank" rel="noopener">
+        <div class="card-tier med">Medium</div>
+        <div class="card-title">MFA Boston — Beyond Brilliance gallery</div>
+        <div class="card-source">Museum of Fine Arts, Boston</div>
+        <div class="card-note">Curated tour of 150+ jewelry highlights with photography.</div>
+      </a>
+      <a class="card" href="https://www.rct.uk/collection/search" target="_blank" rel="noopener">
+        <div class="card-tier med">Medium</div>
+        <div class="card-title">Royal Collection — Search</div>
+        <div class="card-source">Royal Collection Trust, UK</div>
+        <div class="card-note">299K objects — Queen Victoria's personal jewels, Oriental Circlet Tiara; zoomable web.</div>
+      </a>
+      <a class="card" href="https://www.britishmuseum.org/collection/search?object=jewellery" target="_blank" rel="noopener">
+        <div class="card-tier med">Medium</div>
+        <div class="card-title">British Museum — Jewellery</div>
+        <div class="card-source">The British Museum, London</div>
+        <div class="card-note">Free hi-res under Trustees license (non-commercial); narrow by date 1837–1901.</div>
+      </a>
+      <a class="card" href="https://www.rijksmuseum.nl/en/rijksstudio/works-of-art/jewels" target="_blank" rel="noopener">
+        <div class="card-tier med">Medium</div>
+        <div class="card-title">Rijksmuseum — Rijksstudio Jewels</div>
+        <div class="card-source">Rijksmuseum, Amsterdam</div>
+        <div class="card-note">Rijksstudio offers free hi-res download for most works; 19th-c. memorial/mourning pieces.</div>
+      </a>
+      <a class="card" href="https://www.langantiques.com/university/jewelry/jewelry-history/victorian-jewelry/" target="_blank" rel="noopener">
+        <div class="card-tier med">Medium</div>
+        <div class="card-title">AJU — Victorian Jewelry reference</div>
+        <div class="card-source">Lang Antiques / AJU</div>
+        <div class="card-note">Definitive web reference: Romantic/Grand/Aesthetic period pages, fully illustrated.</div>
+      </a>
+      <a class="card" href="https://www.langantiques.com/university/image-gallery-2/" target="_blank" rel="noopener">
+        <div class="card-tier med">Medium</div>
+        <div class="card-title">AJU — Image Gallery hub</div>
+        <div class="card-source">Lang Antiques / AJU</div>
+        <div class="card-note">Curated reference images across periods, techniques, motifs.</div>
+      </a>
+      <a class="card" href="https://www.langantiques.com/archive.html" target="_blank" rel="noopener">
+        <div class="card-tier med">Medium</div>
+        <div class="card-title">Lang Antiques — Sold archive</div>
+        <div class="card-source">Lang Antiques</div>
+        <div class="card-note">Searchable archive of sold pieces; retail-quality studio photography.</div>
+      </a>
+      <a class="card" href="https://victorianweb.org/art/design/jewelry/gere/4.html" target="_blank" rel="noopener">
+        <div class="card-tier med">Medium</div>
+        <div class="card-title">Victorian Web — High Victorian &amp; Second Empire</div>
+        <div class="card-source">Victorian Web (Charlotte Gere)</div>
+        <div class="card-note">Scholarly chapters with numbered plates from museum collections.</div>
+      </a>
+      <a class="card" href="https://victorianweb.org/art/design/jewelry/gere/5.html" target="_blank" rel="noopener">
+        <div class="card-tier med">Medium</div>
+        <div class="card-title">Victorian Web — Archaeological &amp; Renaissance Revival</div>
+        <div class="card-source">Victorian Web</div>
+        <div class="card-note">Castellani / Giuliano / Brogden plates.</div>
+      </a>
+      <a class="card" href="https://www.christies.com/en/results" target="_blank" rel="noopener">
+        <div class="card-tier med">Medium</div>
+        <div class="card-title">Christie's — Past lots</div>
+        <div class="card-source">Christie's</div>
+        <div class="card-note">Free archive with hi-res studio photography of Victorian jewels; watermarked.</div>
+      </a>
+      <a class="card" href="https://www.sothebys.com/en/results" target="_blank" rel="noopener">
+        <div class="card-tier med">Medium</div>
+        <div class="card-title">Sotheby's — Past results</div>
+        <div class="card-source">Sotheby's</div>
+        <div class="card-note">Full searchable past-sale archive; high-quality lot photography.</div>
+      </a>
+      <a class="card" href="https://www.bonhams.com/auctions/results/" target="_blank" rel="noopener">
+        <div class="card-tier med">Medium</div>
+        <div class="card-title">Bonhams — Auction results</div>
+        <div class="card-source">Bonhams</div>
+        <div class="card-note">Victorian filters return hundreds of lots with photography.</div>
+      </a>
+      <a class="card" href="https://www.bonhams.com/department/JWL/jewellery/" target="_blank" rel="noopener">
+        <div class="card-tier med">Medium</div>
+        <div class="card-title">Bonhams Skinner — Jewellery dept</div>
+        <div class="card-source">Bonhams Skinner</div>
+        <div class="card-note">Strong US-market Victorian inventory in past sales; full catalog images.</div>
+      </a>
+      <a class="card" href="https://doyle.com/past-auctions?field_department_target_id=2586&field_location_target_id=&sort_by=field_start_date_value&sort_order=DESC" target="_blank" rel="noopener">
+        <div class="card-tier med">Medium</div>
+        <div class="card-title">Doyle — Past jewelry auctions</div>
+        <div class="card-source">Doyle Auctions</div>
+        <div class="card-note">Filtered list back to 2006; rich Victorian estate jewelry catalog photos.</div>
+      </a>
+      <a class="card" href="https://www.ha.com/heritage-auctions-schedule.s?category=jewelry-and-gemstones&view=past" target="_blank" rel="noopener">
+        <div class="card-tier med">Medium</div>
+        <div class="card-title">Heritage — Jewelry &amp; Gemstones past</div>
+        <div class="card-source">Heritage Auctions</div>
+        <div class="card-note">Multi-angle hi-res photography; uncommonly generous viewer for an auction house.</div>
+      </a>
+      <a class="card" href="https://jewelry.ha.com/ref/overview.zx?article=period" target="_blank" rel="noopener">
+        <div class="card-tier med">Medium</div>
+        <div class="card-title">Heritage — Jewelry by Period reference</div>
+        <div class="card-source">Heritage Auctions</div>
+        <div class="card-note">Period overview pages linking to past Victorian lots.</div>
+      </a>
+      <a class="card" href="https://collection.powerhouse.com.au/" target="_blank" rel="noopener">
+        <div class="card-tier med">Medium</div>
+        <div class="card-title">Powerhouse Collection</div>
+        <div class="card-source">Powerhouse Museum, Sydney</div>
+        <div class="card-note">Searchable collection with zoomable images; jewelry in Fashion &amp; Decorative Arts.</div>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ====================== ART DECO ====================== -->
+<section class="era" data-era="deco">
+  <div class="era-head">
+    <h2>Art Deco</h2>
+    <span class="dates">c. 1920 — 1939</span>
+    <span class="desc">Cartier, Van Cleef, Boucheron, Lacloche, Templier, Fouquet, Lalique. Platinum + onyx + coral + jade; geometry; tutti-frutti; 1925 Paris Expo.</span>
+  </div>
+
+  <div class="tier-block" data-tier="high">
+    <div class="tier-head"><span class="tier-pip pip-high"></span> High — Downloadable hi-res / IIIF / public domain</div>
+    <div class="grid">
+      <a class="card" href="https://www.metmuseum.org/art/collection/search?material=Jewelry&showOnly=withImage" target="_blank" rel="noopener">
+        <div class="card-tier high">High</div>
+        <div class="card-title">Met — Jewelry with images</div>
+        <div class="card-source">The Metropolitan Museum of Art</div>
+        <div class="card-note">CC0 Open Access; ~375K public-domain images. Append <code>&amp;q=art+deco</code> or filter by era 1900–present.</div>
+      </a>
+      <a class="card" href="https://art.thewalters.org/browse/category/jewelry/" target="_blank" rel="noopener">
+        <div class="card-tier high">High</div>
+        <div class="card-title">Walters — Jewelry browse</div>
+        <div class="card-source">Walters Art Museum, Baltimore</div>
+        <div class="card-note">~20,000 objects CC0; downloadable originals plus an open API for bulk access.</div>
+      </a>
+      <a class="card" href="https://www.clevelandart.org/art/collection/search" target="_blank" rel="noopener">
+        <div class="card-tier high">High</div>
+        <div class="card-title">Cleveland — Collection search</div>
+        <div class="card-source">Cleveland Museum of Art</div>
+        <div class="card-note">68,000+ works; open-access filter downloads CC0 originals. Keyword "art deco" + classification jewelry.</div>
+      </a>
+      <a class="card" href="https://www.getty.edu/art/collection/" target="_blank" rel="noopener">
+        <div class="card-tier high">High</div>
+        <div class="card-title">Getty — Collection</div>
+        <div class="card-source">J. Paul Getty Museum</div>
+        <div class="card-note">88,000+ CC0 hi-res images, fully downloadable. Smaller decorative-arts holdings but worth searching 1920s–30s.</div>
+      </a>
+      <a class="card" href="https://collection.cooperhewitt.org/departments/35347039/" target="_blank" rel="noopener">
+        <div class="card-tier high">High</div>
+        <div class="card-title">Cooper Hewitt — Product Design &amp; Decorative Arts</div>
+        <div class="card-source">Cooper Hewitt, Smithsonian Design Museum</div>
+        <div class="card-note">215,000-object department fully digitized; many no-known-copyright records with full downloads.</div>
+      </a>
+      <a class="card" href="https://collection.cooperhewitt.org/exhibitions/420577501/" target="_blank" rel="noopener">
+        <div class="card-tier high">High</div>
+        <div class="card-title">Jeweled Splendors of the Art Deco Era — Aga Khan</div>
+        <div class="card-source">Cooper Hewitt</div>
+        <div class="card-note">Object-level records for ~100 Cartier / VC&amp;A / Lacloche / Boucheron / Bulgari pieces 1910–1938.</div>
+      </a>
+      <a class="card" href="https://cdm.bostonathenaeum.org/digital/collection/p16057coll23" target="_blank" rel="noopener">
+        <div class="card-tier high">High</div>
+        <div class="card-title">Cartier — Art Deco Designs</div>
+        <div class="card-source">Boston Athenaeum digital collection</div>
+        <div class="card-note">Original Cartier Art Deco design drawings, zoomable hi-res, downloadable.</div>
+      </a>
+      <a class="card" href="https://commons.wikimedia.org/wiki/Category:Art_Deco_jewellery" target="_blank" rel="noopener">
+        <div class="card-tier high">High</div>
+        <div class="card-title">Wikimedia — Art Deco jewellery</div>
+        <div class="card-source">Wikimedia Commons</div>
+        <div class="card-note">~39 files + 3 subcategories of free-license, hi-res Art Deco jewelry photos.</div>
+      </a>
+      <a class="card" href="https://www.rijksmuseum.nl/en/rijksstudio" target="_blank" rel="noopener">
+        <div class="card-tier high">High</div>
+        <div class="card-title">Rijksmuseum — Rijksstudio</div>
+        <div class="card-source">Rijksmuseum, Amsterdam</div>
+        <div class="card-note">Hi-res CC0 downloads. Search "jewellery 1920" or browse the user-curated Art Deco set.</div>
+      </a>
+      <a class="card" href="https://archive.org/details/LaBijouterieFrancaiseAuXixeSiecle1800-1900.Iii.LaTroisieme" target="_blank" rel="noopener">
+        <div class="card-tier high">High</div>
+        <div class="card-title">Vever — La Bijouterie française au XIXe siècle, Vol. III</div>
+        <div class="card-source">Internet Archive</div>
+        <div class="card-note">Pre-Deco French jewelry context (3,000+ engraved pieces) — foundational reference.</div>
+      </a>
+      <a class="card" href="https://archive.org/details/ldpd_19765162_000" target="_blank" rel="noopener">
+        <div class="card-tier high">High</div>
+        <div class="card-title">1925 Paris Expo — Rapport général</div>
+        <div class="card-source">Internet Archive</div>
+        <div class="card-note">Original 1925 Exposition internationale publication with plates including jewelry sections.</div>
+      </a>
+      <a class="card" href="https://archive.org/details/laliqueglasscomp0000lali" target="_blank" rel="noopener">
+        <div class="card-tier high">High</div>
+        <div class="card-title">Lalique — Complete Illustrated Catalogue 1932</div>
+        <div class="card-source">Internet Archive</div>
+        <div class="card-note">1932 Lalique catalog scan with plates; primarily glass but includes jewelry/pendants.</div>
+      </a>
+      <a class="card" href="https://archive.org/details/gialibrary" target="_blank" rel="noopener">
+        <div class="card-tier high">High</div>
+        <div class="card-title">GIA — Cartier Rare Book Repository</div>
+        <div class="card-source">GIA / Internet Archive</div>
+        <div class="card-note">650+ digitized rare jewelry books; many cover the Art Deco period.</div>
+      </a>
+      <a class="card" href="https://archive.org/details/vancleefarpels1923" target="_blank" rel="noopener">
+        <div class="card-tier high">High</div>
+        <div class="card-title">Van Cleef &amp; Arpels — MFA 1923 archive book</div>
+        <div class="card-source">Internet Archive</div>
+        <div class="card-note">Early VC&amp;A reference document scan.</div>
+      </a>
+      <a class="card" href="https://library.si.edu/digital-library/book/cataloguetiffan00tiff" target="_blank" rel="noopener">
+        <div class="card-tier high">High</div>
+        <div class="card-title">Tiffany &amp; Co. — 1893 catalogue</div>
+        <div class="card-source">Smithsonian Libraries</div>
+        <div class="card-note">Public-domain Tiffany catalog; pre-Deco baseline framing 1920s output.</div>
+      </a>
+    </div>
+  </div>
+
+  <div class="tier-block" data-tier="med">
+    <div class="tier-head"><span class="tier-pip pip-med"></span> Medium — Zoomable web · no easy download</div>
+    <div class="grid">
+      <a class="card" href="https://www.vam.ac.uk/collections/jewellery" target="_blank" rel="noopener">
+        <div class="card-tier med">Medium</div>
+        <div class="card-title">V&amp;A — Jewellery collection page</div>
+        <div class="card-source">Victoria &amp; Albert Museum</div>
+        <div class="card-note">3,000+ jewels with hi-res zoom; many image-downloadable. Use <a href="https://collections.vam.ac.uk/search/?q=Art+Deco+jewellery" target="_blank" rel="noopener" style="color:#C9A962">filtered Art Deco search</a>.</div>
+      </a>
+      <a class="card" href="https://www.vam.ac.uk/collections/art-deco" target="_blank" rel="noopener">
+        <div class="card-tier med">Medium</div>
+        <div class="card-title">V&amp;A — Art Deco collections gateway</div>
+        <div class="card-source">Victoria &amp; Albert Museum</div>
+        <div class="card-note">Curated Art Deco object pages including Raymond Templier and Lalique.</div>
+      </a>
+      <a class="card" href="https://collections.madparis.fr/" target="_blank" rel="noopener">
+        <div class="card-tier med">Medium</div>
+        <div class="card-title">MAD Paris — Collections portal</div>
+        <div class="card-source">Musée des Arts Décoratifs, Paris</div>
+        <div class="card-note">Place Vendôme + avant-garde Art Deco jewelers (Templier, Després, Fouquet, Cartier, Boucheron).</div>
+      </a>
+      <a class="card" href="http://madparis.fr/francais/musees/musee-des-arts-decoratifs/collections/dossiers-thematiques/une-histoire-du-bijou/art-deco" target="_blank" rel="noopener">
+        <div class="card-tier med">Medium</div>
+        <div class="card-title">MAD Paris — Galerie des Bijoux Art Deco</div>
+        <div class="card-source">Musée des Arts Décoratifs, Paris</div>
+        <div class="card-note">Thematic Art Deco walkthrough of the jewelry gallery's 1200-piece display.</div>
+      </a>
+      <a class="card" href="https://the-collection.vancleefarpels.com/en/corpus/art-deco/" target="_blank" rel="noopener">
+        <div class="card-tier med">Medium</div>
+        <div class="card-title">Van Cleef &amp; Arpels — Art Deco corpus</div>
+        <div class="card-source">Van Cleef &amp; Arpels Heritage</div>
+        <div class="card-note">Maison's curated digital archive 1906–1953; archive photography and drawings, web-res.</div>
+      </a>
+      <a class="card" href="https://www.christies.com/en/results?department=14&searchterm=art+deco" target="_blank" rel="noopener">
+        <div class="card-tier med">Medium</div>
+        <div class="card-title">Christie's — Art Deco jewelry results</div>
+        <div class="card-source">Christie's</div>
+        <div class="card-note">Past-lot archive with hi-res zoomable images; extensive but not downloadable.</div>
+      </a>
+      <a class="card" href="https://www.sothebys.com/en/results?f0=00000162-9b06-d39d-a767-fb4e996d0000&f1=00000162-9b1c-d471-a3e6-bb3df1180000" target="_blank" rel="noopener">
+        <div class="card-tier med">Medium</div>
+        <div class="card-title">Sotheby's — Past Jewelry &amp; Watches</div>
+        <div class="card-source">Sotheby's</div>
+        <div class="card-note">Massive past-lot archive of Art Deco maker-signed pieces with editorial images.</div>
+      </a>
+      <a class="card" href="https://www.bonhams.com/department/JWL/jewellery/" target="_blank" rel="noopener">
+        <div class="card-tier med">Medium</div>
+        <div class="card-title">Bonhams — Jewellery results</div>
+        <div class="card-source">Bonhams</div>
+        <div class="card-note">Past Art Deco sales (Cartier tiaras, VC&amp;A bows) with detailed zoomable photography.</div>
+      </a>
+      <a class="card" href="https://www.phillips.com/search/1?search=art+deco" target="_blank" rel="noopener">
+        <div class="card-tier med">Medium</div>
+        <div class="card-title">Phillips — Art Deco search</div>
+        <div class="card-source">Phillips</div>
+        <div class="card-note">20th-century-focused jewelry sales; Geneva/NY catalogs with hi-res lot photography.</div>
+      </a>
+      <a class="card" href="https://www.langantiques.com/university/art-deco-gallery/" target="_blank" rel="noopener">
+        <div class="card-tier med">Medium</div>
+        <div class="card-title">AJU — Art Deco Jewelry Gallery</div>
+        <div class="card-source">Antique Jewelry University</div>
+        <div class="card-note">Curated piece-by-piece galleries with clean macro photography on white. Reference-grade.</div>
+      </a>
+      <a class="card" href="https://doyle.com/past-auctions/" target="_blank" rel="noopener">
+        <div class="card-tier med">Medium</div>
+        <div class="card-title">Doyle — Past auctions</div>
+        <div class="card-source">Doyle New York</div>
+        <div class="card-note">Searchable past jewelry sales; mid-market Art Deco signed and unsigned pieces.</div>
+      </a>
+      <a class="card" href="https://library.si.edu/finding-aid/art-deco-picture-collections-cooper-hewitt-smithsonian-design-library" target="_blank" rel="noopener">
+        <div class="card-tier med">Medium</div>
+        <div class="card-title">Cooper Hewitt — Art Deco picture finding aid</div>
+        <div class="card-source">Smithsonian Libraries</div>
+        <div class="card-note">Index to the physical/digital Art Deco picture files; some images online.</div>
+      </a>
+    </div>
+  </div>
+
+  <div class="tier-block" data-tier="low">
+    <div class="tier-head"><span class="tier-pip pip-low"></span> Low — Brand pages / thumbnails / watermarked</div>
+    <div class="grid">
+      <a class="card" href="https://www.boucheron.com/fr_en/high-jewelry/collections-histoire-de-style/art-deco" target="_blank" rel="noopener">
+        <div class="card-tier low">Low</div>
+        <div class="card-title">Boucheron — Histoire de Style: Art Déco</div>
+        <div class="card-source">Boucheron</div>
+        <div class="card-note">Mostly modern-collection imagery citing archives; limited historical images.</div>
+      </a>
+      <a class="card" href="https://www.1stdibs.com/jewelry/style/art-deco/" target="_blank" rel="noopener">
+        <div class="card-tier low">Low</div>
+        <div class="card-title">1stDibs — Art Deco Jewelry browse</div>
+        <div class="card-source">1stDibs</div>
+        <div class="card-note">~30,000 listings with clean photography (watermarked, marketplace) — useful as a visual index.</div>
+      </a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div>Compiled by parallel agent search · 2026-05-22</div>
+  <div class="note">Auction-house archives (Christie's, Sotheby's, Bonhams, Doyle, Heritage, Phillips) are MEDIUM rather than HIGH because images are copyrighted and watermarked — but they remain excellent reference catalogs. Wikimedia Commons does not have a "Victorian jewellery" category; Category:19th-century jewellery is the canonical parent. eBay/Etsy/Pinterest deliberately excluded.</div>
+</footer>
+
+<script>
+(function () {
+  const cards = Array.from(document.querySelectorAll('.card'));
+  const eras = Array.from(document.querySelectorAll('section.era'));
+  const tierBlocks = Array.from(document.querySelectorAll('.tier-block'));
+  const eraChips = Array.from(document.querySelectorAll('.chip[data-era]'));
+  const tierChips = Array.from(document.querySelectorAll('.chip[data-tier]'));
+  const search = document.getElementById('search');
+
+  let currentEra = 'all';
+  let currentTier = 'all';
+  let currentQuery = '';
+
+  // Stats
+  const statTotal = document.getElementById('stat-total');
+  const statHigh  = document.getElementById('stat-high');
+  const statMed   = document.getElementById('stat-med');
+  statTotal.textContent = cards.length;
+  statHigh.textContent  = document.querySelectorAll('.card-tier.high').length;
+  statMed.textContent   = document.querySelectorAll('.card-tier.med').length;
+
+  function setActive(chips, val, attr) {
+    chips.forEach(c => c.classList.toggle('active', c.getAttribute(attr) === val));
+  }
+
+  function apply() {
+    cards.forEach(card => {
+      const tier = card.querySelector('.card-tier').classList.contains('high') ? 'high'
+                 : card.querySelector('.card-tier').classList.contains('med')  ? 'med'
+                 : 'low';
+      const era = card.closest('section.era').getAttribute('data-era');
+      const text = card.textContent.toLowerCase();
+
+      const eraOk  = currentEra  === 'all' || currentEra  === era;
+      const tierOk = currentTier === 'all' || currentTier === tier;
+      const qOk    = currentQuery === '' || text.includes(currentQuery);
+
+      card.classList.toggle('hidden', !(eraOk && tierOk && qOk));
+    });
+
+    // Hide empty tier blocks / eras
+    tierBlocks.forEach(tb => {
+      const visibleCards = tb.querySelectorAll('.card:not(.hidden)').length;
+      tb.classList.toggle('hidden', visibleCards === 0);
+    });
+    eras.forEach(e => {
+      const visibleCards = e.querySelectorAll('.card:not(.hidden)').length;
+      e.classList.toggle('hidden', visibleCards === 0);
+    });
+  }
+
+  eraChips.forEach(chip => chip.addEventListener('click', () => {
+    currentEra = chip.getAttribute('data-era');
+    setActive(eraChips, currentEra, 'data-era');
+    apply();
+  }));
+  tierChips.forEach(chip => chip.addEventListener('click', () => {
+    currentTier = chip.getAttribute('data-tier');
+    setActive(tierChips, currentTier, 'data-tier');
+    apply();
+  }));
+  search.addEventListener('input', e => {
+    currentQuery = e.target.value.trim().toLowerCase();
+    apply();
+  });
+})();
+</script>
+
+</body>
+</html>
