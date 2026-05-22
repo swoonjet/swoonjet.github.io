@@ -136,10 +136,22 @@
   }
   .btn-ghost:hover { border-color: var(--black); }
 
+  /* Era section */
+  .era-section { padding-top: 64px; }
+  .era-section-header {
+    display: flex; align-items: baseline; justify-content: space-between;
+    padding: 0 64px 28px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 0;
+  }
+  .era-section-intro {
+    font-size: 13px; color: var(--mid); max-width: 420px;
+    line-height: 1.6; margin-top: 6px;
+  }
   /* Era strip */
   .era-strip {
     display: grid; grid-template-columns: repeat(4, 1fr);
-    border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
   }
   .era-card {
     position: relative; overflow: hidden; aspect-ratio: 3/4; cursor: pointer;
@@ -243,6 +255,12 @@
     font-family: var(--serif); font-size: 40px; font-weight: 300;
     font-variation-settings: 'opsz' 144; line-height: 1.0;
     letter-spacing: -0.01em; color: white; margin-bottom: 24px;
+  }
+  .editorial-headnote {
+    font-family: var(--serif); font-size: 18px; font-weight: 300;
+    font-variation-settings: 'opsz' 72;
+    line-height: 1.55; color: rgba(255,255,255,0.85);
+    margin-bottom: 22px;
   }
   .editorial-body {
     font-size: 13px; font-weight: 300; line-height: 1.8;
@@ -363,7 +381,7 @@
   .item-breadcrumb span { color: var(--charcoal); }
 
   /* 3-column: image | facts | story */
-  .item-layout { display: grid; grid-template-columns: 300px 260px 1fr; align-items: start; }
+  .item-layout { display: grid; grid-template-columns: 1.15fr 280px 0.95fr; align-items: start; }
 
   /* ── Image column ── */
   .item-gallery {
@@ -373,6 +391,7 @@
     background: linear-gradient(160deg, var(--cream-dk) 0%, var(--blush) 100%);
   }
   .gallery-main {
+    position: relative;
     aspect-ratio: 4/5; overflow: hidden; background: var(--cream);
     border: 1px solid var(--border);
     box-shadow:
@@ -380,6 +399,27 @@
       0 18px 40px -14px rgba(58, 54, 48, 0.22);
   }
   .gallery-main img { width: 100%; height: 100%; object-fit: cover; }
+  .gallery-nav {
+    position: absolute; top: 50%; transform: translateY(-50%);
+    width: 38px; height: 38px; border-radius: 50%;
+    background: rgba(250, 248, 245, 0.88); backdrop-filter: blur(6px);
+    color: var(--charcoal); cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--serif); font-size: 22px; font-weight: 300; line-height: 1;
+    opacity: 0; transition: opacity 0.2s, background 0.2s;
+    user-select: none;
+  }
+  .gallery-main:hover .gallery-nav { opacity: 1; }
+  .gallery-nav:hover { background: var(--white); }
+  .gallery-nav-prev { left: 14px; padding-right: 2px; }
+  .gallery-nav-next { right: 14px; padding-left: 2px; }
+  .gallery-counter {
+    position: absolute; bottom: 14px; right: 14px;
+    background: rgba(25, 23, 20, 0.7); backdrop-filter: blur(4px);
+    color: rgba(255, 255, 255, 0.9);
+    font-family: var(--sans); font-size: 10px; font-weight: 400;
+    letter-spacing: 0.1em; padding: 4px 10px;
+  }
   .gallery-thumbs { display: flex; flex-direction: row; gap: 6px; margin-top: 4px; }
   .gallery-thumb {
     flex: 0 0 calc(25% - 5px); aspect-ratio: 1; overflow: hidden; cursor: pointer;
@@ -448,9 +488,12 @@
     color: var(--gold); margin-bottom: 28px;
   }
   .item-description p {
-    font-family: var(--serif); font-size: 17px; font-weight: 300;
-    line-height: 1.95; color: var(--charcoal); margin-bottom: 22px;
-    font-variation-settings: 'opsz' 24;
+    font-family: var(--serif); font-size: 14.5px; font-weight: 300;
+    line-height: 1.85; color: var(--charcoal); margin-bottom: 18px;
+    font-variation-settings: 'opsz' 18;
+  }
+  .item-description p:first-of-type::first-line {
+    font-weight: 400;
   }
 
   /* Related */
@@ -783,6 +826,10 @@
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
       <span class="nav-badge" id="nav-wishlist-badge">0</span>
     </div>
+    <div class="nav-icon" onclick="openBag()" title="Bag">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6L18 2H6z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+      <span class="nav-badge" id="nav-bag-badge">0</span>
+    </div>
   </div>
 </nav>
 
@@ -804,37 +851,46 @@
     </div>
   </div>
 
-  <div class="era-strip">
-    <div class="era-card" onclick="filterByEra('Georgian')">
-      <img src="https://images.unsplash.com/photo-1573408301219-f4e2ab7cf4f0?w=600&q=80&fit=crop" alt="" onerror="this.style.display='none'">
-      <div style="position:absolute;inset:0;background:var(--cream-dk);z-index:-1"></div>
-      <div class="era-card-overlay">
-        <div class="era-label">Georgian</div>
-        <div class="era-count" id="era-count-Georgian">— pieces</div>
+  <div class="era-section">
+    <div class="era-section-header">
+      <div>
+        <h2 class="section-title">Shop by Era</h2>
+        <p class="era-section-intro">Every piece is dated and tagged. Browse by historical period to focus the collection.</p>
       </div>
+      <span class="section-link" onclick="switchView('catalog')">View all</span>
     </div>
-    <div class="era-card" onclick="filterByEra('Victorian')">
-      <img src="https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=600&q=80&fit=crop" alt="" onerror="this.style.display='none'">
-      <div style="position:absolute;inset:0;background:var(--cream-dk);z-index:-1"></div>
-      <div class="era-card-overlay">
-        <div class="era-label">Victorian</div>
-        <div class="era-count" id="era-count-Victorian">— pieces</div>
+    <div class="era-strip">
+      <div class="era-card" onclick="filterByEra('Georgian')">
+        <img src="jewelry victorian/CFA1403228-75254.800.800.jpg" alt="" onerror="this.style.display='none'">
+        <div style="position:absolute;inset:0;background:var(--cream-dk);z-index:-1"></div>
+        <div class="era-card-overlay">
+          <div class="era-label">Georgian</div>
+          <div class="era-count" id="era-count-Georgian">— pieces</div>
+        </div>
       </div>
-    </div>
-    <div class="era-card" onclick="filterByEra('Edwardian')">
-      <img src="https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=600&q=80&fit=crop" alt="" onerror="this.style.display='none'">
-      <div style="position:absolute;inset:0;background:var(--cream-dk);z-index:-1"></div>
-      <div class="era-card-overlay">
-        <div class="era-label">Edwardian</div>
-        <div class="era-count" id="era-count-Edwardian">— pieces</div>
+      <div class="era-card" onclick="filterByEra('Victorian')">
+        <img src="jewelry victorian/Victorian_Garnet_Serpent_and_Heart_9kt_Necklace-1.800.jpg" alt="" onerror="this.style.display='none'">
+        <div style="position:absolute;inset:0;background:var(--cream-dk);z-index:-1"></div>
+        <div class="era-card-overlay">
+          <div class="era-label">Victorian</div>
+          <div class="era-count" id="era-count-Victorian">— pieces</div>
+        </div>
       </div>
-    </div>
-    <div class="era-card" onclick="filterByEra('Art Nouveau')">
-      <img src="https://images.unsplash.com/photo-1602173574-0f0aef9a3d96?w=600&q=80&fit=crop" alt="" onerror="this.style.display='none'">
-      <div style="position:absolute;inset:0;background:var(--cream-dk);z-index:-1"></div>
-      <div class="era-card-overlay">
-        <div class="era-label">Art Nouveau</div>
-        <div class="era-count" id="era-count-Art Nouveau">— pieces</div>
+      <div class="era-card" onclick="filterByEra('Edwardian')">
+        <img src="https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=600&q=80&fit=crop" alt="" onerror="this.style.display='none'">
+        <div style="position:absolute;inset:0;background:var(--cream-dk);z-index:-1"></div>
+        <div class="era-card-overlay">
+          <div class="era-label">Edwardian</div>
+          <div class="era-count" id="era-count-Edwardian">— pieces</div>
+        </div>
+      </div>
+      <div class="era-card" onclick="filterByEra('Art Nouveau')">
+        <img src="https://images.unsplash.com/photo-1602173574-0f0aef9a3d96?w=600&q=80&fit=crop" alt="" onerror="this.style.display='none'">
+        <div style="position:absolute;inset:0;background:var(--cream-dk);z-index:-1"></div>
+        <div class="era-card-overlay">
+          <div class="era-label">Art Nouveau</div>
+          <div class="era-count" id="era-count-Art Nouveau">— pieces</div>
+        </div>
       </div>
     </div>
   </div>
@@ -852,10 +908,11 @@
       <img src="https://images.unsplash.com/photo-1589128777073-263566ae5e4d?w=900&q=80&fit=crop" alt="" onerror="this.style.display='none'">
     </div>
     <div class="editorial-content">
-      <div class="editorial-eyebrow">About the collection</div>
-      <h2 class="editorial-headline">Properly sourced. Properly told.</h2>
-      <p class="editorial-body">Every piece is acquired with provenance in mind and documented with the full detail — era, hallmarks, materials, condition — that a discerning buyer deserves to have before making a decision.</p>
-      <div class="btn-ghost-dark">Our approach</div>
+      <div class="editorial-eyebrow">From the proprietor</div>
+      <h2 class="editorial-headline">About Us</h2>
+      <p class="editorial-headnote">Since 1978, Cynthia Findlay has sourced and showcased outstanding antiques and jewels from all eras, from collections across Canada, the United States and Europe.</p>
+      <p class="editorial-body">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore.</p>
+      <div class="btn-ghost-dark">Our story</div>
     </div>
   </div>
 
@@ -1119,6 +1176,7 @@ const PRODUCTS = [
 // ── State ───────────────────────────────────────────────────────────────────
 const STORAGE_WISHLIST = 'vj_wishlist_v1';
 const STORAGE_RECENT = 'vj_recent_v1';
+const STORAGE_BAG = 'vj_bag_v1';
 
 function loadStored(key) {
   try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch (e) { return []; }
@@ -1133,8 +1191,10 @@ const state = {
   currentProductId: PRODUCTS[0].id,
   wishlist: new Set(loadStored(STORAGE_WISHLIST)),
   recentlyViewed: loadStored(STORAGE_RECENT),
+  bag: new Set(loadStored(STORAGE_BAG)),
   visitType: 'in-person',
-  selectedTime: ''
+  selectedTime: '',
+  galleryFrame: 1
 };
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
@@ -1300,9 +1360,20 @@ function openProduct(id, track = true) {
   document.getElementById('breadcrumb-era').textContent = p.era;
   document.getElementById('breadcrumb-title').textContent = p.shortTitle;
 
-  // Gallery — single image, no fake query-param variants
+  // Gallery — carousel mock with 4 thumbs (production will hold multiple photos)
+  state.galleryFrame = 1;
+  const thumbs = [0,1,2,3].map(i => `
+    <div class="gallery-thumb ${i === 0 ? 'active' : ''}" onclick="setGalleryFrame(${i + 1})">
+      ${imgWithFallback(p.img, p.title)}
+    </div>`).join('');
   document.getElementById('item-gallery').innerHTML = `
-    <div class="gallery-main">${imgWithFallback(p.img, p.title)}</div>`;
+    <div class="gallery-main">
+      ${imgWithFallback(p.img, p.title)}
+      <div class="gallery-nav gallery-nav-prev" onclick="cycleGallery(-1)">&#8249;</div>
+      <div class="gallery-nav gallery-nav-next" onclick="cycleGallery(1)">&#8250;</div>
+      <div class="gallery-counter"><span id="gallery-counter-num">1</span> / 4</div>
+    </div>
+    <div class="gallery-thumbs">${thumbs}</div>`;
 
   // Specs — trimmed to most useful fields
   const specs = [
@@ -1318,10 +1389,9 @@ function openProduct(id, track = true) {
 
   const descParas = p.description.split('\n\n').map(t => `<p>${t}</p>`).join('');
 
-  const purchaseMode = p.price >= 5000 ? 'inquire' : 'buy';
-
   // Facts column
   const wished = state.wishlist.has(p.id);
+  const inBag = state.bag.has(p.id);
   const escapedTitle = p.shortTitle.replace(/'/g, "\\'");
   document.getElementById('item-info').innerHTML = `
     <div class="item-era-badge">${p.era} · ${p.category}</div>
@@ -1329,11 +1399,9 @@ function openProduct(id, track = true) {
     <div class="item-subtitle">${p.materials}</div>
     <div class="item-price">${fmt(p.price)}</div>
     <div class="item-actions">
-      ${purchaseMode === 'buy'
-        ? `<button class="btn-full primary">Purchase — ${fmt(p.price)}</button>
-           <button class="btn-full outline" onclick="openBooking('${escapedTitle}')">Book a Viewing</button>`
-        : `<button class="btn-full primary" onclick="openBooking('${escapedTitle}')">Book a Viewing</button>
-           <button class="btn-full outline" onclick="openBooking('${escapedTitle}')">Make an Enquiry</button>`}
+      <button class="btn-full primary" id="add-to-bag-btn" onclick="addToBag('${p.id}')">${inBag ? 'In Bag ✓' : 'Add to Bag'}</button>
+      <button class="btn-full outline" onclick="openContact('${escapedTitle}')">Contact Us</button>
+      <button class="btn-full outline" onclick="openBooking('${escapedTitle}')">Schedule an Appointment</button>
     </div>
     <div class="item-share-row">
       <button class="item-wish-btn ${wished ? 'active' : ''}" id="item-wish-btn" onclick="toggleWishlist('${p.id}', true)">
@@ -1556,6 +1624,120 @@ function renderWishlistPanel() {
     </div>`;
 }
 
+// ── Gallery carousel (mock — same photo, but mechanics are wired) ───────────
+function setGalleryFrame(n) {
+  state.galleryFrame = n;
+  const counter = document.getElementById('gallery-counter-num');
+  if (counter) counter.textContent = n;
+  document.querySelectorAll('.gallery-thumb').forEach((t, i) => {
+    t.classList.toggle('active', i === n - 1);
+  });
+}
+function cycleGallery(dir) {
+  const n = ((state.galleryFrame - 1 + dir + 4) % 4) + 1;
+  setGalleryFrame(n);
+}
+
+// ── Bag ─────────────────────────────────────────────────────────────────────
+function addToBag(id) {
+  const p = PRODUCTS.find(x => x.id === id);
+  if (!p) return;
+  if (state.bag.has(id)) {
+    showToast('Already in your bag');
+    return;
+  }
+  state.bag.add(id);
+  saveStored(STORAGE_BAG, [...state.bag]);
+  updateBagBadge();
+  showToast(`Added to bag · ${p.shortTitle}`);
+  const btn = document.getElementById('add-to-bag-btn');
+  if (btn && state.currentProductId === id) btn.textContent = 'In Bag ✓';
+}
+function removeFromBag(id) {
+  state.bag.delete(id);
+  saveStored(STORAGE_BAG, [...state.bag]);
+  updateBagBadge();
+  renderBagPanel();
+  const btn = document.getElementById('add-to-bag-btn');
+  if (btn && state.currentProductId === id) btn.textContent = 'Add to Bag';
+}
+function updateBagBadge() {
+  const badge = document.getElementById('nav-bag-badge');
+  const count = state.bag.size;
+  badge.textContent = count;
+  badge.classList.toggle('visible', count > 0);
+}
+function openBag() {
+  renderBagPanel();
+  document.getElementById('bag-overlay').classList.add('open');
+  document.getElementById('bag-panel').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeBag() {
+  document.getElementById('bag-overlay').classList.remove('open');
+  document.getElementById('bag-panel').classList.remove('open');
+  document.body.style.overflow = '';
+}
+function renderBagPanel() {
+  const content = document.getElementById('bag-content');
+  const items = [...state.bag].map(id => PRODUCTS.find(p => p.id === id)).filter(Boolean);
+  if (items.length === 0) {
+    content.innerHTML = `
+      <div class="wishlist-empty">
+        <div class="wishlist-empty-icon">
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6L18 2H6z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+        </div>
+        <h3>Your bag is empty</h3>
+        <p>Add pieces from any product page to gather them here.</p>
+      </div>`;
+    return;
+  }
+  const subtotal = items.reduce((sum, p) => sum + p.price, 0);
+  content.innerHTML = `
+    <div class="wishlist-items">
+      ${items.map(p => `
+        <div class="wishlist-item" onclick="closeBag(); openProduct('${p.id}')">
+          <div class="wishlist-item-img">${imgWithFallback(p.img, p.shortTitle)}</div>
+          <div class="wishlist-item-meta">
+            <div class="wishlist-item-era">${p.era} · ${p.category}</div>
+            <div class="wishlist-item-name">${p.shortTitle}</div>
+            <div class="wishlist-item-price">${fmt(p.price)}</div>
+          </div>
+          <div class="wishlist-item-remove" onclick="event.stopPropagation(); removeFromBag('${p.id}')" title="Remove">&#215;</div>
+        </div>
+      `).join('')}
+    </div>
+    <div style="margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: baseline;">
+      <span style="font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--mid);">Subtotal</span>
+      <span style="font-family: var(--serif); font-size: 22px; font-weight: 400; font-variation-settings: 'opsz' 72;">${fmt(subtotal)}</span>
+    </div>
+    <button class="booking-submit" style="margin-top: 18px;" onclick="showToast('Checkout coming in the next iteration')">Proceed to Checkout</button>`;
+}
+
+// ── Contact ─────────────────────────────────────────────────────────────────
+function openContact(interest = '') {
+  document.getElementById('contact-overlay').classList.add('open');
+  document.getElementById('contact-panel').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  document.getElementById('contact-success').style.display = 'none';
+  document.getElementById('contact-form').style.display = 'flex';
+  if (interest) {
+    const field = document.getElementById('contact-interest');
+    if (field) field.value = interest;
+  }
+}
+function closeContact() {
+  document.getElementById('contact-overlay').classList.remove('open');
+  document.getElementById('contact-panel').classList.remove('open');
+  document.body.style.overflow = '';
+}
+function submitContact(e) {
+  e.preventDefault();
+  document.getElementById('contact-form').style.display = 'none';
+  document.getElementById('contact-success').style.display = 'block';
+  setTimeout(closeContact, 3000);
+}
+
 // ── Recently viewed ─────────────────────────────────────────────────────────
 function trackView(id) {
   state.recentlyViewed = [id, ...state.recentlyViewed.filter(x => x !== id)].slice(0, 6);
@@ -1617,8 +1799,9 @@ function showToast(msg) {
   }, 2400);
 }
 
-// Init wishlist badge + recently viewed on load
+// Init wishlist + bag badges + recently viewed on load
 updateWishlistBadge();
+updateBagBadge();
 renderRecentlyViewed();
 </script>
 
@@ -1693,6 +1876,56 @@ renderRecentlyViewed();
   <div class="booking-eyebrow">Your Wishlist</div>
   <h2 class="booking-title" style="margin-bottom: 24px;">Saved pieces</h2>
   <div id="wishlist-content"></div>
+</div>
+
+<!-- Bag panel (reuses wishlist-panel chrome) -->
+<div class="booking-overlay" id="bag-overlay" onclick="closeBag()"></div>
+<div class="wishlist-panel" id="bag-panel">
+  <div class="booking-close" onclick="closeBag()">&#215;</div>
+  <div class="booking-eyebrow">Your Bag</div>
+  <h2 class="booking-title" style="margin-bottom: 24px;">Selected pieces</h2>
+  <div id="bag-content"></div>
+</div>
+
+<!-- Contact panel (reuses booking-panel chrome) -->
+<div class="booking-overlay" id="contact-overlay" onclick="closeContact()"></div>
+<div class="booking-panel" id="contact-panel">
+  <div class="booking-close" onclick="closeContact()">&#215;</div>
+  <div class="booking-eyebrow">Contact Us</div>
+  <h2 class="booking-title">Get in touch</h2>
+  <p class="booking-intro">Questions about a piece, provenance, condition, or anything else — we'll respond within one business day.</p>
+
+  <form class="booking-form" id="contact-form" onsubmit="submitContact(event)">
+    <div class="booking-row">
+      <div class="booking-field">
+        <label>First name</label>
+        <input type="text" placeholder="Jane" required>
+      </div>
+      <div class="booking-field">
+        <label>Last name</label>
+        <input type="text" placeholder="Smith" required>
+      </div>
+    </div>
+    <div class="booking-field">
+      <label>Email address</label>
+      <input type="email" placeholder="jane@example.com" required>
+    </div>
+    <div class="booking-field">
+      <label>About <span class="opt">optional</span></label>
+      <input type="text" id="contact-interest" placeholder="Piece you're enquiring about">
+    </div>
+    <div class="booking-field">
+      <label>Message</label>
+      <textarea rows="5" placeholder="Tell us what you'd like to know…" required></textarea>
+    </div>
+    <button type="submit" class="booking-submit">Send Message</button>
+  </form>
+
+  <div class="booking-success" id="contact-success">
+    <div class="booking-success-check">✓</div>
+    <h3>Message sent.</h3>
+    <p>We'll be in touch by email within one business day.</p>
+  </div>
 </div>
 
 <!-- Toast stack -->
