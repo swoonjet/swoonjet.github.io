@@ -87,14 +87,11 @@
     display: grid; grid-template-columns: 1fr 1fr;
   }
   .hero-image {
-    position: relative; overflow: hidden; background: var(--cream-dk);
-  }
-  .hero-image img {
-    height: 100%; width: 100%; object-fit: cover;
-    object-position: 43% 76%;
-    transform: scale(1.9);
-    transform-origin: 43% 76%;
-    filter: brightness(0.98) contrast(1.04);
+    position: relative; overflow: hidden;
+    background-color: var(--cream-dk);
+    background-size: 260% auto;
+    background-position: 43% 76%;
+    background-repeat: no-repeat;
   }
   .hero-image-caption {
     position: absolute; bottom: 24px; left: 24px;
@@ -246,12 +243,12 @@
 
   /* Editorial */
   .editorial { display: grid; grid-template-columns: 1fr 1fr; }
-  .editorial-image { background: var(--cream-dk); overflow: hidden; }
-  .editorial-image img {
-    height: 100%; width: 100%; object-fit: cover;
-    object-position: 50% 80%;
-    transform: scale(1.45);
-    transform-origin: 50% 82%;
+  .editorial-image {
+    background-color: var(--cream-dk);
+    background-size: 200% auto;
+    background-position: 50% 88%;
+    background-repeat: no-repeat;
+    overflow: hidden;
   }
   .editorial-content {
     background: var(--black); display: flex; flex-direction: column;
@@ -846,8 +843,7 @@
 <!-- ══════ HOME ══════ -->
 <div class="view active" id="view-home">
   <div class="hero">
-    <div class="hero-image">
-      <img src="https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=900&q=80&fit=crop" alt="" onerror="this.style.display='none'">
+    <div class="hero-image" style="background-image: url('https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=900&q=80&fit=crop');">
       <div class="hero-image-caption">Victorian Garnet Serpent &amp; Heart Necklace, 9k gold, c.1880</div>
     </div>
     <div class="hero-content">
@@ -914,9 +910,7 @@
   </div>
 
   <div class="editorial" id="about">
-    <div class="editorial-image">
-      <img src="https://images.unsplash.com/photo-1589128777073-263566ae5e4d?w=900&q=80&fit=crop" alt="" onerror="this.style.display='none'">
-    </div>
+    <div class="editorial-image" style="background-image: url('https://images.unsplash.com/photo-1589128777073-263566ae5e4d?w=900&q=80&fit=crop');"></div>
     <div class="editorial-content">
       <div class="editorial-eyebrow">From the proprietor</div>
       <h2 class="editorial-headline">About Us</h2>
