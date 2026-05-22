@@ -813,7 +813,7 @@
   <div class="nav-left">
     <a onclick="switchView('catalog')">Collection</a>
     <a onclick="switchView('catalog')">New Arrivals</a>
-    <a href="#">About</a>
+    <a onclick="gotoAbout()" style="cursor:pointer">About</a>
   </div>
   <div class="nav-logo" onclick="switchView('home')" title="Logo placeholder">[ Brand ]</div>
   <div class="nav-right">
@@ -841,7 +841,7 @@
       <div class="hero-image-caption">Victorian Garnet Serpent &amp; Heart Necklace, 9k gold, c.1880</div>
     </div>
     <div class="hero-content">
-      <div class="hero-eyebrow">New Arrivals — Summer 2025</div>
+      <div class="hero-eyebrow">New Arrivals — Summer 2026</div>
       <h1 class="hero-headline">Each piece,<br><em>a story.</em></h1>
       <p class="hero-body">Antique and estate jewellery sourced, authenticated, and described with the detail it deserves. Georgian through mid-century — every item documented to the standard a serious collector expects.</p>
       <div class="hero-actions">
@@ -903,7 +903,7 @@
     <div class="product-grid" id="home-featured"></div>
   </div>
 
-  <div class="editorial">
+  <div class="editorial" id="about">
     <div class="editorial-image">
       <img src="https://images.unsplash.com/photo-1589128777073-263566ae5e4d?w=900&q=80&fit=crop" alt="" onerror="this.style.display='none'">
     </div>
@@ -1226,12 +1226,24 @@ function productCardHTML(p, onclick = '') {
 }
 
 // ── View switching ──────────────────────────────────────────────────────────
-function switchView(name) {
+function switchView(name, opts = {}) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.querySelectorAll('.vs-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('view-' + name).classList.add('active');
   document.getElementById('btn-' + name).classList.add('active');
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  if (!opts.noScroll) window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function gotoAbout() {
+  const isHome = document.getElementById('view-home').classList.contains('active');
+  if (!isHome) switchView('home', { noScroll: true });
+  requestAnimationFrame(() => {
+    const el = document.getElementById('about');
+    if (!el) return;
+    const navHeight = 68;
+    const top = el.getBoundingClientRect().top + window.pageYOffset - navHeight;
+    window.scrollTo({ top, behavior: 'smooth' });
+  });
 }
 
 // ── Home: featured products ─────────────────────────────────────────────────
