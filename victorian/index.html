@@ -3,154 +3,113 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Antique Jewelry — Site Mockup</title>
+<title>Jewellery — Working Prototype</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;1,9..144,300;1,9..144,400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
-  /* ── Reset & Base ───────────────────────────────────────────── */
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
   :root {
-    --cream:    #F6F3EE;
-    --cream-dk: #EDE8E0;
-    --white:    #FDFCFB;
+    --page:     #E8E0D2;
+    --cream:    #EDE6D8;
+    --cream-dk: #E2D9C8;
+    --white:    #F2EBDB;
+    --blush:    #E8D5C0;
+    --blush-dk: #DCC3A8;
+    --paper:    #EDE2CD;
     --black:    #191714;
     --charcoal: #3A3630;
     --mid:      #6E6860;
     --light:    #A09890;
     --gold:     #8C6E42;
     --gold-lt:  #C4A97A;
-    --border:   #E2DDD6;
+    --border:   #D2C8B4;
     --serif:    'Fraunces', Georgia, serif;
     --sans:     'Inter', system-ui, sans-serif;
   }
-
-  html { font-size: 16px; background: var(--white); color: var(--black); }
+  html {
+    font-size: 16px; color: var(--black);
+    background:
+      radial-gradient(ellipse 1200px 800px at 85% 5%, rgba(232, 213, 192, 0.55) 0%, transparent 60%),
+      radial-gradient(ellipse 900px 700px at 10% 95%, rgba(220, 195, 168, 0.35) 0%, transparent 55%),
+      var(--page);
+    background-attachment: fixed;
+  }
   body { font-family: var(--sans); font-weight: 300; }
-  img { display: block; width: 100%; object-fit: cover; }
-  a { text-decoration: none; color: inherit; }
+  img { display: block; width: 100%; height: 100%; object-fit: cover; }
+  a { text-decoration: none; color: inherit; cursor: pointer; }
 
-  /* ── View switching ─────────────────────────────────────────── */
+  /* ── Views ── */
   .view { display: none; }
   .view.active { display: block; }
 
-  /* ── NAV ────────────────────────────────────────────────────── */
+  /* ── Nav ── */
   nav {
     position: sticky; top: 0; z-index: 100;
-    background: var(--white);
+    background: linear-gradient(180deg, var(--cream) 0%, var(--paper) 100%);
     border-bottom: 1px solid var(--border);
-    display: grid;
-    grid-template-columns: 1fr auto 1fr;
-    align-items: center;
-    padding: 0 48px;
-    height: 68px;
+    display: grid; grid-template-columns: 1fr auto 1fr;
+    align-items: center; padding: 0 48px; height: 68px;
   }
   .nav-left { display: flex; gap: 32px; }
   .nav-left a, .nav-right a {
-    font-family: var(--sans);
-    font-size: 11px;
-    font-weight: 400;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--charcoal);
-    transition: color 0.2s;
+    font-family: var(--sans); font-size: 11px; font-weight: 400;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--charcoal); transition: color 0.2s;
   }
   .nav-left a:hover, .nav-right a:hover { color: var(--gold); }
   .nav-logo {
-    font-family: var(--serif);
-    font-size: 22px;
-    font-weight: 500;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    text-align: center;
-    color: var(--black);
+    font-family: var(--sans); font-size: 10px; font-weight: 400;
+    letter-spacing: 0.22em; text-transform: uppercase;
+    text-align: center; color: var(--light);
+    border: 1px dashed var(--border); padding: 5px 14px;
+    cursor: pointer;
   }
-  .nav-right {
-    display: flex; gap: 24px; justify-content: flex-end; align-items: center;
-  }
+  .nav-right { display: flex; gap: 24px; justify-content: flex-end; align-items: center; }
   .nav-icon { cursor: pointer; color: var(--charcoal); opacity: 0.7; }
   .nav-icon:hover { opacity: 1; }
 
-  /* ── View pill indicator (dev only) ────────────────────────── */
+  /* ── View switcher ── */
   .view-switcher {
     position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
-    z-index: 999;
-    background: var(--black);
-    border-radius: 40px;
-    display: flex;
-    overflow: hidden;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+    z-index: 999; background: var(--black); border-radius: 40px;
+    display: flex; overflow: hidden; box-shadow: 0 8px 32px rgba(0,0,0,0.2);
   }
   .vs-btn {
-    padding: 10px 22px;
-    font-family: var(--sans);
-    font-size: 11px;
-    font-weight: 400;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: rgba(255,255,255,0.5);
-    cursor: pointer;
-    border: none;
-    background: transparent;
-    transition: all 0.2s;
+    padding: 10px 22px; font-family: var(--sans); font-size: 11px;
+    font-weight: 400; letter-spacing: 0.1em; text-transform: uppercase;
+    color: rgba(255,255,255,0.45); cursor: pointer; border: none;
+    background: transparent; transition: all 0.2s;
   }
   .vs-btn.active { background: var(--gold); color: white; }
 
-  /* ════════════════════════════════════════════════════════════
-     HOME VIEW
-  ════════════════════════════════════════════════════════════ */
-
-  /* Hero */
+  /* ════════════ HOME ════════════ */
   .hero {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
+    display: grid; grid-template-columns: 1fr 1fr;
     min-height: calc(100vh - 68px);
   }
   .hero-image {
-    position: relative;
-    overflow: hidden;
-    background: var(--cream-dk);
+    position: relative; overflow: hidden; background: var(--cream-dk);
   }
-  .hero-image img {
-    height: 100%;
-    width: 100%;
-    object-fit: cover;
-    object-position: center;
-    filter: brightness(0.96);
-  }
+  .hero-image img { height: 100%; width: 100%; object-fit: cover; filter: brightness(0.95); }
   .hero-image-caption {
-    position: absolute;
-    bottom: 24px; left: 24px;
-    font-family: var(--sans);
-    font-size: 10px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: rgba(255,255,255,0.7);
+    position: absolute; bottom: 24px; left: 24px;
+    font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase;
+    color: rgba(255,255,255,0.65);
   }
   .hero-content {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    padding: 80px 72px;
-    background: var(--white);
+    display: flex; flex-direction: column; justify-content: flex-start;
+    padding: 64px 72px 80px;
+    background: linear-gradient(155deg, var(--cream) 0%, var(--blush) 100%);
   }
   .hero-eyebrow {
-    font-family: var(--sans);
-    font-size: 10px;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    color: var(--gold);
-    margin-bottom: 24px;
+    font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--gold); margin-bottom: 24px;
   }
   .hero-headline {
-    font-family: var(--serif);
-    font-size: 60px;
-    font-weight: 300;
+    font-family: var(--serif); font-size: 62px; font-weight: 300;
     font-variation-settings: 'opsz' 144, 'WONK' 0;
-    line-height: 0.95;
-    letter-spacing: -0.01em;
-    color: var(--black);
-    margin-bottom: 32px;
+    line-height: 0.93; letter-spacing: -0.01em;
+    color: var(--black); margin-bottom: 32px;
   }
   .hero-headline em {
     font-style: italic;
@@ -158,786 +117,777 @@
     color: var(--gold);
   }
   .hero-body {
-    font-size: 14px;
-    font-weight: 300;
-    line-height: 1.8;
-    color: var(--mid);
-    max-width: 400px;
-    margin-bottom: 48px;
+    font-size: 14px; font-weight: 300; line-height: 1.8;
+    color: var(--mid); max-width: 380px; margin-bottom: 48px;
   }
+  .hero-actions { display: flex; gap: 14px; flex-wrap: wrap; }
   .btn-primary {
-    display: inline-block;
-    font-family: var(--sans);
-    font-size: 11px;
-    font-weight: 400;
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-    color: var(--white);
-    background: var(--black);
-    padding: 14px 36px;
-    border: 1px solid var(--black);
-    transition: all 0.25s;
-    cursor: pointer;
-    width: fit-content;
+    display: inline-block; font-family: var(--sans); font-size: 11px;
+    font-weight: 400; letter-spacing: 0.15em; text-transform: uppercase;
+    color: var(--white); background: var(--black); padding: 14px 36px;
+    border: 1px solid var(--black); transition: all 0.25s; cursor: pointer;
   }
   .btn-primary:hover { background: var(--gold); border-color: var(--gold); }
   .btn-ghost {
-    display: inline-block;
-    font-family: var(--sans);
-    font-size: 11px;
-    font-weight: 400;
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-    color: var(--black);
-    background: transparent;
-    padding: 14px 36px;
-    border: 1px solid var(--border);
-    transition: all 0.25s;
-    cursor: pointer;
-    width: fit-content;
+    display: inline-block; font-family: var(--sans); font-size: 11px;
+    font-weight: 400; letter-spacing: 0.15em; text-transform: uppercase;
+    color: var(--black); background: transparent; padding: 14px 36px;
+    border: 1px solid var(--border); transition: all 0.25s; cursor: pointer;
   }
   .btn-ghost:hover { border-color: var(--black); }
 
   /* Era strip */
   .era-strip {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    border-top: 1px solid var(--border);
-    border-bottom: 1px solid var(--border);
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
   }
   .era-card {
-    position: relative;
-    overflow: hidden;
-    aspect-ratio: 3/4;
-    cursor: pointer;
+    position: relative; overflow: hidden; aspect-ratio: 3/4; cursor: pointer;
   }
   .era-card + .era-card { border-left: 1px solid var(--border); }
-  .era-card img { height: 100%; transition: transform 0.6s ease; }
-  .era-card:hover img { transform: scale(1.04); }
+  .era-card > img { transition: transform 0.6s ease; }
+  .era-card:hover > img { transform: scale(1.04); }
+  .era-img-placeholder {
+    width: 100%; height: 100%; position: absolute; inset: 0;
+  }
   .era-card-overlay {
     position: absolute; inset: 0;
-    background: linear-gradient(to top, rgba(20,17,14,0.65) 0%, transparent 55%);
+    background: linear-gradient(to top, rgba(20,17,14,0.7) 0%, transparent 55%);
     display: flex; flex-direction: column; justify-content: flex-end;
     padding: 28px 24px;
   }
   .era-label {
-    font-family: var(--serif);
-    font-size: 22px;
-    font-weight: 400;
-    color: white;
-    margin-bottom: 4px;
+    font-family: var(--serif); font-size: 22px; font-weight: 400;
+    font-variation-settings: 'opsz' 144; color: white; margin-bottom: 4px;
   }
   .era-count {
-    font-family: var(--sans);
-    font-size: 10px;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
+    font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase;
     color: rgba(255,255,255,0.6);
   }
 
-  /* Featured section */
+  /* Section */
   .section {
     padding: 80px 64px;
+    background: linear-gradient(180deg, var(--paper) 0%, var(--cream) 100%);
   }
   .section-header {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    margin-bottom: 48px;
-    padding-bottom: 20px;
-    border-bottom: 1px solid var(--border);
+    display: flex; align-items: baseline; justify-content: space-between;
+    margin-bottom: 48px; padding-bottom: 20px; border-bottom: 1px solid var(--border);
   }
   .section-title {
-    font-family: var(--serif);
-    font-size: 36px;
-    font-weight: 300;
-    font-variation-settings: 'opsz' 144;
-    line-height: 1;
-    letter-spacing: -0.01em;
+    font-family: var(--serif); font-size: 36px; font-weight: 300;
+    font-variation-settings: 'opsz' 144; line-height: 1; letter-spacing: -0.01em;
   }
   .section-link {
-    font-family: var(--sans);
-    font-size: 11px;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--gold);
-    border-bottom: 1px solid currentColor;
-    padding-bottom: 1px;
+    font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--gold); border-bottom: 1px solid currentColor; padding-bottom: 1px;
+    cursor: pointer;
   }
 
-  .product-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 2px;
-  }
+  /* Product cards */
+  .product-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; }
   .product-grid.four-col { grid-template-columns: repeat(4, 1fr); }
-
   .product-card { cursor: pointer; }
   .product-card-image {
-    position: relative;
-    aspect-ratio: 3/4;
-    overflow: hidden;
-    background: var(--cream);
+    position: relative; aspect-ratio: 3/4; overflow: hidden; background: var(--cream);
     margin-bottom: 16px;
+    border: 1px solid var(--border);
+    box-shadow:
+      0 1px 2px rgba(58, 54, 48, 0.04),
+      0 14px 32px -12px rgba(58, 54, 48, 0.18);
+    transition: box-shadow 0.35s ease, transform 0.35s ease;
   }
   .product-card-image img { height: 100%; transition: transform 0.5s ease; }
+  .product-card:hover .product-card-image {
+    box-shadow:
+      0 2px 4px rgba(58, 54, 48, 0.06),
+      0 22px 40px -12px rgba(58, 54, 48, 0.26);
+    transform: translateY(-2px);
+  }
   .product-card:hover .product-card-image img { transform: scale(1.03); }
+  .product-img-placeholder {
+    width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
+    background: var(--cream); color: var(--border); font-size: 32px;
+  }
   .product-badge {
-    position: absolute; top: 14px; left: 14px;
-    font-family: var(--sans);
-    font-size: 9px;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    background: var(--white);
-    color: var(--charcoal);
-    padding: 4px 10px;
+    position: absolute; top: 14px; left: 14px; font-size: 9px;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    background: var(--white); color: var(--charcoal); padding: 4px 10px; z-index: 2;
   }
-  .product-badge.sold {
-    background: var(--black); color: white;
-  }
-  .product-card-meta {
-    padding: 0 2px;
-  }
+  .product-badge.sold { background: var(--black); color: white; }
+  .product-card-meta { padding: 0 2px; }
   .product-era {
-    font-family: var(--sans);
-    font-size: 10px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--gold);
-    margin-bottom: 5px;
+    font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--gold); margin-bottom: 5px;
   }
   .product-name {
-    font-family: var(--serif);
-    font-size: 17px;
-    font-weight: 400;
-    color: var(--black);
-    line-height: 1.3;
-    margin-bottom: 6px;
+    font-family: var(--serif); font-size: 17px; font-weight: 400;
+    font-variation-settings: 'opsz' 72; line-height: 1.25;
+    color: var(--black); margin-bottom: 6px;
   }
-  .product-price {
-    font-family: var(--sans);
-    font-size: 13px;
-    font-weight: 300;
-    color: var(--mid);
-  }
+  .product-price { font-size: 13px; font-weight: 300; color: var(--mid); }
 
-  /* Editorial strip */
-  .editorial {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    min-height: 520px;
-  }
-  .editorial-image {
-    background: var(--cream-dk);
-    overflow: hidden;
-  }
+  /* Editorial */
+  .editorial { display: grid; grid-template-columns: 1fr 1fr; min-height: 480px; }
+  .editorial-image { background: var(--cream-dk); overflow: hidden; }
   .editorial-image img { height: 100%; }
   .editorial-content {
-    background: var(--black);
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    padding: 80px 72px;
+    background: var(--black); display: flex; flex-direction: column;
+    justify-content: center; padding: 80px 72px;
   }
   .editorial-eyebrow {
-    font-size: 10px;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    color: var(--gold-lt);
-    margin-bottom: 20px;
+    font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--gold-lt); margin-bottom: 20px;
   }
   .editorial-headline {
-    font-family: var(--serif);
-    font-size: 40px;
-    font-weight: 300;
-    font-variation-settings: 'opsz' 144;
-    line-height: 1.0;
-    letter-spacing: -0.01em;
-    color: white;
-    margin-bottom: 24px;
+    font-family: var(--serif); font-size: 40px; font-weight: 300;
+    font-variation-settings: 'opsz' 144; line-height: 1.0;
+    letter-spacing: -0.01em; color: white; margin-bottom: 24px;
   }
   .editorial-body {
-    font-size: 13px;
-    font-weight: 300;
-    line-height: 1.8;
-    color: rgba(255,255,255,0.55);
-    margin-bottom: 40px;
+    font-size: 13px; font-weight: 300; line-height: 1.8;
+    color: rgba(255,255,255,0.5); margin-bottom: 40px;
   }
+  .btn-ghost-dark {
+    display: inline-block; font-family: var(--sans); font-size: 11px;
+    font-weight: 400; letter-spacing: 0.15em; text-transform: uppercase;
+    color: white; background: transparent; padding: 14px 36px;
+    border: 1px solid rgba(255,255,255,0.2); transition: all 0.25s; cursor: pointer;
+    width: fit-content;
+  }
+  .btn-ghost-dark:hover { border-color: rgba(255,255,255,0.6); }
 
-  /* ════════════════════════════════════════════════════════════
-     CATALOG VIEW
-  ════════════════════════════════════════════════════════════ */
-
+  /* ════════════ CATALOG ════════════ */
   .catalog-header {
-    padding: 48px 64px 32px;
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    align-items: flex-end;
-    justify-content: space-between;
+    padding: 48px 64px 32px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: flex-end; justify-content: space-between;
   }
   .catalog-title {
-    font-family: var(--serif);
-    font-size: 42px;
-    font-weight: 300;
+    font-family: var(--serif); font-size: 42px; font-weight: 300;
+    font-variation-settings: 'opsz' 144; line-height: 1; letter-spacing: -0.01em;
   }
-  .catalog-count {
-    font-family: var(--sans);
-    font-size: 12px;
-    color: var(--light);
-    letter-spacing: 0.05em;
-    padding-bottom: 8px;
-  }
-
-  .catalog-layout {
-    display: grid;
-    grid-template-columns: 260px 1fr;
-    align-items: start;
-  }
+  .catalog-count { font-size: 12px; color: var(--light); letter-spacing: 0.05em; padding-bottom: 8px; }
+  .catalog-layout { display: grid; grid-template-columns: 260px 1fr; align-items: start; }
 
   /* Filter sidebar */
   .filter-sidebar {
-    padding: 36px 36px 48px;
-    border-right: 1px solid var(--border);
-    position: sticky;
-    top: 68px;
+    padding: 36px 28px 48px; border-right: 1px solid var(--border);
+    position: sticky; top: 68px; overflow: hidden; width: 260px; min-width: 0;
+    background: var(--cream-dk);
   }
-  .filter-search {
-    position: relative;
-    margin-bottom: 32px;
-  }
+  .filter-search { position: relative; margin-bottom: 32px; }
   .filter-search input {
-    width: 100%;
-    border: none;
-    border-bottom: 1px solid var(--border);
-    background: transparent;
-    padding: 8px 28px 8px 0;
-    font-family: var(--sans);
-    font-size: 12px;
-    color: var(--black);
-    outline: none;
+    width: 100%; border: none; border-bottom: 1px solid var(--border);
+    background: transparent; padding: 8px 28px 8px 0;
+    font-family: var(--sans); font-size: 12px; color: var(--black); outline: none;
   }
   .filter-search input::placeholder { color: var(--light); }
-  .filter-search svg {
-    position: absolute; right: 0; top: 50%; transform: translateY(-50%);
-    opacity: 0.4;
-  }
-  .filter-group { margin-bottom: 28px; }
+  .filter-search svg { position: absolute; right: 0; top: 50%; transform: translateY(-50%); opacity: 0.4; }
+  .filter-group { margin-bottom: 24px; }
   .filter-group-label {
-    font-family: var(--sans);
-    font-size: 10px;
-    font-weight: 500;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--charcoal);
-    margin-bottom: 12px;
-    display: flex;
-    justify-content: space-between;
-    cursor: pointer;
+    font-size: 10px; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--charcoal); margin-bottom: 10px; display: flex; justify-content: space-between;
   }
-  .filter-group-label span { color: var(--light); font-weight: 300; font-size: 10px; }
+  .filter-group-label span { color: var(--light); font-weight: 300; }
   .filter-option {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 5px 0;
-    cursor: pointer;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 5px 0; cursor: pointer;
   }
-  .filter-option-left {
-    display: flex; align-items: center; gap: 10px;
-  }
+  .filter-option-left { display: flex; align-items: center; gap: 10px; }
   .filter-check {
-    width: 14px; height: 14px;
-    border: 1px solid var(--border);
-    border-radius: 2px;
-    flex-shrink: 0;
-    display: flex; align-items: center; justify-content: center;
+    width: 14px; height: 14px; border: 1px solid var(--border); border-radius: 2px;
+    flex-shrink: 0; display: flex; align-items: center; justify-content: center;
     transition: all 0.15s;
   }
-  .filter-check.checked {
-    background: var(--black); border-color: var(--black);
-  }
+  .filter-check.checked { background: var(--black); border-color: var(--black); }
   .filter-check.checked::after {
-    content: '';
-    width: 7px; height: 4px;
-    border-left: 1.5px solid white;
-    border-bottom: 1.5px solid white;
+    content: ''; width: 7px; height: 4px;
+    border-left: 1.5px solid white; border-bottom: 1.5px solid white;
     transform: rotate(-45deg) translateY(-1px);
   }
-  .filter-option-name {
-    font-family: var(--sans);
-    font-size: 12px;
-    color: var(--charcoal);
-  }
-  .filter-option-count {
-    font-family: var(--sans);
-    font-size: 11px;
-    color: var(--light);
-  }
-  .filter-divider {
-    height: 1px; background: var(--border); margin: 4px 0 28px;
-  }
-  .price-range {
-    padding: 4px 0;
-  }
-  .price-inputs {
-    display: flex; gap: 8px; align-items: center; margin-bottom: 12px;
-  }
+  .filter-option-name { font-size: 12px; color: var(--charcoal); }
+  .filter-option-count { font-size: 11px; color: var(--light); }
+  .filter-divider { height: 1px; background: var(--border); margin: 4px 0 24px; }
+  .price-inputs { display: flex; gap: 8px; align-items: center; margin-top: 6px; width: 100%; }
   .price-input {
-    flex: 1;
-    border: 1px solid var(--border);
-    padding: 7px 10px;
-    font-family: var(--sans);
-    font-size: 12px;
-    color: var(--charcoal);
-    outline: none;
-    background: transparent;
+    flex: 1 1 0; min-width: 0; width: 0; border: 1px solid var(--border); padding: 7px 8px;
+    font-family: var(--sans); font-size: 12px; color: var(--charcoal);
+    outline: none; background: transparent;
   }
   .price-sep { color: var(--light); font-size: 12px; }
+  .clear-filters {
+    font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--gold); cursor: pointer; border-bottom: 1px solid currentColor;
+    display: inline-block; margin-top: 20px;
+  }
 
-  /* Catalog grid area */
+  /* Catalog grid */
   .catalog-grid-area {
     padding: 32px 48px 64px;
+    background: linear-gradient(180deg, var(--cream) 0%, var(--paper) 60%, var(--cream) 100%);
   }
   .catalog-toolbar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 28px;
+    display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px;
   }
-  .active-filters {
-    display: flex; gap: 8px; flex-wrap: wrap;
-  }
+  .active-filters { display: flex; gap: 8px; flex-wrap: wrap; }
   .filter-tag {
-    display: flex; align-items: center; gap: 6px;
-    font-family: var(--sans);
-    font-size: 11px;
-    color: var(--charcoal);
-    background: var(--cream);
-    border: 1px solid var(--border);
-    padding: 4px 10px 4px 12px;
-    letter-spacing: 0.04em;
+    display: flex; align-items: center; gap: 6px; font-size: 11px;
+    color: var(--charcoal); background: var(--cream); border: 1px solid var(--border);
+    padding: 4px 10px 4px 12px; letter-spacing: 0.04em;
   }
-  .filter-tag-x {
-    opacity: 0.5; cursor: pointer; font-size: 14px; line-height: 1;
-  }
+  .filter-tag-x { opacity: 0.5; cursor: pointer; font-size: 14px; line-height: 1; }
+  .sort-wrapper { position: relative; }
   .sort-select {
-    font-family: var(--sans);
-    font-size: 11px;
-    letter-spacing: 0.08em;
-    color: var(--charcoal);
-    border: none;
-    border-bottom: 1px solid var(--border);
-    background: transparent;
-    padding: 4px 20px 4px 0;
-    outline: none;
-    cursor: pointer;
+    font-family: var(--sans); font-size: 11px; letter-spacing: 0.08em;
+    color: var(--charcoal); border: none; border-bottom: 1px solid var(--border);
+    background: transparent; padding: 4px 20px 4px 0; outline: none; cursor: pointer;
     appearance: none;
   }
-  .sort-wrapper { position: relative; }
   .sort-wrapper::after {
-    content: '↓';
-    position: absolute; right: 0; top: 50%; transform: translateY(-50%);
-    font-size: 10px; color: var(--light);
-    pointer-events: none;
+    content: '↓'; position: absolute; right: 0; top: 50%; transform: translateY(-50%);
+    font-size: 10px; color: var(--light); pointer-events: none;
   }
-  .catalog-product-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 32px 24px;
+  .catalog-product-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px 24px; }
+  .no-results {
+    grid-column: 1/-1; padding: 60px 0; text-align: center;
+    font-family: var(--serif); font-size: 20px; font-weight: 300;
+    font-variation-settings: 'opsz' 72; color: var(--light);
   }
 
-  /* ════════════════════════════════════════════════════════════
-     ITEM DETAIL VIEW
-  ════════════════════════════════════════════════════════════ */
-
+  /* ════════════ ITEM DETAIL ════════════ */
   .item-breadcrumb {
-    padding: 18px 64px;
-    border-bottom: 1px solid var(--border);
-    font-family: var(--sans);
-    font-size: 11px;
-    letter-spacing: 0.06em;
-    color: var(--light);
+    padding: 18px 64px; border-bottom: 1px solid var(--border);
+    font-size: 11px; letter-spacing: 0.06em; color: var(--light);
     display: flex; gap: 12px; align-items: center;
   }
   .item-breadcrumb span { color: var(--charcoal); }
-  .item-breadcrumb .sep { opacity: 0.4; }
 
-  .item-layout {
-    display: grid;
-    grid-template-columns: 1fr 480px;
-    gap: 0;
-    align-items: start;
-  }
+  /* 3-column: image | facts | story */
+  .item-layout { display: grid; grid-template-columns: 300px 260px 1fr; align-items: start; }
 
-  /* Image gallery */
+  /* ── Image column ── */
   .item-gallery {
-    padding: 48px 56px 64px 64px;
-    display: grid;
-    grid-template-columns: 72px 1fr;
-    gap: 12px;
-    position: sticky;
-    top: 68px;
-  }
-  .gallery-thumbs {
+    padding: 40px 28px 48px 64px;
     display: flex; flex-direction: column; gap: 8px;
+    position: sticky; top: 68px;
+    background: linear-gradient(160deg, var(--cream-dk) 0%, var(--blush) 100%);
   }
-  .gallery-thumb {
-    aspect-ratio: 1;
-    overflow: hidden;
-    cursor: pointer;
-    border: 1.5px solid transparent;
-    transition: border-color 0.2s;
-    background: var(--cream);
-  }
-  .gallery-thumb.active { border-color: var(--black); }
-  .gallery-thumb img { height: 100%; }
   .gallery-main {
-    aspect-ratio: 3/4;
-    overflow: hidden;
-    background: var(--cream);
+    aspect-ratio: 4/5; overflow: hidden; background: var(--cream);
+    border: 1px solid var(--border);
+    box-shadow:
+      0 2px 4px rgba(58, 54, 48, 0.05),
+      0 18px 40px -14px rgba(58, 54, 48, 0.22);
   }
-  .gallery-main img { height: 100%; }
+  .gallery-main img { width: 100%; height: 100%; object-fit: cover; }
+  .gallery-thumbs { display: flex; flex-direction: row; gap: 6px; margin-top: 4px; }
+  .gallery-thumb {
+    flex: 0 0 calc(25% - 5px); aspect-ratio: 1; overflow: hidden; cursor: pointer;
+    border: 1px solid var(--border); transition: border-color 0.15s, box-shadow 0.2s;
+    background: var(--cream);
+    box-shadow: 0 4px 10px -4px rgba(58, 54, 48, 0.12);
+  }
+  .gallery-thumb:hover { box-shadow: 0 6px 14px -4px rgba(58, 54, 48, 0.2); }
+  .gallery-thumb.active { border-color: var(--black); }
+  .gallery-thumb img { width: 100%; height: 100%; object-fit: cover; }
 
-  /* Item info */
+  /* ── Facts column ── */
   .item-info {
-    padding: 48px 64px 64px 0;
+    padding: 40px 24px 48px 28px;
     border-left: 1px solid var(--border);
-    padding-left: 56px;
+    position: sticky; top: 68px;
+    background: var(--paper);
   }
   .item-era-badge {
-    font-family: var(--sans);
-    font-size: 10px;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--gold);
-    margin-bottom: 12px;
-    display: flex; align-items: center; gap: 10px;
+    font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--gold); margin-bottom: 10px; display: flex; align-items: center; gap: 10px;
   }
-  .item-era-badge::after {
-    content: '';
-    flex: 1; max-width: 40px;
-    height: 1px; background: var(--gold-lt);
-  }
+  .item-era-badge::after { content: ''; flex: 0 0 28px; height: 1px; background: var(--gold-lt); }
   .item-title {
-    font-family: var(--serif);
-    font-size: 36px;
-    font-weight: 300;
-    font-variation-settings: 'opsz' 144;
-    line-height: 1.0;
-    letter-spacing: -0.01em;
-    margin-bottom: 8px;
+    font-family: var(--serif); font-size: 24px; font-weight: 300;
+    font-variation-settings: 'opsz' 144; line-height: 1.1; letter-spacing: -0.01em; margin-bottom: 6px;
   }
   .item-subtitle {
-    font-family: var(--serif);
-    font-style: italic;
-    font-size: 16px;
-    font-weight: 300;
-    color: var(--mid);
-    margin-bottom: 24px;
+    font-family: var(--serif); font-style: italic; font-size: 12px;
+    font-weight: 300; color: var(--mid); margin-bottom: 16px; line-height: 1.5;
   }
   .item-price {
-    font-family: var(--serif);
-    font-size: 28px;
-    font-weight: 400;
-    color: var(--black);
-    margin-bottom: 32px;
-    padding-bottom: 32px;
-    border-bottom: 1px solid var(--border);
+    font-family: var(--serif); font-size: 22px; font-weight: 400;
+    font-variation-settings: 'opsz' 72; color: var(--black);
+    margin-bottom: 14px; padding-bottom: 14px; border-bottom: 1px solid var(--border);
   }
-
-  .item-actions {
-    display: flex; flex-direction: column; gap: 10px;
-    margin-bottom: 36px;
-  }
+  .item-actions { display: flex; flex-direction: column; gap: 7px; margin-bottom: 20px; }
   .btn-full {
-    width: 100%; padding: 15px;
-    font-family: var(--sans);
-    font-size: 11px;
-    font-weight: 400;
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-    border: none; cursor: pointer;
-    transition: all 0.25s;
+    width: 100%; padding: 12px; font-family: var(--sans); font-size: 10px;
+    font-weight: 400; letter-spacing: 0.15em; text-transform: uppercase;
+    border: none; cursor: pointer; transition: all 0.25s;
   }
-  .btn-full.primary {
-    background: var(--black); color: white;
-  }
+  .btn-full.primary { background: var(--black); color: white; }
   .btn-full.primary:hover { background: var(--gold); }
-  .btn-full.outline {
-    background: transparent; color: var(--black);
-    border: 1px solid var(--border);
-  }
+  .btn-full.outline { background: transparent; color: var(--black); border: 1px solid var(--border); }
   .btn-full.outline:hover { border-color: var(--black); }
-
-  .item-specs {
-    margin-bottom: 32px;
-    padding-bottom: 32px;
-    border-bottom: 1px solid var(--border);
-  }
   .specs-title {
-    font-family: var(--sans);
-    font-size: 10px;
-    font-weight: 500;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--charcoal);
-    margin-bottom: 16px;
+    font-size: 9px; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--light); margin-bottom: 8px;
   }
   .spec-row {
-    display: flex;
-    justify-content: space-between;
-    padding: 9px 0;
-    border-bottom: 1px solid var(--cream-dk);
-    font-family: var(--sans);
-    font-size: 12px;
+    display: flex; justify-content: space-between; padding: 5px 0;
+    border-bottom: 1px solid var(--cream-dk); font-size: 11px;
   }
   .spec-label { color: var(--light); font-weight: 300; }
-  .spec-value { color: var(--charcoal); font-weight: 400; text-align: right; }
+  .spec-value { color: var(--charcoal); font-weight: 400; text-align: right; max-width: 58%; }
 
-  .item-description {
-    margin-bottom: 32px;
+  /* ── Story column ── */
+  .item-story {
+    padding: 40px 64px 48px 36px;
+    border-left: 1px solid var(--border);
+    background: linear-gradient(180deg, var(--white) 0%, var(--paper) 100%);
+  }
+  .story-eyebrow {
+    font-size: 9px; font-weight: 500; letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--gold); margin-bottom: 28px;
   }
   .item-description p {
-    font-family: var(--serif);
-    font-size: 16px;
-    font-weight: 300;
-    line-height: 1.85;
-    color: var(--mid);
-  }
-
-  .provenance-block {
-    background: var(--cream);
-    padding: 20px 22px;
-    border-left: 2px solid var(--gold-lt);
-  }
-  .provenance-label {
-    font-family: var(--sans);
-    font-size: 9px;
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-    color: var(--gold);
-    margin-bottom: 8px;
-  }
-  .provenance-text {
-    font-family: var(--serif);
-    font-style: italic;
-    font-size: 14px;
-    color: var(--mid);
-    line-height: 1.7;
+    font-family: var(--serif); font-size: 17px; font-weight: 300;
+    line-height: 1.95; color: var(--charcoal); margin-bottom: 22px;
+    font-variation-settings: 'opsz' 24;
   }
 
   /* Related */
-  .related-section {
-    padding: 64px;
-    border-top: 1px solid var(--border);
-  }
+  .related-section { padding: 64px; border-top: 1px solid var(--border); }
 
-  /* ── Footer ─────────────────────────────────────────────── */
+  /* ── Footer ── */
   footer {
-    background: var(--black);
-    color: white;
-    padding: 64px;
-    display: grid;
-    grid-template-columns: 2fr 1fr 1fr 1fr;
-    gap: 48px;
+    background: var(--black); color: white; padding: 64px;
+    display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 48px;
   }
   .footer-brand {
-    font-family: var(--serif);
-    font-size: 20px;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    margin-bottom: 16px;
+    font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--light); border: 1px dashed rgba(255,255,255,0.15);
+    display: inline-block; padding: 5px 12px; margin-bottom: 16px;
   }
-  .footer-tagline {
-    font-size: 12px;
-    font-weight: 300;
-    line-height: 1.7;
-    color: rgba(255,255,255,0.4);
-    max-width: 260px;
-  }
+  .footer-tagline { font-size: 12px; font-weight: 300; line-height: 1.7; color: rgba(255,255,255,0.35); max-width: 260px; }
   .footer-col-title {
-    font-family: var(--sans);
-    font-size: 10px;
-    font-weight: 500;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: rgba(255,255,255,0.35);
-    margin-bottom: 16px;
+    font-size: 10px; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase;
+    color: rgba(255,255,255,0.3); margin-bottom: 16px;
   }
   .footer-links { display: flex; flex-direction: column; gap: 10px; }
-  .footer-links a {
-    font-size: 13px;
-    font-weight: 300;
-    color: rgba(255,255,255,0.6);
-    transition: color 0.2s;
-  }
+  .footer-links a { font-size: 13px; font-weight: 300; color: rgba(255,255,255,0.55); transition: color 0.2s; }
   .footer-links a:hover { color: var(--gold-lt); }
   .footer-bottom {
-    background: var(--black);
-    border-top: 1px solid rgba(255,255,255,0.08);
-    padding: 20px 64px;
-    display: flex;
-    justify-content: space-between;
-    font-size: 11px;
-    color: rgba(255,255,255,0.25);
+    background: var(--black); border-top: 1px solid rgba(255,255,255,0.07);
+    padding: 20px 64px; display: flex; justify-content: space-between;
+    font-size: 11px; color: rgba(255,255,255,0.2);
+  }
+
+  /* ════════════ BOOKING PANEL ════════════ */
+  .booking-overlay {
+    position: fixed; inset: 0; background: rgba(25,23,20,0.45);
+    z-index: 200; opacity: 0; pointer-events: none;
+    transition: opacity 0.3s ease;
+  }
+  .booking-overlay.open { opacity: 1; pointer-events: all; }
+
+  .booking-panel {
+    position: fixed; top: 0; right: 0; bottom: 0; width: 500px;
+    background: var(--cream); z-index: 201;
+    transform: translateX(100%);
+    transition: transform 0.38s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow-y: auto; padding: 52px 48px 64px;
+    border-left: 1px solid var(--border);
+  }
+  .booking-panel.open { transform: translateX(0); }
+
+  .booking-close {
+    position: absolute; top: 20px; right: 24px;
+    font-size: 24px; color: var(--light); cursor: pointer;
+    font-weight: 300; line-height: 1; transition: color 0.2s;
+  }
+  .booking-close:hover { color: var(--black); }
+
+  .booking-eyebrow {
+    font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--gold); margin-bottom: 12px;
+  }
+  .booking-title {
+    font-family: var(--serif); font-size: 34px; font-weight: 300;
+    font-variation-settings: 'opsz' 144; line-height: 1.05;
+    letter-spacing: -0.01em; margin-bottom: 16px;
+  }
+  .booking-intro {
+    font-size: 13px; font-weight: 300; line-height: 1.8; color: var(--mid);
+    margin-bottom: 32px; padding-bottom: 32px; border-bottom: 1px solid var(--border);
+  }
+  .booking-form { display: flex; flex-direction: column; gap: 22px; }
+  .booking-field { display: flex; flex-direction: column; gap: 7px; }
+  .booking-field label {
+    font-size: 10px; font-weight: 500; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--charcoal);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .booking-field label .opt {
+    font-size: 10px; color: var(--light); font-weight: 300;
+    text-transform: none; letter-spacing: 0;
+  }
+  .booking-field input,
+  .booking-field select,
+  .booking-field textarea {
+    border: none; border-bottom: 1px solid var(--border);
+    background: transparent; padding: 9px 0;
+    font-family: var(--sans); font-size: 13px; font-weight: 300;
+    color: var(--black); outline: none; transition: border-color 0.2s;
+    width: 100%;
+  }
+  .booking-field input:focus,
+  .booking-field select:focus,
+  .booking-field textarea:focus { border-color: var(--gold); }
+  .booking-field textarea { resize: none; line-height: 1.7; }
+  .booking-field select { appearance: none; cursor: pointer; }
+  .booking-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+
+  .booking-submit {
+    margin-top: 8px; width: 100%; padding: 14px;
+    font-family: var(--sans); font-size: 11px; font-weight: 400;
+    letter-spacing: 0.15em; text-transform: uppercase;
+    background: var(--black); color: var(--white); border: none; cursor: pointer;
+    transition: background 0.25s;
+  }
+  .booking-submit:hover { background: var(--gold); }
+
+  .booking-success {
+    display: none; text-align: center; padding: 80px 24px;
+  }
+  .booking-success-check {
+    width: 48px; height: 48px; border-radius: 50%;
+    border: 1px solid var(--gold); display: flex; align-items: center;
+    justify-content: center; margin: 0 auto 24px;
+    color: var(--gold); font-size: 20px;
+  }
+  .booking-success h3 {
+    font-family: var(--serif); font-size: 26px; font-weight: 300;
+    font-variation-settings: 'opsz' 144; margin-bottom: 12px;
+  }
+  .booking-success p { font-size: 13px; color: var(--mid); line-height: 1.7; }
+
+  /* ════════════ WISHLIST ════════════ */
+  /* Nav heart badge */
+  .nav-icon { position: relative; }
+  .nav-badge {
+    position: absolute; top: -6px; right: -8px;
+    min-width: 16px; height: 16px; padding: 0 4px;
+    border-radius: 8px; background: var(--gold); color: white;
+    font-family: var(--sans); font-size: 9px; font-weight: 500;
+    letter-spacing: 0; display: none; align-items: center; justify-content: center;
+    line-height: 1;
+  }
+  .nav-badge.visible { display: flex; }
+
+  /* Heart on product cards */
+  .product-card-image { position: relative; }
+  .wishlist-heart {
+    position: absolute; top: 12px; right: 12px; z-index: 3;
+    width: 32px; height: 32px; border-radius: 50%;
+    background: rgba(250,248,245,0.85); backdrop-filter: blur(4px);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: all 0.2s; opacity: 0; transform: translateY(-4px);
+    color: var(--charcoal);
+  }
+  .product-card:hover .wishlist-heart,
+  .wishlist-heart.active { opacity: 1; transform: translateY(0); }
+  .wishlist-heart:hover { background: var(--white); color: var(--gold); }
+  .wishlist-heart.active { color: var(--gold); }
+  .wishlist-heart.active svg { fill: var(--gold); }
+
+  /* Wishlist panel — same chrome as booking */
+  .wishlist-panel {
+    position: fixed; top: 0; right: 0; bottom: 0; width: 460px;
+    background: var(--cream); z-index: 201;
+    transform: translateX(100%);
+    transition: transform 0.38s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow-y: auto; padding: 52px 40px 64px;
+    border-left: 1px solid var(--border);
+  }
+  .wishlist-panel.open { transform: translateX(0); }
+  .wishlist-empty {
+    text-align: center; padding: 60px 24px; color: var(--mid);
+  }
+  .wishlist-empty-icon {
+    width: 48px; height: 48px; margin: 0 auto 20px;
+    color: var(--light); display: flex; align-items: center; justify-content: center;
+  }
+  .wishlist-empty h3 {
+    font-family: var(--serif); font-size: 22px; font-weight: 300;
+    font-variation-settings: 'opsz' 144; color: var(--charcoal);
+    margin-bottom: 8px;
+  }
+  .wishlist-empty p { font-size: 13px; line-height: 1.7; }
+  .wishlist-items { display: flex; flex-direction: column; gap: 18px; margin-top: 24px; }
+  .wishlist-item {
+    display: grid; grid-template-columns: 84px 1fr auto; gap: 16px;
+    align-items: center; padding-bottom: 18px;
+    border-bottom: 1px solid var(--border); cursor: pointer;
+  }
+  .wishlist-item:last-child { border-bottom: none; }
+  .wishlist-item-img {
+    width: 84px; height: 84px; overflow: hidden; background: var(--cream-dk);
+    border: 1px solid var(--border);
+    box-shadow: 0 4px 10px -4px rgba(58, 54, 48, 0.14);
+  }
+  .wishlist-item-meta { min-width: 0; }
+  .wishlist-item-era {
+    font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--gold); margin-bottom: 4px;
+  }
+  .wishlist-item-name {
+    font-family: var(--serif); font-size: 14px; font-weight: 400;
+    font-variation-settings: 'opsz' 72; line-height: 1.3;
+    color: var(--black); margin-bottom: 4px;
+  }
+  .wishlist-item-price { font-size: 12px; color: var(--mid); }
+  .wishlist-item-remove {
+    color: var(--light); font-size: 18px; line-height: 1;
+    cursor: pointer; padding: 4px; transition: color 0.2s;
+  }
+  .wishlist-item-remove:hover { color: var(--black); }
+
+  /* ════════════ TOAST ════════════ */
+  .toast-stack {
+    position: fixed; bottom: 88px; left: 50%; transform: translateX(-50%);
+    z-index: 300; display: flex; flex-direction: column; gap: 8px;
+    pointer-events: none;
+  }
+  .toast {
+    background: var(--black); color: white;
+    padding: 12px 22px; font-family: var(--sans); font-size: 12px;
+    letter-spacing: 0.06em; box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+    opacity: 0; transform: translateY(8px);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    border-left: 2px solid var(--gold);
+  }
+  .toast.visible { opacity: 1; transform: translateY(0); }
+
+  /* ════════════ ENHANCED SCHEDULING ════════════ */
+  .visit-type-toggle {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 0;
+    border: 1px solid var(--border); margin-bottom: 6px;
+  }
+  .visit-type-btn {
+    padding: 10px 12px; background: transparent; border: none;
+    font-family: var(--sans); font-size: 11px; font-weight: 400;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--mid); cursor: pointer; transition: all 0.2s;
+  }
+  .visit-type-btn.active { background: var(--black); color: white; }
+  .visit-type-hint {
+    font-size: 11px; color: var(--light); line-height: 1.6;
+    margin-top: 4px;
+  }
+  .time-slots {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;
+  }
+  .time-slot {
+    padding: 9px 6px; font-family: var(--sans); font-size: 11px;
+    font-weight: 400; letter-spacing: 0.04em;
+    background: transparent; border: 1px solid var(--border);
+    color: var(--charcoal); cursor: pointer; transition: all 0.15s;
+    text-align: center;
+  }
+  .time-slot:hover:not(.taken):not(.selected) { border-color: var(--charcoal); }
+  .time-slot.selected { background: var(--black); color: white; border-color: var(--black); }
+  .time-slot.taken {
+    color: var(--light); border-color: var(--cream-dk); cursor: not-allowed;
+    text-decoration: line-through; background: var(--cream-dk);
+  }
+  .time-slot-empty {
+    grid-column: 1/-1; padding: 12px; font-size: 11px;
+    color: var(--light); text-align: center; font-style: italic;
+  }
+
+  /* Item detail share button row */
+  .item-share-row {
+    display: flex; gap: 12px; align-items: center;
+    margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--cream-dk);
+  }
+  .item-share-btn, .item-wish-btn {
+    flex: 1; padding: 9px; font-family: var(--sans); font-size: 10px;
+    font-weight: 400; letter-spacing: 0.12em; text-transform: uppercase;
+    background: transparent; border: 1px solid var(--border);
+    color: var(--charcoal); cursor: pointer; transition: all 0.2s;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+  }
+  .item-share-btn:hover, .item-wish-btn:hover { border-color: var(--charcoal); }
+  .item-wish-btn.active { border-color: var(--gold); color: var(--gold); }
+  .item-wish-btn.active svg { fill: var(--gold); }
+
+  /* Recently viewed strip */
+  .recently-viewed {
+    padding: 56px 64px 16px;
+    background: linear-gradient(180deg, var(--cream) 0%, var(--blush) 100%);
+    border-top: 1px solid var(--border);
+  }
+  .recently-viewed.hidden { display: none; }
+  .recent-header {
+    display: flex; align-items: baseline; justify-content: space-between;
+    margin-bottom: 24px;
+  }
+  .recent-title {
+    font-family: var(--serif); font-size: 18px; font-weight: 400;
+    font-variation-settings: 'opsz' 72; letter-spacing: 0.01em;
+  }
+  .recent-clear {
+    font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--light); cursor: pointer;
+  }
+  .recent-clear:hover { color: var(--gold); }
+  .recent-row {
+    display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px;
+  }
+  .recent-card { cursor: pointer; }
+  .recent-card-img {
+    aspect-ratio: 1; overflow: hidden; background: var(--cream-dk);
+    margin-bottom: 8px;
+    border: 1px solid var(--border);
+    box-shadow: 0 6px 16px -6px rgba(58, 54, 48, 0.16);
+    transition: box-shadow 0.25s ease, transform 0.25s ease;
+  }
+  .recent-card:hover .recent-card-img {
+    box-shadow: 0 10px 22px -8px rgba(58, 54, 48, 0.24);
+    transform: translateY(-2px);
+  }
+  .recent-card-img img { transition: transform 0.4s ease; }
+  .recent-card:hover .recent-card-img img { transform: scale(1.04); }
+  .recent-card-name {
+    font-family: var(--serif); font-size: 12px; font-weight: 400;
+    font-variation-settings: 'opsz' 72; line-height: 1.3;
+    color: var(--charcoal);
   }
 </style>
 </head>
 <body>
 
-<!-- ── Navigation ───────────────────────────────────────────────── -->
+<!-- Nav -->
 <nav>
   <div class="nav-left">
-    <a href="#" onclick="switchView('catalog')">Collection</a>
-    <a href="#">New Arrivals</a>
+    <a onclick="switchView('catalog')">Collection</a>
+    <a onclick="switchView('catalog')">New Arrivals</a>
     <a href="#">About</a>
   </div>
-  <div class="nav-logo" onclick="switchView('home')" style="cursor:pointer">Victorian Antique Jewelry</div>
+  <div class="nav-logo" onclick="switchView('home')" title="Logo placeholder">[ Brand ]</div>
   <div class="nav-right">
-    <a href="#">Services</a>
-    <a href="#">Contact</a>
+    <a href="#">Consign</a>
+    <a onclick="openBooking()" style="cursor:pointer">Book a Viewing</a>
     <div class="nav-icon" onclick="switchView('catalog')">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
     </div>
-    <div class="nav-icon">
+    <div class="nav-icon" onclick="openWishlist()" title="Wishlist">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+      <span class="nav-badge" id="nav-wishlist-badge">0</span>
     </div>
   </div>
 </nav>
 
-<!-- ══════════════════════════════════════════════════════════════
-     HOME VIEW
-══════════════════════════════════════════════════════════════ -->
+<!-- ══════ HOME ══════ -->
 <div class="view active" id="view-home">
-
-  <!-- Hero -->
   <div class="hero">
     <div class="hero-image">
-      <img src="https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=900&q=80&fit=crop" alt="Featured piece" onerror="this.style.display='none'">
-      <div class="hero-image-caption">Victorian Gold & Diamond Brooch, c.1880</div>
+      <img src="https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=900&q=80&fit=crop" alt="" onerror="this.style.display='none'">
+      <div class="hero-image-caption">Victorian Garnet Serpent &amp; Heart Necklace, 9k gold, c.1880</div>
     </div>
     <div class="hero-content">
       <div class="hero-eyebrow">New Arrivals — Summer 2025</div>
-      <h1 class="hero-headline">Pieces with<br><em>a past.</em></h1>
-      <p class="hero-body">A carefully curated collection of antique and estate jewelry, spanning the Georgian era through the mid-20th century. Each piece is sourced, authenticated, and described with the detail it deserves.</p>
-      <div style="display:flex;gap:14px;flex-wrap:wrap">
-        <div class="btn-primary" onclick="switchView('catalog')">Explore the Collection</div>
-        <div class="btn-ghost">New Arrivals</div>
+      <h1 class="hero-headline">Each piece,<br><em>a story.</em></h1>
+      <p class="hero-body">Antique and estate jewellery sourced, authenticated, and described with the detail it deserves. Georgian through mid-century — every item documented to the standard a serious collector expects.</p>
+      <div class="hero-actions">
+        <div class="btn-primary" onclick="switchView('catalog')">Browse the Collection</div>
+        <div class="btn-ghost" onclick="filterByEra('Victorian')">Victorian</div>
       </div>
     </div>
   </div>
 
-  <!-- Era categories -->
   <div class="era-strip">
-    <div class="era-card" onclick="switchView('catalog')">
-      <img src="https://images.unsplash.com/photo-1573408301219-f4e2ab7cf4f0?w=600&q=80&fit=crop&crop=center" alt="Georgian" onerror="this.parentElement.style.background='#e8e2da'">
+    <div class="era-card" onclick="filterByEra('Georgian')">
+      <img src="https://images.unsplash.com/photo-1573408301219-f4e2ab7cf4f0?w=600&q=80&fit=crop" alt="" onerror="this.style.display='none'">
+      <div style="position:absolute;inset:0;background:var(--cream-dk);z-index:-1"></div>
       <div class="era-card-overlay">
         <div class="era-label">Georgian</div>
-        <div class="era-count">1714 – 1837 · 42 pieces</div>
+        <div class="era-count" id="era-count-Georgian">— pieces</div>
       </div>
     </div>
-    <div class="era-card" onclick="switchView('catalog')">
-      <img src="https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=600&q=80&fit=crop&crop=center" alt="Victorian" onerror="this.parentElement.style.background='#dcd5c8'">
+    <div class="era-card" onclick="filterByEra('Victorian')">
+      <img src="https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=600&q=80&fit=crop" alt="" onerror="this.style.display='none'">
+      <div style="position:absolute;inset:0;background:var(--cream-dk);z-index:-1"></div>
       <div class="era-card-overlay">
         <div class="era-label">Victorian</div>
-        <div class="era-count">1837 – 1901 · 218 pieces</div>
+        <div class="era-count" id="era-count-Victorian">— pieces</div>
       </div>
     </div>
-    <div class="era-card" onclick="switchView('catalog')">
-      <img src="https://images.unsplash.com/photo-1602173574-0f0aef9a3d96?w=600&q=80&fit=crop&crop=center" alt="Edwardian" onerror="this.parentElement.style.background='#e2dcd4'">
+    <div class="era-card" onclick="filterByEra('Edwardian')">
+      <img src="https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=600&q=80&fit=crop" alt="" onerror="this.style.display='none'">
+      <div style="position:absolute;inset:0;background:var(--cream-dk);z-index:-1"></div>
       <div class="era-card-overlay">
         <div class="era-label">Edwardian</div>
-        <div class="era-count">1901 – 1915 · 134 pieces</div>
+        <div class="era-count" id="era-count-Edwardian">— pieces</div>
       </div>
     </div>
-    <div class="era-card" onclick="switchView('catalog')">
-      <img src="https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=600&q=80&fit=crop&crop=center" alt="Art Deco" onerror="this.parentElement.style.background='#d8d1c9'">
+    <div class="era-card" onclick="filterByEra('Art Nouveau')">
+      <img src="https://images.unsplash.com/photo-1602173574-0f0aef9a3d96?w=600&q=80&fit=crop" alt="" onerror="this.style.display='none'">
+      <div style="position:absolute;inset:0;background:var(--cream-dk);z-index:-1"></div>
       <div class="era-card-overlay">
-        <div class="era-label">Art Deco</div>
-        <div class="era-count">1920 – 1940 · 96 pieces</div>
+        <div class="era-label">Art Nouveau</div>
+        <div class="era-count" id="era-count-Art Nouveau">— pieces</div>
       </div>
     </div>
   </div>
 
-  <!-- Featured pieces -->
   <div class="section">
     <div class="section-header">
       <h2 class="section-title">Recently Added</h2>
-      <a href="#" class="section-link" onclick="switchView('catalog')">View all</a>
+      <span class="section-link" onclick="switchView('catalog')">View all</span>
     </div>
-    <div class="product-grid">
-      <div class="product-card" onclick="switchView('item')">
-        <div class="product-card-image">
-          <img src="https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=600&q=80&fit=crop" alt="" onerror="this.style.display='none'">
-          <div class="product-badge">New</div>
-        </div>
-        <div class="product-card-meta">
-          <div class="product-era">Victorian · c.1875</div>
-          <div class="product-name">Old Mine Cut Diamond Solitaire Ring</div>
-          <div class="product-price">CAD $4,800</div>
-        </div>
-      </div>
-      <div class="product-card" onclick="switchView('item')">
-        <div class="product-card-image">
-          <img src="https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=600&q=80&fit=crop" alt="" onerror="this.style.display='none'">
-        </div>
-        <div class="product-card-meta">
-          <div class="product-era">Edwardian · c.1908</div>
-          <div class="product-name">Platinum & Pearl Lavaliere Necklace</div>
-          <div class="product-price">CAD $3,200</div>
-        </div>
-      </div>
-      <div class="product-card" onclick="switchView('item')">
-        <div class="product-card-image">
-          <img src="https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=600&q=80&fit=crop" alt="" onerror="this.style.display='none'">
-          <div class="product-badge sold">Sold</div>
-        </div>
-        <div class="product-card-meta">
-          <div class="product-era">Art Deco · c.1928</div>
-          <div class="product-name">Onyx & Diamond Geometric Brooch</div>
-          <div class="product-price">CAD $6,400</div>
-        </div>
-      </div>
-    </div>
+    <div class="product-grid" id="home-featured"></div>
   </div>
 
-  <!-- Editorial strip -->
   <div class="editorial">
     <div class="editorial-image">
-      <img src="https://images.unsplash.com/photo-1602173574-0f0aef9a3d96?w=900&q=80&fit=crop" alt="" onerror="this.style.background='#c8bfb4'">
+      <img src="https://images.unsplash.com/photo-1589128777073-263566ae5e4d?w=900&q=80&fit=crop" alt="" onerror="this.style.display='none'">
     </div>
     <div class="editorial-content">
-      <div class="editorial-eyebrow">How we work</div>
-      <h2 class="editorial-headline">Every piece, properly described.</h2>
-      <p class="editorial-body">We take the time to document what matters — era, metal, stones, hallmarks, provenance, condition. Because the right buyer deserves to know exactly what they're falling in love with.</p>
-      <div class="btn-ghost" style="color:white;border-color:rgba(255,255,255,0.2)">Learn more</div>
+      <div class="editorial-eyebrow">About the collection</div>
+      <h2 class="editorial-headline">Properly sourced. Properly told.</h2>
+      <p class="editorial-body">Every piece is acquired with provenance in mind and documented with the full detail — era, hallmarks, materials, condition — that a discerning buyer deserves to have before making a decision.</p>
+      <div class="btn-ghost-dark">Our approach</div>
     </div>
   </div>
 
-  <!-- Footer -->
+  <div class="recently-viewed hidden" id="recently-viewed">
+    <div class="recent-header">
+      <div class="recent-title">Recently viewed</div>
+      <span class="recent-clear" onclick="clearRecentlyViewed()">Clear</span>
+    </div>
+    <div class="recent-row" id="recent-row"></div>
+  </div>
+
   <footer>
     <div>
-      <div class="footer-brand">Victorian Antique Jewelry</div>
-      <div class="footer-tagline">Antique and estate jewelry, thoughtfully sourced and carefully presented. Toronto, Ontario.</div>
+      <div class="footer-brand">[ Brand ]</div>
+      <div class="footer-tagline">Antique and estate jewellery. Thoughtfully sourced, carefully presented.</div>
     </div>
     <div>
-      <div class="footer-col-title">Collection</div>
+      <div class="footer-col-title">Eras</div>
       <div class="footer-links">
-        <a href="#">Georgian</a>
-        <a href="#">Victorian</a>
-        <a href="#">Edwardian</a>
-        <a href="#">Art Nouveau</a>
-        <a href="#">Art Deco</a>
+        <a onclick="filterByEra('Georgian')">Georgian</a>
+        <a onclick="filterByEra('Victorian')">Victorian</a>
+        <a onclick="filterByEra('Edwardian')">Edwardian</a>
+        <a onclick="filterByEra('Art Nouveau')">Art Nouveau</a>
       </div>
     </div>
     <div>
       <div class="footer-col-title">Category</div>
       <div class="footer-links">
-        <a href="#">Rings</a>
-        <a href="#">Necklaces</a>
-        <a href="#">Brooches</a>
-        <a href="#">Bracelets</a>
-        <a href="#">Earrings</a>
+        <a onclick="filterByCategory('Ring')">Rings</a>
+        <a onclick="filterByCategory('Necklace')">Necklaces</a>
+        <a onclick="filterByCategory('Brooch')">Brooches</a>
+        <a onclick="filterByCategory('Bracelet')">Bracelets</a>
       </div>
     </div>
     <div>
@@ -951,453 +901,125 @@
     </div>
   </footer>
   <div class="footer-bottom">
-    <span>© 2025 Victorian Antique Jewelry. All rights reserved.</span>
-    <span>Toronto, Ontario · By appointment</span>
+    <span>Working prototype — not for distribution</span>
+    <span>10 items loaded</span>
   </div>
-
 </div>
 
-<!-- ══════════════════════════════════════════════════════════════
-     CATALOG VIEW
-══════════════════════════════════════════════════════════════ -->
+<!-- ══════ CATALOG ══════ -->
 <div class="view" id="view-catalog">
-
   <div class="catalog-header">
     <div>
       <h1 class="catalog-title">The Collection</h1>
     </div>
-    <div class="catalog-count">Showing 48 of 512 pieces</div>
+    <div class="catalog-count" id="catalog-count">10 pieces</div>
   </div>
-
   <div class="catalog-layout">
-    <!-- Filters -->
     <div class="filter-sidebar">
       <div class="filter-search">
-        <input type="text" placeholder="Search pieces…">
+        <input type="text" id="search-input" placeholder="Search pieces…" oninput="applyFilters()">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
       </div>
 
       <div class="filter-group">
-        <div class="filter-group-label">Era <span>5 selected</span></div>
-        <div class="filter-option">
-          <div class="filter-option-left">
-            <div class="filter-check checked"></div>
-            <div class="filter-option-name">Victorian</div>
-          </div>
-          <div class="filter-option-count">218</div>
-        </div>
-        <div class="filter-option">
-          <div class="filter-option-left">
-            <div class="filter-check checked"></div>
-            <div class="filter-option-name">Edwardian</div>
-          </div>
-          <div class="filter-option-count">134</div>
-        </div>
-        <div class="filter-option">
-          <div class="filter-option-left">
-            <div class="filter-check"></div>
-            <div class="filter-option-name">Georgian</div>
-          </div>
-          <div class="filter-option-count">42</div>
-        </div>
-        <div class="filter-option">
-          <div class="filter-option-left">
-            <div class="filter-check checked"></div>
-            <div class="filter-option-name">Art Nouveau</div>
-          </div>
-          <div class="filter-option-count">78</div>
-        </div>
-        <div class="filter-option">
-          <div class="filter-option-left">
-            <div class="filter-check"></div>
-            <div class="filter-option-name">Art Deco</div>
-          </div>
-          <div class="filter-option-count">96</div>
-        </div>
+        <div class="filter-group-label">Era</div>
+        <div id="filter-era"></div>
       </div>
-
       <div class="filter-divider"></div>
-
       <div class="filter-group">
         <div class="filter-group-label">Category</div>
-        <div class="filter-option">
-          <div class="filter-option-left">
-            <div class="filter-check checked"></div>
-            <div class="filter-option-name">Rings</div>
-          </div>
-          <div class="filter-option-count">164</div>
-        </div>
-        <div class="filter-option">
-          <div class="filter-option-left">
-            <div class="filter-check"></div>
-            <div class="filter-option-name">Brooches</div>
-          </div>
-          <div class="filter-option-count">98</div>
-        </div>
-        <div class="filter-option">
-          <div class="filter-option-left">
-            <div class="filter-check"></div>
-            <div class="filter-option-name">Necklaces</div>
-          </div>
-          <div class="filter-option-count">87</div>
-        </div>
-        <div class="filter-option">
-          <div class="filter-option-left">
-            <div class="filter-check"></div>
-            <div class="filter-option-name">Bracelets</div>
-          </div>
-          <div class="filter-option-count">63</div>
-        </div>
-        <div class="filter-option">
-          <div class="filter-option-left">
-            <div class="filter-check"></div>
-            <div class="filter-option-name">Earrings</div>
-          </div>
-          <div class="filter-option-count">55</div>
-        </div>
+        <div id="filter-category"></div>
       </div>
-
       <div class="filter-divider"></div>
-
       <div class="filter-group">
-        <div class="filter-group-label">Metal</div>
-        <div class="filter-option">
-          <div class="filter-option-left">
-            <div class="filter-check"></div>
-            <div class="filter-option-name">Yellow Gold</div>
-          </div>
-          <div class="filter-option-count">287</div>
-        </div>
-        <div class="filter-option">
-          <div class="filter-option-left">
-            <div class="filter-check"></div>
-            <div class="filter-option-name">Platinum</div>
-          </div>
-          <div class="filter-option-count">112</div>
-        </div>
-        <div class="filter-option">
-          <div class="filter-option-left">
-            <div class="filter-check"></div>
-            <div class="filter-option-name">Rose Gold</div>
-          </div>
-          <div class="filter-option-count">54</div>
-        </div>
-        <div class="filter-option">
-          <div class="filter-option-left">
-            <div class="filter-check"></div>
-            <div class="filter-option-name">Silver</div>
-          </div>
-          <div class="filter-option-count">48</div>
+        <div class="filter-group-label">Price</div>
+        <div class="price-inputs">
+          <input class="price-input" id="price-min" type="number" placeholder="Min $" oninput="applyFilters()">
+          <span class="price-sep">—</span>
+          <input class="price-input" id="price-max" type="number" placeholder="Max $" oninput="applyFilters()">
         </div>
       </div>
-
-      <div class="filter-divider"></div>
-
-      <div class="filter-group">
-        <div class="filter-group-label">Price Range</div>
-        <div class="price-range">
-          <div class="price-inputs">
-            <input class="price-input" type="text" placeholder="CAD Min">
-            <span class="price-sep">—</span>
-            <input class="price-input" type="text" placeholder="CAD Max">
-          </div>
-        </div>
-      </div>
-
-      <div class="filter-divider"></div>
-
-      <div class="filter-group">
-        <div class="filter-group-label">Availability</div>
-        <div class="filter-option">
-          <div class="filter-option-left">
-            <div class="filter-check checked"></div>
-            <div class="filter-option-name">Available</div>
-          </div>
-          <div class="filter-option-count">448</div>
-        </div>
-        <div class="filter-option">
-          <div class="filter-option-left">
-            <div class="filter-check"></div>
-            <div class="filter-option-name">On Hold</div>
-          </div>
-          <div class="filter-option-count">12</div>
-        </div>
-      </div>
+      <span class="clear-filters" onclick="clearFilters()">Clear all filters</span>
     </div>
 
-    <!-- Grid -->
     <div class="catalog-grid-area">
       <div class="catalog-toolbar">
-        <div class="active-filters">
-          <div class="filter-tag">Victorian <span class="filter-tag-x">×</span></div>
-          <div class="filter-tag">Edwardian <span class="filter-tag-x">×</span></div>
-          <div class="filter-tag">Rings <span class="filter-tag-x">×</span></div>
-        </div>
+        <div class="active-filters" id="active-filter-tags"></div>
         <div class="sort-wrapper">
-          <select class="sort-select">
-            <option>Sort: Newest First</option>
-            <option>Price: Low to High</option>
-            <option>Price: High to Low</option>
+          <select class="sort-select" id="sort-select" onchange="applyFilters()">
+            <option value="default">Sort: Newest First</option>
+            <option value="price-asc">Price: Low to High</option>
+            <option value="price-desc">Price: High to Low</option>
+            <option value="era">Sort by Era</option>
           </select>
         </div>
       </div>
-      <div class="catalog-product-grid">
-        <div class="product-card" onclick="switchView('item')">
-          <div class="product-card-image">
-            <img src="https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=500&q=80&fit=crop" alt="" onerror="this.style.display='none'">
-            <div class="product-badge">New</div>
-          </div>
-          <div class="product-card-meta">
-            <div class="product-era">Victorian · c.1875</div>
-            <div class="product-name">Old Mine Cut Diamond Solitaire Ring</div>
-            <div class="product-price">CAD $4,800</div>
-          </div>
-        </div>
-        <div class="product-card" onclick="switchView('item')">
-          <div class="product-card-image">
-            <img src="https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=500&q=80&fit=crop" alt="" onerror="this.style.display='none'">
-          </div>
-          <div class="product-card-meta">
-            <div class="product-era">Edwardian · c.1908</div>
-            <div class="product-name">Platinum & Pearl Lavaliere Necklace</div>
-            <div class="product-price">CAD $3,200</div>
-          </div>
-        </div>
-        <div class="product-card" onclick="switchView('item')">
-          <div class="product-card-image">
-            <img src="https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=500&q=80&fit=crop" alt="" onerror="this.style.display='none'">
-          </div>
-          <div class="product-card-meta">
-            <div class="product-era">Victorian · c.1890</div>
-            <div class="product-name">15ct Gold & Turquoise Mourning Ring</div>
-            <div class="product-price">CAD $1,650</div>
-          </div>
-        </div>
-        <div class="product-card" onclick="switchView('item')">
-          <div class="product-card-image">
-            <img src="https://images.unsplash.com/photo-1602173574-0f0aef9a3d96?w=500&q=80&fit=crop" alt="" onerror="this.style.display='none'">
-          </div>
-          <div class="product-card-meta">
-            <div class="product-era">Edwardian · c.1910</div>
-            <div class="product-name">Rose-Cut Diamond Three-Stone Ring</div>
-            <div class="product-price">CAD $5,400</div>
-          </div>
-        </div>
-        <div class="product-card" onclick="switchView('item')">
-          <div class="product-card-image">
-            <img src="https://images.unsplash.com/photo-1573408301219-f4e2ab7cf4f0?w=500&q=80&fit=crop" alt="" onerror="this.style.display='none'">
-            <div class="product-badge">On Hold</div>
-          </div>
-          <div class="product-card-meta">
-            <div class="product-era">Victorian · c.1882</div>
-            <div class="product-name">Garnet & Seed Pearl Cluster Ring</div>
-            <div class="product-price">CAD $2,100</div>
-          </div>
-        </div>
-        <div class="product-card" onclick="switchView('item')">
-          <div class="product-card-image">
-            <img src="https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=500&q=80&fit=crop&sat=-30" alt="" onerror="this.style.display='none'">
-          </div>
-          <div class="product-card-meta">
-            <div class="product-era">Edwardian · c.1905</div>
-            <div class="product-name">Sapphire & Diamond Half-Hoop Ring</div>
-            <div class="product-price">CAD $7,200</div>
-          </div>
-        </div>
-      </div>
+      <div class="catalog-product-grid" id="catalog-grid"></div>
     </div>
   </div>
 </div>
 
-<!-- ══════════════════════════════════════════════════════════════
-     ITEM DETAIL VIEW
-══════════════════════════════════════════════════════════════ -->
+<!-- ══════ ITEM DETAIL ══════ -->
 <div class="view" id="view-item">
   <div class="item-breadcrumb">
-    <a href="#" onclick="switchView('home')">Home</a>
+    <a onclick="switchView('home')">Home</a>
     <span class="sep">/</span>
-    <a href="#" onclick="switchView('catalog')">Collection</a>
+    <a onclick="switchView('catalog')">Collection</a>
     <span class="sep">/</span>
-    <a href="#" onclick="switchView('catalog')">Victorian Rings</a>
+    <span id="breadcrumb-era"></span>
     <span class="sep">/</span>
-    <span>Old Mine Cut Diamond Solitaire Ring</span>
+    <span id="breadcrumb-title"></span>
   </div>
-
   <div class="item-layout">
-    <!-- Gallery -->
-    <div class="item-gallery">
-      <div class="gallery-thumbs">
-        <div class="gallery-thumb active">
-          <img src="https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=200&q=80&fit=crop" alt="">
-        </div>
-        <div class="gallery-thumb">
-          <img src="https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=200&q=80&fit=crop" alt="">
-        </div>
-        <div class="gallery-thumb">
-          <img src="https://images.unsplash.com/photo-1573408301219-f4e2ab7cf4f0?w=200&q=80&fit=crop" alt="">
-        </div>
-        <div class="gallery-thumb">
-          <img src="https://images.unsplash.com/photo-1602173574-0f0aef9a3d96?w=200&q=80&fit=crop" alt="">
-        </div>
-      </div>
-      <div class="gallery-main">
-        <img src="https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=900&q=80&fit=crop" alt="Old Mine Cut Diamond Solitaire Ring">
-      </div>
-    </div>
-
-    <!-- Info -->
-    <div class="item-info">
-      <div class="item-era-badge">Victorian · c.1875</div>
-      <h1 class="item-title">Old Mine Cut Diamond Solitaire Ring</h1>
-      <div class="item-subtitle">15ct Yellow Gold, English, circa 1875</div>
-      <div class="item-price">CAD $4,800</div>
-
-      <div class="item-actions">
-        <button class="btn-full primary">Purchase — CAD $4,800</button>
-        <button class="btn-full outline">Make an Enquiry</button>
-      </div>
-
-      <div class="item-specs">
-        <div class="specs-title">Details</div>
-        <div class="spec-row">
-          <span class="spec-label">Era</span>
-          <span class="spec-value">Victorian (1837–1901)</span>
-        </div>
-        <div class="spec-row">
-          <span class="spec-label">Date</span>
-          <span class="spec-value">circa 1875</span>
-        </div>
-        <div class="spec-row">
-          <span class="spec-label">Metal</span>
-          <span class="spec-value">15ct Yellow Gold</span>
-        </div>
-        <div class="spec-row">
-          <span class="spec-label">Stone</span>
-          <span class="spec-value">Diamond, Old Mine Cut</span>
-        </div>
-        <div class="spec-row">
-          <span class="spec-label">Carat Weight</span>
-          <span class="spec-value">Approx. 0.85ct</span>
-        </div>
-        <div class="spec-row">
-          <span class="spec-label">Ring Size</span>
-          <span class="spec-value">6.5 (resizable)</span>
-        </div>
-        <div class="spec-row">
-          <span class="spec-label">Hallmarks</span>
-          <span class="spec-value">15ct, English assay, legible</span>
-        </div>
-        <div class="spec-row">
-          <span class="spec-label">Condition</span>
-          <span class="spec-value">Excellent</span>
-        </div>
-        <div class="spec-row">
-          <span class="spec-label">Origin</span>
-          <span class="spec-value">England</span>
-        </div>
-        <div class="spec-row">
-          <span class="spec-label">Stock No.</span>
-          <span class="spec-value">ARD-2024-1847</span>
-        </div>
-      </div>
-
-      <div class="item-description">
-        <p>A beautifully preserved Victorian solitaire, set with an old mine cut diamond in a classic four-claw collet mount. The stone carries the characteristic warmth and depth of the period — gently rounded girdle, high crown, small table — and catches light in the way modern cuts simply don't replicate.</p>
-        <br>
-        <p>The shank is a clean, slender 15ct gold band with subtle shoulder taper. Hallmarks are legible and consistent with an English origin, circa 1875. The ring has been professionally cleaned and is in excellent overall condition.</p>
-      </div>
-
-      <div class="provenance-block">
-        <div class="provenance-label">Provenance</div>
-        <div class="provenance-text">Acquired from a private Ontario collection. Previously held by a single family for three generations; no prior retail history.</div>
-      </div>
-    </div>
+    <div class="item-gallery" id="item-gallery"></div>
+    <div class="item-info" id="item-info"></div>
+    <div class="item-story" id="item-story"></div>
   </div>
-
-  <!-- Related -->
   <div class="related-section">
     <div class="section-header">
       <h2 class="section-title">You may also like</h2>
-      <a href="#" class="section-link" onclick="switchView('catalog')">View all Victorian rings</a>
+      <span class="section-link" onclick="switchView('catalog')">View all</span>
     </div>
-    <div class="product-grid four-col">
-      <div class="product-card" onclick="switchView('item')">
-        <div class="product-card-image">
-          <img src="https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=400&q=80&fit=crop" alt="" onerror="this.style.display='none'">
-        </div>
-        <div class="product-card-meta">
-          <div class="product-era">Victorian · c.1885</div>
-          <div class="product-name">Ruby & Diamond Cluster Ring</div>
-          <div class="product-price">CAD $3,600</div>
-        </div>
-      </div>
-      <div class="product-card" onclick="switchView('item')">
-        <div class="product-card-image">
-          <img src="https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=400&q=80&fit=crop" alt="" onerror="this.style.display='none'">
-        </div>
-        <div class="product-card-meta">
-          <div class="product-era">Victorian · c.1890</div>
-          <div class="product-name">15ct Gold & Turquoise Mourning Ring</div>
-          <div class="product-price">CAD $1,650</div>
-        </div>
-      </div>
-      <div class="product-card" onclick="switchView('item')">
-        <div class="product-card-image">
-          <img src="https://images.unsplash.com/photo-1573408301219-f4e2ab7cf4f0?w=400&q=80&fit=crop" alt="" onerror="this.style.display='none'">
-        </div>
-        <div class="product-card-meta">
-          <div class="product-era">Edwardian · c.1905</div>
-          <div class="product-name">Sapphire & Diamond Half-Hoop Ring</div>
-          <div class="product-price">CAD $7,200</div>
-        </div>
-      </div>
-      <div class="product-card" onclick="switchView('item')">
-        <div class="product-card-image">
-          <img src="https://images.unsplash.com/photo-1602173574-0f0aef9a3d96?w=400&q=80&fit=crop" alt="" onerror="this.style.display='none'">
-        </div>
-        <div class="product-card-meta">
-          <div class="product-era">Edwardian · c.1910</div>
-          <div class="product-name">Rose-Cut Diamond Three-Stone Ring</div>
-          <div class="product-price">CAD $5,400</div>
-        </div>
-      </div>
-    </div>
+    <div class="product-grid four-col" id="related-grid"></div>
   </div>
-
   <footer>
     <div>
-      <div class="footer-brand">Victorian Antique Jewelry</div>
-      <div class="footer-tagline">Antique and estate jewelry, thoughtfully sourced and carefully presented. Toronto, Ontario.</div>
+      <div class="footer-brand">[ Brand ]</div>
+      <div class="footer-tagline">Antique and estate jewellery. Thoughtfully sourced, carefully presented.</div>
     </div>
     <div>
-      <div class="footer-col-title">Collection</div>
+      <div class="footer-col-title">Eras</div>
       <div class="footer-links">
-        <a href="#">Georgian</a><a href="#">Victorian</a>
-        <a href="#">Edwardian</a><a href="#">Art Deco</a>
+        <a onclick="filterByEra('Georgian')">Georgian</a>
+        <a onclick="filterByEra('Victorian')">Victorian</a>
+        <a onclick="filterByEra('Edwardian')">Edwardian</a>
+        <a onclick="filterByEra('Art Nouveau')">Art Nouveau</a>
       </div>
     </div>
     <div>
       <div class="footer-col-title">Category</div>
       <div class="footer-links">
-        <a href="#">Rings</a><a href="#">Necklaces</a>
-        <a href="#">Brooches</a><a href="#">Earrings</a>
+        <a onclick="filterByCategory('Ring')">Rings</a>
+        <a onclick="filterByCategory('Necklace')">Necklaces</a>
+        <a onclick="filterByCategory('Brooch')">Brooches</a>
       </div>
     </div>
     <div>
       <div class="footer-col-title">About</div>
       <div class="footer-links">
-        <a href="#">Our Story</a><a href="#">Sell or Consign</a>
-        <a href="#">How to Buy</a><a href="#">Contact</a>
+        <a href="#">Our Story</a>
+        <a href="#">How to Buy</a>
+        <a href="#">Contact</a>
       </div>
     </div>
   </footer>
   <div class="footer-bottom">
-    <span>© 2025 Victorian Antique Jewelry. All rights reserved.</span>
-    <span>Toronto, Ontario · By appointment</span>
+    <span>Working prototype — not for distribution</span>
+    <span>10 items loaded</span>
   </div>
 </div>
 
-<!-- ── View Switcher (mockup nav) ──────────────────────────────── -->
+<!-- View switcher -->
 <div class="view-switcher">
   <button class="vs-btn active" id="btn-home" onclick="switchView('home')">Home</button>
   <button class="vs-btn" id="btn-catalog" onclick="switchView('catalog')">Catalog</button>
@@ -1405,29 +1027,676 @@
 </div>
 
 <script>
-  function switchView(name) {
-    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-    document.querySelectorAll('.vs-btn').forEach(b => b.classList.remove('active'));
-    document.getElementById('view-' + name).classList.add('active');
-    document.getElementById('btn-' + name).classList.add('active');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+// ── Product Data ────────────────────────────────────────────────────────────
+const PRODUCTS = [
+  {
+    id: 'JNGn88897',
+    title: 'Victorian Garnet Serpent and Heart Necklace',
+    shortTitle: 'Garnet Serpent & Heart Necklace',
+    era: 'Victorian',
+    category: 'Necklace',
+    materials: '9k gold, garnets',
+    metal: 'Gold',
+    hallmarks: 'None',
+    weight: '19.2 g',
+    dimensions: '39 cm length; chain 3 mm wide',
+    size: null,
+    condition: 'Very good antique condition',
+    price: 6800,
+    img: 'jewelry victorian/Victorian_Garnet_Serpent_and_Heart_9kt_Necklace-1.800.jpg',
+    description: `A rare 9k yellow gold and garnet necklace in the form of a snake, one of the most popular jewellery motifs of the Victorian era. The excavation of the ancient buried cities of Herculaneum and Pompeii in the 1750s captivated the public's imagination and revived the popularity of classical snake imagery. In 1839, when Prince Albert gave Queen Victoria a jewel-encrusted snake-shaped ring to mark their engagement, the gift secured the popularity of a motif whose currency and relevance endures even now.\n\nThis necklace is designed to sit comfortably at collar length. The snake's eyes are rendered with two cabochon garnets (approx. 0.18 cw), while the head, neck and heart-shaped drop are embellished with three large engraved cushion-cut garnets (approx. 2.48 tcw), bezel-set into detailed engraved forms. The body is fashioned with a sinuous star-pierced link chain and closes securely. Remarkable for both its personality and its layered meaning.`
+  },
+  {
+    id: 'JP75254',
+    title: 'Georgian Memorial Locket Pendant',
+    shortTitle: 'Georgian Memorial Locket',
+    era: 'Georgian',
+    category: 'Locket',
+    materials: '12k rose gold, blue enamel, seed pearls, paste; 9k yellow gold chain',
+    metal: 'Gold',
+    hallmarks: 'None',
+    weight: '39.2 g',
+    dimensions: '30 mm length; 18 mm wide',
+    size: null,
+    condition: 'Very good antique condition',
+    price: 2600,
+    img: 'jewelry victorian/CFA1403228-75254.800.800.jpg',
+    description: `An outstanding Georgian memorial navette-shaped locket pendant, likely English-made from around 1800. The pendant features at its centre a finely painted neo-classical portrait miniature of a woman in a romanticized landscape, along with the initials "J.S." Surrounding the central vignette are 42 creamy white seed pearls, suggesting a mourner's tears, contrasting sharply with a vibrant royal blue enamel band — a characteristic feature of higher-quality examples — and a halo of 44 sparkling foil-backed glass pastes.\n\nThe pendant hangs from a 9k yellow gold link chain at 22 inches in length. A moving piece of memorial jewellery, beautifully rendered in ethereal tones of sepia, white and deep blue.`
+  },
+  {
+    id: 'JRIn72009',
+    title: 'Antique Hardstone Intaglio Ring',
+    shortTitle: 'Hardstone Intaglio Ring',
+    era: 'Victorian',
+    category: 'Ring',
+    materials: '14k gold, hardstone',
+    metal: 'Gold',
+    hallmarks: 'None',
+    weight: '24 g',
+    dimensions: 'approx. 25.35 × 20.8 × 5.77 mm',
+    size: '4 (sizeable)',
+    condition: 'Very good antique condition',
+    price: 4200,
+    img: 'jewelry victorian/Antique_Hardstone_Intaglio_CFA2307192_72009_1.800.jpg',
+    description: `This substantial intaglio ring features a hardstone centre with detailed carving and an elegant 14k gold setting. Stone seals were widely used at writing desks, fashioned into pocket watch chain fobs or, as here, set into ring faces. Wax seals added a layer of privacy to personal letters and offered an opportunity to convey meaning via a personal motto or motif.\n\nHere, a yellow-brown hardstone is inscribed with a characterful figure of a man with a walking stick, along with the words, "In the world, not of it." This seal's message invokes the idea of moving through the material world even as you maintain a deliberate moral separation from its distractions and ills.`
+  },
+  {
+    id: 'JB87805',
+    title: 'Victorian Enamel Buckle Bangle',
+    shortTitle: 'Enamel Buckle Bangle',
+    era: 'Victorian',
+    category: 'Bracelet',
+    materials: '14k gold, black enamel',
+    metal: 'Gold',
+    hallmarks: 'None',
+    weight: '39.2 g',
+    dimensions: '20 mm wide; 60 mm interior circumference',
+    size: 'Ideal for a medium wrist',
+    condition: 'Excellent antique condition',
+    price: 8800,
+    img: 'jewelry victorian/Victorian_Enamel_Buckle_Bangle-cfa220971-87805.800.jpg',
+    description: `An exceptional Victorian buckle bangle bracelet in highly textured 14k gold, featuring stylized snowflake and fleur de lys motifs on a black enamelled buckle and loop. The buckle was wildly popular in Victorian jewellery, where items seemed to wrap around and curve back on themselves, creating an endless loop representing loyalty and eternity, as well as strength and protection.\n\nThis bracelet, hollow yet substantial in construction, is designed to sit comfortably against the wrist, opening easily with a hinge and closing securely with a classic push-in clasp and original safety chain. Distinctive enough to wear solo but easily layered as part of a bracelet stack.`
+  },
+  {
+    id: 'JBrMm71811',
+    title: 'Micro Mosaic Brooch — St. Peter\'s Cathedral, Rome',
+    shortTitle: 'Micro Mosaic Brooch, Rome',
+    era: 'Victorian',
+    category: 'Brooch',
+    materials: 'Glass tesserae, onyx, 18k yellow gold',
+    metal: 'Gold',
+    hallmarks: 'None',
+    weight: '13 g',
+    dimensions: '36 × 31 mm',
+    size: null,
+    condition: 'Very good antique condition',
+    price: 5000,
+    img: 'jewelry victorian/micro-mosaic-brooch-st-peters-cathedral-rome-CFA1306170-71811aa.800.jpg',
+    description: `The beauty of the eternal city rendered in captivating miniature. This custom-made loose tesserae micro mosaic brooch depicts, with remarkable detail, the famous colonnades, fountains and obelisk of St. Peter's Square in Rome, as well as the facade and dome of St. Peter's basilica shimmering in the background.\n\nLikely made by a skilled craftsperson in Rome for an English Grand Tourist in the late nineteenth century. With all hand-cut glass tesserae intact, this is a rare survivor set first into a simple onyx frame that highlights its vibrant original colour scheme, and then into an 18k gold frame in the Etruscan style. Fastens securely with a characteristic Victorian c-clasp and tube hinge.`
+  }
+];
+
+// ── State ───────────────────────────────────────────────────────────────────
+const STORAGE_WISHLIST = 'vj_wishlist_v1';
+const STORAGE_RECENT = 'vj_recent_v1';
+
+function loadStored(key) {
+  try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch (e) { return []; }
+}
+function saveStored(key, arr) {
+  try { localStorage.setItem(key, JSON.stringify(arr)); } catch (e) {}
+}
+
+const state = {
+  activeEras: new Set(),
+  activeCategories: new Set(),
+  currentProductId: PRODUCTS[0].id,
+  wishlist: new Set(loadStored(STORAGE_WISHLIST)),
+  recentlyViewed: loadStored(STORAGE_RECENT),
+  visitType: 'in-person',
+  selectedTime: ''
+};
+
+// ── Helpers ─────────────────────────────────────────────────────────────────
+function fmt(price) {
+  return 'CAD $' + price.toLocaleString();
+}
+
+function imgWithFallback(src, alt, cls = '') {
+  return `<img src="${src}" alt="${alt}" class="${cls}" onerror="this.style.background='var(--cream-dk)';this.style.display='block';this.src='data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'">`;
+}
+
+function productCardHTML(p, onclick = '') {
+  const clickFn = onclick || `openProduct('${p.id}')`;
+  const wished = state.wishlist.has(p.id);
+  return `
+    <div class="product-card" onclick="${clickFn}">
+      <div class="product-card-image">
+        ${imgWithFallback(p.img, p.shortTitle)}
+        <div class="wishlist-heart ${wished ? 'active' : ''}" onclick="event.stopPropagation(); toggleWishlist('${p.id}')" title="Save to wishlist">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+        </div>
+      </div>
+      <div class="product-card-meta">
+        <div class="product-era">${p.era} · ${p.category}</div>
+        <div class="product-name">${p.shortTitle}</div>
+        <div class="product-price">${fmt(p.price)}</div>
+      </div>
+    </div>`;
+}
+
+// ── View switching ──────────────────────────────────────────────────────────
+function switchView(name) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.vs-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('view-' + name).classList.add('active');
+  document.getElementById('btn-' + name).classList.add('active');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ── Home: featured products ─────────────────────────────────────────────────
+function renderHome() {
+  // Era counts
+  const eraCounts = {};
+  PRODUCTS.forEach(p => { eraCounts[p.era] = (eraCounts[p.era] || 0) + 1; });
+  ['Georgian','Victorian','Edwardian','Art Nouveau'].forEach(era => {
+    const el = document.getElementById('era-count-' + era);
+    if (el) el.textContent = (eraCounts[era] || 0) + ' pieces';
+  });
+
+  // Featured: first 3
+  const featured = PRODUCTS.slice(0, 3);
+  document.getElementById('home-featured').innerHTML = featured.map(p => productCardHTML(p)).join('');
+}
+
+// ── Catalog ─────────────────────────────────────────────────────────────────
+function buildFilterUI() {
+  const eras = [...new Set(PRODUCTS.map(p => p.era))].sort();
+  const cats = [...new Set(PRODUCTS.map(p => p.category))].sort();
+
+  function filterOptionHTML(value, type) {
+    const count = PRODUCTS.filter(p => p[type === 'era' ? 'era' : 'category'] === value).length;
+    return `
+      <div class="filter-option" onclick="toggleFilter('${type}', '${value}')">
+        <div class="filter-option-left">
+          <div class="filter-check" id="check-${type}-${value.replace(/\s/g,'_')}"></div>
+          <div class="filter-option-name">${value}</div>
+        </div>
+        <div class="filter-option-count">${count}</div>
+      </div>`;
   }
 
-  // Gallery thumb switching
-  document.querySelectorAll('.gallery-thumb').forEach((thumb, i) => {
-    thumb.addEventListener('click', () => {
-      document.querySelectorAll('.gallery-thumb').forEach(t => t.classList.remove('active'));
-      thumb.classList.add('active');
-      const mainImg = document.querySelector('.gallery-main img');
-      const thumbImg = thumb.querySelector('img');
-      if (mainImg && thumbImg) mainImg.src = thumbImg.src.replace('w=200', 'w=900');
-    });
+  document.getElementById('filter-era').innerHTML = eras.map(e => filterOptionHTML(e, 'era')).join('');
+  document.getElementById('filter-category').innerHTML = cats.map(c => filterOptionHTML(c, 'category')).join('');
+}
+
+function toggleFilter(type, value) {
+  const set = type === 'era' ? state.activeEras : state.activeCategories;
+  if (set.has(value)) set.delete(value);
+  else set.add(value);
+  const key = value.replace(/\s/g,'_');
+  const el = document.getElementById(`check-${type}-${key}`);
+  if (el) el.classList.toggle('checked', set.has(value));
+  applyFilters();
+}
+
+function filterByEra(era) {
+  state.activeEras.clear();
+  state.activeCategories.clear();
+  state.activeEras.add(era);
+  buildFilterUI();
+  const key = era.replace(/\s/g,'_');
+  const el = document.getElementById(`check-era-${key}`);
+  if (el) el.classList.add('checked');
+  applyFilters();
+  switchView('catalog');
+}
+
+function filterByCategory(cat) {
+  state.activeEras.clear();
+  state.activeCategories.clear();
+  state.activeCategories.add(cat);
+  buildFilterUI();
+  const el = document.getElementById(`check-category-${cat}`);
+  if (el) el.classList.add('checked');
+  applyFilters();
+  switchView('catalog');
+}
+
+function applyFilters() {
+  const query = (document.getElementById('search-input')?.value || '').toLowerCase().trim();
+  const minP = parseFloat(document.getElementById('price-min')?.value) || 0;
+  const maxP = parseFloat(document.getElementById('price-max')?.value) || Infinity;
+  const sort = document.getElementById('sort-select')?.value || 'default';
+
+  let filtered = PRODUCTS.filter(p => {
+    if (state.activeEras.size > 0 && !state.activeEras.has(p.era)) return false;
+    if (state.activeCategories.size > 0 && !state.activeCategories.has(p.category)) return false;
+    if (p.price < minP || p.price > maxP) return false;
+    if (query) {
+      const haystack = [p.title, p.era, p.category, p.materials, p.description].join(' ').toLowerCase();
+      if (!haystack.includes(query)) return false;
+    }
+    return true;
   });
 
-  // Checkbox toggle demo
-  document.querySelectorAll('.filter-check').forEach(check => {
-    check.addEventListener('click', () => check.classList.toggle('checked'));
+  if (sort === 'price-asc') filtered.sort((a,b) => a.price - b.price);
+  else if (sort === 'price-desc') filtered.sort((a,b) => b.price - a.price);
+  else if (sort === 'era') filtered.sort((a,b) => a.era.localeCompare(b.era));
+
+  document.getElementById('catalog-count').textContent = filtered.length + ' piece' + (filtered.length !== 1 ? 's' : '');
+
+  const grid = document.getElementById('catalog-grid');
+  if (filtered.length === 0) {
+    grid.innerHTML = '<div class="no-results">No pieces match your filters.</div>';
+  } else {
+    grid.innerHTML = filtered.map(p => productCardHTML(p)).join('');
+  }
+
+  // Active filter tags
+  const tags = [];
+  state.activeEras.forEach(e => tags.push(`<div class="filter-tag">${e} <span class="filter-tag-x" onclick="toggleFilter('era','${e}')">×</span></div>`));
+  state.activeCategories.forEach(c => tags.push(`<div class="filter-tag">${c} <span class="filter-tag-x" onclick="toggleFilter('category','${c}')">×</span></div>`));
+  document.getElementById('active-filter-tags').innerHTML = tags.join('');
+}
+
+function clearFilters() {
+  state.activeEras.clear();
+  state.activeCategories.clear();
+  document.getElementById('search-input').value = '';
+  document.getElementById('price-min').value = '';
+  document.getElementById('price-max').value = '';
+  document.querySelectorAll('.filter-check').forEach(el => el.classList.remove('checked'));
+  applyFilters();
+}
+
+// ── Item Detail ─────────────────────────────────────────────────────────────
+function openProduct(id, track = true) {
+  const p = PRODUCTS.find(x => x.id === id);
+  if (!p) return;
+  state.currentProductId = id;
+
+  // Breadcrumb
+  document.getElementById('breadcrumb-era').textContent = p.era;
+  document.getElementById('breadcrumb-title').textContent = p.shortTitle;
+
+  // Gallery — single image, no fake query-param variants
+  document.getElementById('item-gallery').innerHTML = `
+    <div class="gallery-main">${imgWithFallback(p.img, p.title)}</div>`;
+
+  // Specs — trimmed to most useful fields
+  const specs = [
+    ['Era', p.era],
+    ['Category', p.category],
+    ['Metal', p.metal],
+    ['Hallmarks', p.hallmarks || 'None'],
+    ['Weight', p.weight || '—'],
+    p.dimensions ? ['Dimensions', p.dimensions] : null,
+    p.size ? ['Size', p.size] : null,
+    ['Condition', p.condition],
+  ].filter(Boolean);
+
+  const descParas = p.description.split('\n\n').map(t => `<p>${t}</p>`).join('');
+
+  const purchaseMode = p.price >= 5000 ? 'inquire' : 'buy';
+
+  // Facts column
+  const wished = state.wishlist.has(p.id);
+  const escapedTitle = p.shortTitle.replace(/'/g, "\\'");
+  document.getElementById('item-info').innerHTML = `
+    <div class="item-era-badge">${p.era} · ${p.category}</div>
+    <h1 class="item-title">${p.title}</h1>
+    <div class="item-subtitle">${p.materials}</div>
+    <div class="item-price">${fmt(p.price)}</div>
+    <div class="item-actions">
+      ${purchaseMode === 'buy'
+        ? `<button class="btn-full primary">Purchase — ${fmt(p.price)}</button>
+           <button class="btn-full outline" onclick="openBooking('${escapedTitle}')">Book a Viewing</button>`
+        : `<button class="btn-full primary" onclick="openBooking('${escapedTitle}')">Book a Viewing</button>
+           <button class="btn-full outline" onclick="openBooking('${escapedTitle}')">Make an Enquiry</button>`}
+    </div>
+    <div class="item-share-row">
+      <button class="item-wish-btn ${wished ? 'active' : ''}" id="item-wish-btn" onclick="toggleWishlist('${p.id}', true)">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+        <span id="item-wish-label">${wished ? 'Saved' : 'Save'}</span>
+      </button>
+      <button class="item-share-btn" onclick="shareItem('${p.id}')">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+        Share
+      </button>
+    </div>
+    <div class="specs-title" style="margin-top: 22px;">Details</div>
+    ${specs.map(([k,v]) => `
+      <div class="spec-row">
+        <span class="spec-label">${k}</span>
+        <span class="spec-value">${v}</span>
+      </div>`).join('')}`;
+
+  // Story column
+  document.getElementById('item-story').innerHTML = `
+    <div class="story-eyebrow">The piece</div>
+    <div class="item-description">${descParas}</div>`;
+
+  // Related: same era or category, excluding current
+  const related = PRODUCTS.filter(x => x.id !== id && (x.era === p.era || x.category === p.category)).slice(0, 4);
+  document.getElementById('related-grid').innerHTML = related.map(r => productCardHTML(r)).join('');
+
+  if (track) trackView(id);
+  switchView('item');
+}
+
+function setMainImg(src, thumb) {
+  document.querySelectorAll('.gallery-thumb').forEach(t => t.classList.remove('active'));
+  thumb.classList.add('active');
+  const main = document.querySelector('.gallery-main img');
+  if (main) main.src = src.split('?')[0] + '?w=800&q=80&fit=crop';
+}
+
+// ── Init ────────────────────────────────────────────────────────────────────
+renderHome();
+buildFilterUI();
+applyFilters();
+
+// Default item detail to first product (don't track this as a "recent view")
+openProduct(PRODUCTS[0].id, false);
+switchView('home');
+
+// ── Booking ─────────────────────────────────────────────────────────────────
+function openBooking(interest = '') {
+  document.getElementById('booking-overlay').classList.add('open');
+  document.getElementById('booking-panel').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  document.getElementById('booking-success').style.display = 'none';
+  document.getElementById('booking-form').style.display = 'flex';
+  if (interest) {
+    const field = document.getElementById('book-interest');
+    if (field) field.value = interest;
+  }
+  // Set date min to today
+  const dateField = document.getElementById('book-date');
+  if (dateField) {
+    const today = new Date().toISOString().split('T')[0];
+    dateField.min = today;
+  }
+}
+function closeBooking() {
+  document.getElementById('booking-overlay').classList.remove('open');
+  document.getElementById('booking-panel').classList.remove('open');
+  document.body.style.overflow = '';
+}
+function submitBooking(e) {
+  e.preventDefault();
+  if (!state.selectedTime) {
+    showToast('Please pick an available time.');
+    return;
+  }
+  document.getElementById('booking-form').style.display = 'none';
+  document.getElementById('booking-success').style.display = 'block';
+  setTimeout(closeBooking, 3200);
+}
+
+function setVisitType(type) {
+  state.visitType = type;
+  document.querySelectorAll('.visit-type-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.visit === type);
   });
+  const hint = document.getElementById('visit-type-hint');
+  if (hint) {
+    hint.textContent = type === 'virtual'
+      ? 'A 20-minute video call — we walk the piece in your hands, on-camera.'
+      : 'See the piece in our Toronto showroom by appointment.';
+  }
+}
+
+// Deterministic "available" slots — same date → same slots, no randomness flicker
+function slotsForDate(dateStr) {
+  const all = ['10:00 am','11:00 am','12:00 pm','1:00 pm','2:00 pm','3:00 pm','4:00 pm','5:00 pm'];
+  if (!dateStr) return [];
+  const d = new Date(dateStr + 'T00:00:00');
+  const dow = d.getDay(); // 0 Sun, 6 Sat
+  if (dow === 0) return []; // closed Sundays
+  // Hash the date string to pick which slots are "taken"
+  let h = 0;
+  for (let i = 0; i < dateStr.length; i++) h = (h * 31 + dateStr.charCodeAt(i)) >>> 0;
+  return all.map((t, i) => ({ time: t, taken: ((h >> i) & 1) === 1 && i !== 0 && i !== 4 }));
+}
+
+function renderTimeSlots() {
+  const dateStr = document.getElementById('book-date').value;
+  const container = document.getElementById('time-slots');
+  const label = document.getElementById('book-date-label');
+  state.selectedTime = '';
+  document.getElementById('book-time').value = '';
+
+  if (!dateStr) {
+    container.innerHTML = '<div class="time-slot-empty">Select a date to see available times.</div>';
+    label.textContent = '— pick a date';
+    return;
+  }
+  const d = new Date(dateStr + 'T00:00:00');
+  const formatted = d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+  label.textContent = formatted;
+
+  const slots = slotsForDate(dateStr);
+  if (slots.length === 0) {
+    container.innerHTML = '<div class="time-slot-empty">Closed Sundays. Please choose another day.</div>';
+    return;
+  }
+  container.innerHTML = slots.map(s =>
+    `<button type="button" class="time-slot ${s.taken ? 'taken' : ''}" ${s.taken ? 'disabled' : ''} onclick="pickTime(this, '${s.time}')">${s.time}</button>`
+  ).join('');
+}
+
+function pickTime(btn, time) {
+  document.querySelectorAll('.time-slot').forEach(s => s.classList.remove('selected'));
+  btn.classList.add('selected');
+  state.selectedTime = time;
+  document.getElementById('book-time').value = time;
+}
+
+// ── Wishlist ────────────────────────────────────────────────────────────────
+function toggleWishlist(id, fromDetail = false) {
+  const p = PRODUCTS.find(x => x.id === id);
+  if (!p) return;
+  if (state.wishlist.has(id)) {
+    state.wishlist.delete(id);
+    showToast('Removed from wishlist');
+  } else {
+    state.wishlist.add(id);
+    showToast(`Saved · ${p.shortTitle}`);
+  }
+  saveStored(STORAGE_WISHLIST, [...state.wishlist]);
+  updateWishlistBadge();
+  // Update all heart icons in the current view
+  document.querySelectorAll(`.wishlist-heart[onclick*="'${id}'"]`).forEach(el => {
+    el.classList.toggle('active', state.wishlist.has(id));
+  });
+  // Update item detail button if present
+  if (fromDetail || document.getElementById('item-wish-btn')) {
+    const btn = document.getElementById('item-wish-btn');
+    const lbl = document.getElementById('item-wish-label');
+    if (btn && lbl && state.currentProductId === id) {
+      const active = state.wishlist.has(id);
+      btn.classList.toggle('active', active);
+      lbl.textContent = active ? 'Saved' : 'Save';
+    }
+  }
+  // Refresh wishlist panel if open
+  if (document.getElementById('wishlist-panel').classList.contains('open')) {
+    renderWishlistPanel();
+  }
+}
+
+function updateWishlistBadge() {
+  const badge = document.getElementById('nav-wishlist-badge');
+  const count = state.wishlist.size;
+  badge.textContent = count;
+  badge.classList.toggle('visible', count > 0);
+}
+
+function openWishlist() {
+  renderWishlistPanel();
+  document.getElementById('wishlist-overlay').classList.add('open');
+  document.getElementById('wishlist-panel').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeWishlist() {
+  document.getElementById('wishlist-overlay').classList.remove('open');
+  document.getElementById('wishlist-panel').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function renderWishlistPanel() {
+  const content = document.getElementById('wishlist-content');
+  const items = [...state.wishlist].map(id => PRODUCTS.find(p => p.id === id)).filter(Boolean);
+  if (items.length === 0) {
+    content.innerHTML = `
+      <div class="wishlist-empty">
+        <div class="wishlist-empty-icon">
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+        </div>
+        <h3>No pieces saved yet</h3>
+        <p>Tap the heart on any piece to keep it here for later.</p>
+      </div>`;
+    return;
+  }
+  content.innerHTML = `
+    <div class="wishlist-items">
+      ${items.map(p => `
+        <div class="wishlist-item" onclick="closeWishlist(); openProduct('${p.id}')">
+          <div class="wishlist-item-img">${imgWithFallback(p.img, p.shortTitle)}</div>
+          <div class="wishlist-item-meta">
+            <div class="wishlist-item-era">${p.era} · ${p.category}</div>
+            <div class="wishlist-item-name">${p.shortTitle}</div>
+            <div class="wishlist-item-price">${fmt(p.price)}</div>
+          </div>
+          <div class="wishlist-item-remove" onclick="event.stopPropagation(); toggleWishlist('${p.id}')" title="Remove">&#215;</div>
+        </div>
+      `).join('')}
+    </div>`;
+}
+
+// ── Recently viewed ─────────────────────────────────────────────────────────
+function trackView(id) {
+  state.recentlyViewed = [id, ...state.recentlyViewed.filter(x => x !== id)].slice(0, 6);
+  saveStored(STORAGE_RECENT, state.recentlyViewed);
+  renderRecentlyViewed();
+}
+
+function renderRecentlyViewed() {
+  const strip = document.getElementById('recently-viewed');
+  const row = document.getElementById('recent-row');
+  const items = state.recentlyViewed.map(id => PRODUCTS.find(p => p.id === id)).filter(Boolean);
+  if (items.length === 0) {
+    strip.classList.add('hidden');
+    return;
+  }
+  strip.classList.remove('hidden');
+  row.innerHTML = items.map(p => `
+    <div class="recent-card" onclick="openProduct('${p.id}')">
+      <div class="recent-card-img">${imgWithFallback(p.img, p.shortTitle)}</div>
+      <div class="recent-card-name">${p.shortTitle}</div>
+    </div>`).join('');
+}
+
+function clearRecentlyViewed() {
+  state.recentlyViewed = [];
+  saveStored(STORAGE_RECENT, []);
+  renderRecentlyViewed();
+}
+
+// ── Share ───────────────────────────────────────────────────────────────────
+function shareItem(id) {
+  const p = PRODUCTS.find(x => x.id === id);
+  if (!p) return;
+  const url = `${location.origin}${location.pathname}#piece=${id}`;
+  const payload = { title: p.title, text: `${p.title} — ${fmt(p.price)}`, url };
+  if (navigator.share) {
+    navigator.share(payload).catch(() => {});
+  } else if (navigator.clipboard) {
+    navigator.clipboard.writeText(url).then(
+      () => showToast('Link copied to clipboard'),
+      () => showToast('Could not copy link')
+    );
+  } else {
+    showToast(url);
+  }
+}
+
+// ── Toast ───────────────────────────────────────────────────────────────────
+function showToast(msg) {
+  const stack = document.getElementById('toast-stack');
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.textContent = msg;
+  stack.appendChild(el);
+  requestAnimationFrame(() => el.classList.add('visible'));
+  setTimeout(() => {
+    el.classList.remove('visible');
+    setTimeout(() => el.remove(), 250);
+  }, 2400);
+}
+
+// Init wishlist badge + recently viewed on load
+updateWishlistBadge();
+renderRecentlyViewed();
 </script>
+
+<!-- Booking overlay + panel -->
+<div class="booking-overlay" id="booking-overlay" onclick="closeBooking()"></div>
+<div class="booking-panel" id="booking-panel">
+  <div class="booking-close" onclick="closeBooking()">&#215;</div>
+  <div class="booking-eyebrow">By Appointment</div>
+  <h2 class="booking-title">Book a Viewing</h2>
+  <p class="booking-intro">We welcome visits to see the collection in person. Share your details and we'll confirm a time within one business day.</p>
+
+  <form class="booking-form" id="booking-form" onsubmit="submitBooking(event)">
+    <div class="booking-field">
+      <label>Visit type</label>
+      <div class="visit-type-toggle">
+        <button type="button" class="visit-type-btn active" data-visit="in-person" onclick="setVisitType('in-person')">In person</button>
+        <button type="button" class="visit-type-btn" data-visit="virtual" onclick="setVisitType('virtual')">Virtual viewing</button>
+      </div>
+      <div class="visit-type-hint" id="visit-type-hint">See the piece in our Toronto showroom by appointment.</div>
+    </div>
+    <div class="booking-row">
+      <div class="booking-field">
+        <label>First name</label>
+        <input type="text" placeholder="Jane" required>
+      </div>
+      <div class="booking-field">
+        <label>Last name</label>
+        <input type="text" placeholder="Smith" required>
+      </div>
+    </div>
+    <div class="booking-field">
+      <label>Email address</label>
+      <input type="email" placeholder="jane@example.com" required>
+    </div>
+    <div class="booking-field">
+      <label>Phone <span class="opt">optional</span></label>
+      <input type="tel" placeholder="+1 416 000 0000">
+    </div>
+    <div class="booking-field">
+      <label>Piece of interest <span class="opt">optional</span></label>
+      <input type="text" id="book-interest" placeholder="e.g. Garnet Serpent Necklace">
+    </div>
+    <div class="booking-field">
+      <label>Preferred date</label>
+      <input type="date" id="book-date" onchange="renderTimeSlots()">
+    </div>
+    <div class="booking-field">
+      <label>Available times <span class="opt" id="book-date-label">— pick a date</span></label>
+      <div class="time-slots" id="time-slots">
+        <div class="time-slot-empty">Select a date to see available times.</div>
+      </div>
+      <input type="hidden" id="book-time" required>
+    </div>
+    <div class="booking-field">
+      <label>Notes <span class="opt">optional</span></label>
+      <textarea rows="3" placeholder="Anything we should know before your visit…"></textarea>
+    </div>
+    <button type="submit" class="booking-submit">Request Appointment</button>
+  </form>
+
+  <div class="booking-success" id="booking-success">
+    <div class="booking-success-check">✓</div>
+    <h3>Request received.</h3>
+    <p>We'll confirm your appointment by email within one business day.</p>
+  </div>
+</div>
+
+<!-- Wishlist panel -->
+<div class="booking-overlay" id="wishlist-overlay" onclick="closeWishlist()"></div>
+<div class="wishlist-panel" id="wishlist-panel">
+  <div class="booking-close" onclick="closeWishlist()">&#215;</div>
+  <div class="booking-eyebrow">Your Wishlist</div>
+  <h2 class="booking-title" style="margin-bottom: 24px;">Saved pieces</h2>
+  <div id="wishlist-content"></div>
+</div>
+
+<!-- Toast stack -->
+<div class="toast-stack" id="toast-stack"></div>
+
 </body>
 </html>
