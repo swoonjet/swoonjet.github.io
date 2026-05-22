@@ -85,12 +85,17 @@
   /* ════════════ HOME ════════════ */
   .hero {
     display: grid; grid-template-columns: 1fr 1fr;
-    min-height: calc(100vh - 68px);
   }
   .hero-image {
     position: relative; overflow: hidden; background: var(--cream-dk);
   }
-  .hero-image img { height: 100%; width: 100%; object-fit: cover; filter: brightness(0.95); }
+  .hero-image img {
+    height: 100%; width: 100%; object-fit: cover;
+    object-position: 50% 78%;
+    transform: scale(1.7);
+    transform-origin: 50% 76%;
+    filter: brightness(0.96) contrast(1.04);
+  }
   .hero-image-caption {
     position: absolute; bottom: 24px; left: 24px;
     font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase;
@@ -240,12 +245,15 @@
   .product-price { font-size: 13px; font-weight: 300; color: var(--mid); }
 
   /* Editorial */
-  .editorial { display: grid; grid-template-columns: 1fr 1fr; min-height: 480px; }
+  .editorial { display: grid; grid-template-columns: 1fr 1fr; }
   .editorial-image { background: var(--cream-dk); overflow: hidden; }
-  .editorial-image img { height: 100%; }
+  .editorial-image img {
+    height: 100%; width: 100%; object-fit: cover;
+    object-position: 50% 48%;
+  }
   .editorial-content {
     background: var(--black); display: flex; flex-direction: column;
-    justify-content: center; padding: 80px 72px;
+    justify-content: flex-start; padding: 64px 64px;
   }
   .editorial-eyebrow {
     font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase;
@@ -837,8 +845,8 @@
 <div class="view active" id="view-home">
   <div class="hero">
     <div class="hero-image">
-      <img src="https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=900&q=80&fit=crop" alt="" onerror="this.style.display='none'">
-      <div class="hero-image-caption">Victorian Garnet Serpent &amp; Heart Necklace, 9k gold, c.1880</div>
+      <img src="jewelry victorian/Victorian_Garnet_Serpent_and_Heart_9kt_Necklace-1.800.jpg" alt="" onerror="this.style.display='none'">
+      <div class="hero-image-caption">Victorian Garnet Serpent &amp; Heart Necklace, 9k gold, c.1880 — detail</div>
     </div>
     <div class="hero-content">
       <div class="hero-eyebrow">New Arrivals — Summer 2026</div>
@@ -905,7 +913,7 @@
 
   <div class="editorial" id="about">
     <div class="editorial-image">
-      <img src="https://images.unsplash.com/photo-1589128777073-263566ae5e4d?w=900&q=80&fit=crop" alt="" onerror="this.style.display='none'">
+      <img src="jewelry victorian/era-edwardian.jpg" alt="" onerror="this.style.display='none'">
     </div>
     <div class="editorial-content">
       <div class="editorial-eyebrow">From the proprietor</div>
