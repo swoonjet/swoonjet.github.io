@@ -1,0 +1,1106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tree ID Study Guide — Southern Ontario</title>
+<style>
+  :root {
+    --forest: #2d4a2b;
+    --forest-light: #4a6b48;
+    --bark: #6b4423;
+    --bark-light: #8a6240;
+    --moss: #7a8a4f;
+    --cream: #faf7f0;
+    --paper: #ffffff;
+    --border: #d4cfb8;
+    --border-soft: #ebe6d4;
+    --text: #1a1a1a;
+    --text-soft: #4a4a4a;
+    --text-muted: #6b6b6b;
+    --accent: #c4622d;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; scroll-padding-top: 80px; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background: var(--cream);
+    color: var(--text);
+    line-height: 1.65;
+    font-size: 16px;
+  }
+  h1, h2, h3, h4 {
+    font-family: Georgia, "Times New Roman", serif;
+    color: var(--forest);
+    line-height: 1.25;
+    font-weight: 600;
+  }
+  a { color: var(--bark); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+  a:hover { color: var(--accent); }
+
+  /* HEADER NAV */
+  header.topnav {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(45, 74, 43, 0.97);
+    backdrop-filter: blur(8px);
+    box-shadow: 0 1px 8px rgba(0,0,0,0.08);
+  }
+  .topnav-inner {
+    max-width: 1200px; margin: 0 auto;
+    padding: 12px 24px;
+    display: flex; align-items: center; gap: 24px; flex-wrap: wrap;
+  }
+  .topnav .brand {
+    color: white; font-family: Georgia, serif;
+    font-size: 1.05rem; font-weight: 600;
+    text-decoration: none; white-space: nowrap;
+  }
+  .topnav nav {
+    display: flex; gap: 16px; flex-wrap: wrap; font-size: 0.85rem;
+  }
+  .topnav nav a {
+    color: rgba(255,255,255,0.85);
+    text-decoration: none; white-space: nowrap;
+  }
+  .topnav nav a:hover { color: white; }
+
+  /* HERO */
+  .hero {
+    background: linear-gradient(180deg, var(--forest) 0%, var(--forest-light) 100%);
+    color: white;
+    padding: 80px 24px 100px;
+    text-align: center;
+    position: relative; overflow: hidden;
+  }
+  .hero::before {
+    content: ""; position: absolute; inset: 0;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'><g fill='rgba(255,255,255,0.04)'><circle cx='30' cy='40' r='2'/><circle cx='80' cy='90' r='1.5'/><circle cx='150' cy='30' r='2.5'/><circle cx='180' cy='150' r='1.5'/><circle cx='60' cy='170' r='2'/><circle cx='120' cy='130' r='1.5'/></g></svg>");
+    opacity: 0.5;
+  }
+  .hero-content { position: relative; z-index: 1; max-width: 800px; margin: 0 auto; }
+  .hero h1 {
+    color: white;
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    margin-bottom: 16px;
+  }
+  .hero .tagline {
+    font-size: 1.15rem; color: rgba(255,255,255,0.9);
+    margin-bottom: 32px; font-style: italic;
+    font-family: Georgia, serif;
+  }
+  .hero .subtitle {
+    font-size: 1rem; color: rgba(255,255,255,0.8);
+    max-width: 640px; margin: 0 auto;
+  }
+
+  /* MAIN */
+  main {
+    max-width: 1100px; margin: 0 auto; padding: 0 24px;
+  }
+  section {
+    padding: 56px 0; border-bottom: 1px solid var(--border-soft);
+  }
+  section:last-of-type { border-bottom: none; }
+  section h2 {
+    font-size: 2rem; margin-bottom: 8px;
+    display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
+  }
+  section h2 .phase-tag {
+    font-size: 0.7rem; background: var(--bark);
+    color: white; padding: 4px 10px; border-radius: 12px;
+    font-family: -apple-system, sans-serif; font-weight: 500;
+    letter-spacing: 0.5px; text-transform: uppercase;
+  }
+  section > p.lead {
+    font-size: 1.05rem; color: var(--text-soft);
+    margin-bottom: 24px; max-width: 760px;
+  }
+  section h3 {
+    font-size: 1.3rem; margin: 36px 0 14px;
+    color: var(--bark);
+  }
+  section h3 .subcount {
+    font-size: 0.75rem; color: var(--text-muted);
+    font-family: -apple-system, sans-serif;
+    font-weight: 400; margin-left: 6px;
+  }
+  section p { margin-bottom: 14px; max-width: 760px; }
+  ul, ol { margin: 12px 0 16px 24px; }
+  li { margin-bottom: 6px; }
+
+  /* FOUNDATION CARDS */
+  .features {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-top: 24px;
+  }
+  .feature-card {
+    background: var(--paper);
+    border: 1px solid var(--border);
+    border-radius: 10px; padding: 20px;
+  }
+  .feature-card .num {
+    display: inline-block; width: 28px; height: 28px;
+    background: var(--forest); color: white;
+    border-radius: 50%; text-align: center; line-height: 28px;
+    font-weight: 600; font-size: 0.9rem; margin-bottom: 8px;
+  }
+  .feature-card h4 { font-size: 1.05rem; margin-bottom: 6px; }
+  .feature-card p { font-size: 0.9rem; color: var(--text-soft); margin: 0; }
+
+  /* CONCEPT GALLERIES */
+  .concept-cluster {
+    margin-bottom: 32px;
+  }
+  .concept-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 14px;
+    margin-top: 12px;
+  }
+  .concept-card {
+    background: var(--paper);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .concept-img {
+    display: block;
+    width: 100%; height: 130px;
+    background: var(--border-soft);
+    position: relative; overflow: hidden;
+    text-decoration: none;
+  }
+  .concept-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .concept-label {
+    padding: 8px 12px;
+    font-size: 0.82rem;
+    color: var(--text-soft);
+    line-height: 1.35;
+    background: var(--paper);
+  }
+
+  /* BRANCHING DIAGRAM */
+  .branching-diagram {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px; margin: 24px 0; max-width: 700px;
+  }
+  .branch-box {
+    background: var(--paper);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px; text-align: center;
+  }
+  .branch-box h4 { margin-bottom: 12px; }
+  .branch-box svg { display: block; margin: 0 auto; }
+
+  .madcap {
+    background: var(--paper);
+    border-left: 4px solid var(--accent);
+    padding: 18px 22px; margin: 24px 0;
+    border-radius: 4px; max-width: 640px;
+  }
+  .madcap strong { color: var(--accent); }
+
+  /* CONIFER CARDS */
+  .conifer-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 18px;
+    margin-top: 24px;
+  }
+  .conifer-card {
+    background: var(--paper);
+    border: 1px solid var(--border);
+    border-radius: 12px; overflow: hidden;
+    display: flex; flex-direction: column;
+  }
+  .conifer-img {
+    width: 100%; height: 180px;
+    background: var(--border-soft);
+    position: relative; overflow: hidden;
+    text-decoration: none;
+  }
+  .conifer-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .conifer-body { padding: 14px 18px 18px; }
+  .conifer-label {
+    font-family: Georgia, serif;
+    font-size: 1rem; font-weight: 600;
+    color: var(--forest); margin-bottom: 6px;
+  }
+  .conifer-body p { font-size: 0.88rem; color: var(--text-soft); margin: 0; }
+
+  /* SPECIES CARDS */
+  .species-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+    gap: 20px;
+    margin-top: 16px;
+  }
+  .species-card {
+    background: var(--paper);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    display: flex; flex-direction: column;
+  }
+  .species-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+  }
+  .species-img {
+    width: 100%; height: 200px;
+    background: var(--border-soft);
+    position: relative; overflow: hidden;
+    display: block; text-decoration: none;
+  }
+  .species-img img {
+    width: 100%; height: 100%;
+    object-fit: cover; display: block;
+  }
+  .placeholder {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text-muted); font-size: 0.82rem;
+    font-style: italic; text-align: center;
+    background: linear-gradient(135deg, #ebe6d4, #d4cfb8);
+    padding: 12px;
+  }
+  .species-body {
+    padding: 16px 18px 18px;
+    flex: 1; display: flex; flex-direction: column;
+  }
+  .species-name {
+    font-family: Georgia, serif;
+    font-size: 1.12rem; font-weight: 600;
+    color: var(--forest); margin-bottom: 2px;
+  }
+  .species-sci {
+    font-style: italic; color: var(--text-muted);
+    font-size: 0.83rem; margin-bottom: 10px;
+  }
+  .species-notes {
+    font-size: 0.88rem; color: var(--text-soft);
+    line-height: 1.55; flex: 1;
+  }
+  .species-tag {
+    display: inline-block; font-size: 0.68rem;
+    background: var(--moss); color: white;
+    padding: 3px 8px; border-radius: 4px;
+    margin-bottom: 8px; letter-spacing: 0.3px;
+    text-transform: uppercase; font-weight: 500;
+  }
+  .species-tag.conifer { background: var(--forest); }
+  .species-tag.hardwood { background: var(--bark); }
+  .species-tag.understory { background: var(--moss); }
+  .species-tag.invasive { background: var(--accent); }
+  .species-link {
+    display: inline-block; margin-top: 10px;
+    font-size: 0.78rem; color: var(--bark-light);
+  }
+
+  /* GROUPED LISTS (Phase 3) */
+  .group {
+    background: var(--paper);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px 22px;
+    margin-bottom: 14px;
+  }
+  .group h4 {
+    color: var(--bark); font-size: 1.02rem; margin-bottom: 6px;
+  }
+  .group p { font-size: 0.93rem; margin-bottom: 0; }
+
+  /* RESOURCES */
+  .resources {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 16px; margin-top: 20px;
+  }
+  .resource-card {
+    background: var(--paper);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--forest);
+    border-radius: 6px;
+    padding: 16px 20px;
+  }
+  .resource-card h4 {
+    color: var(--forest); font-size: 1rem; margin-bottom: 10px;
+  }
+  .resource-card ul { margin: 0 0 0 18px; font-size: 0.9rem; }
+  .resource-card li { margin-bottom: 5px; }
+
+  /* SEASONS */
+  .seasons {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 14px; margin-top: 20px;
+  }
+  .season-card {
+    background: var(--paper);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 20px;
+    border-top: 4px solid;
+  }
+  .season-card.spring { border-top-color: #8fb869; }
+  .season-card.summer { border-top-color: #4a7a3a; }
+  .season-card.fall { border-top-color: #c4622d; }
+  .season-card.winter { border-top-color: #6b8a9a; }
+  .season-card h4 { margin-bottom: 8px; font-size: 1rem; }
+  .season-card p { font-size: 0.88rem; color: var(--text-soft); margin: 0; }
+
+  /* QUICK REF */
+  .quickref {
+    background: var(--paper);
+    border: 2px dashed var(--bark);
+    border-radius: 10px;
+    padding: 22px 28px;
+    margin-top: 20px;
+  }
+  .quickref ul { margin: 0 0 0 22px; }
+  .quickref li { margin-bottom: 10px; font-size: 0.93rem; }
+  .quickref strong { color: var(--forest); }
+
+  /* CADENCE */
+  .cadence {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 14px; margin-top: 20px;
+  }
+  .cadence-card {
+    background: var(--paper);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 18px;
+  }
+  .cadence-card .when {
+    font-size: 0.76rem; color: var(--bark);
+    text-transform: uppercase; letter-spacing: 0.6px;
+    font-weight: 600; margin-bottom: 4px;
+  }
+  .cadence-card p { font-size: 0.9rem; margin: 0; color: var(--text-soft); }
+
+  /* FOOTER */
+  footer {
+    background: var(--forest);
+    color: rgba(255,255,255,0.85);
+    text-align: center;
+    padding: 32px 24px;
+    font-size: 0.86rem;
+    margin-top: 40px;
+  }
+  footer a { color: rgba(255,255,255,0.95); }
+
+  /* RESPONSIVE */
+  @media (max-width: 640px) {
+    .topnav nav { font-size: 0.76rem; gap: 10px; }
+    .hero { padding: 50px 20px 60px; }
+    .branching-diagram { grid-template-columns: 1fr; }
+    section { padding: 40px 0; }
+    section h2 { font-size: 1.55rem; }
+  }
+</style>
+</head>
+<body>
+
+<header class="topnav">
+  <div class="topnav-inner">
+    <a class="brand" href="#top">🌳 Tree ID — Southern Ontario</a>
+    <nav>
+      <a href="#foundation">Foundation</a>
+      <a href="#glossary">Glossary</a>
+      <a href="#madcap">MAD Cap</a>
+      <a href="#conifers">Conifers</a>
+      <a href="#phase1">Phase 1</a>
+      <a href="#phase2">Phase 2</a>
+      <a href="#phase3">Phase 3</a>
+      <a href="#resources">Resources</a>
+      <a href="#seasons">Seasons</a>
+      <a href="#quickref">Quick Ref</a>
+    </nav>
+  </div>
+</header>
+
+<div id="top" class="hero">
+  <div class="hero-content">
+    <h1>Tree Identification Study Guide</h1>
+    <p class="tagline">A visual, phased plan for Southern Ontario and beyond</p>
+    <p class="subtitle">Start with the framework, master the Core 20, then layer outward. Within a year you'll name most trees you walk past — and have a method that travels to any forest.</p>
+  </div>
+</div>
+
+<main>
+
+<!-- HOW TO USE -->
+<section id="howto">
+  <h2>How to use this guide</h2>
+  <p class="lead">This is a staged plan, not a checklist to race through. The phases build on each other: Phase 1 gives you the framework and the species you'll see constantly; Phase 2 fills in the regional richness; Phase 3 lets you walk into a forest in BC, Nova Scotia, or Tennessee and not feel lost.</p>
+  <p>Move to the next phase only when the current one feels effortless — knowing 20 species cold is far more useful than half-knowing 80. Spend more time observing than reading. Five minutes a day with real trees outperforms an hour with a field guide.</p>
+</section>
+
+<!-- FOUNDATION -->
+<section id="foundation">
+  <h2>Foundation: the five features</h2>
+  <p class="lead">Before memorizing names, train yourself to look at every tree through these five lenses. With practice, you'll cycle through them in a few seconds. A tree is rarely identified from one feature — two or three in combination is the goal.</p>
+
+  <div class="features">
+    <div class="feature-card">
+      <div class="num">1</div>
+      <h4>Branching pattern</h4>
+      <p>Opposite or alternate? The single most powerful first cut — see MAD Cap Horse below.</p>
+    </div>
+    <div class="feature-card">
+      <div class="num">2</div>
+      <h4>Leaves</h4>
+      <p>Simple or compound, lobed or toothed, needle or scale, arrangement on the twig.</p>
+    </div>
+    <div class="feature-card">
+      <div class="num">3</div>
+      <h4>Bark</h4>
+      <p>Smooth, ridged, plated, peeling, furrowed. Color and texture change with age.</p>
+    </div>
+    <div class="feature-card">
+      <div class="num">4</div>
+      <h4>Overall form</h4>
+      <p>Pyramidal, rounded, vase-shaped, weeping. Whether limbs ascend, spread, or droop.</p>
+    </div>
+    <div class="feature-card">
+      <div class="num">5</div>
+      <h4>Habitat &amp; fruit</h4>
+      <p>Wet feet or dry ridges? What nuts, cones, catkins, samaras, or flowers does it bear?</p>
+    </div>
+  </div>
+</section>
+
+<!-- VISUAL GLOSSARY -->
+<section id="glossary">
+  <h2>Visual glossary</h2>
+  <p class="lead">Quick-reference images for the vocabulary you'll use on every walk. Each tile links to the example species on Wikipedia.</p>
+
+  <div class="concept-cluster">
+    <h3>Leaf types</h3>
+    <div class="concept-grid" id="leaves-grid"></div>
+  </div>
+
+  <div class="concept-cluster">
+    <h3>Bark textures</h3>
+    <div class="concept-grid" id="bark-grid"></div>
+  </div>
+
+  <div class="concept-cluster">
+    <h3>Tree forms</h3>
+    <div class="concept-grid" id="form-grid"></div>
+  </div>
+
+  <div class="concept-cluster">
+    <h3>Fruits, seeds &amp; cones</h3>
+    <div class="concept-grid" id="fruits-grid"></div>
+  </div>
+</section>
+
+<!-- MAD CAP HORSE -->
+<section id="madcap">
+  <h2>The MAD Cap Horse rule</h2>
+  <p class="lead">Almost every tree in Ontario has <strong>alternate</strong> branching. The exceptions are easy to memorize. If you see opposite branching (twigs and buds directly across from each other on the stem), you've narrowed the possibilities to a handful of groups instantly.</p>
+
+  <div class="madcap">
+    <p style="margin:0;font-size:1.05rem;">
+      <strong>M</strong>aples — <strong>A</strong>shes — <strong>D</strong>ogwoods — <strong>Cap</strong>rifoliaceae (viburnums, honeysuckles) — <strong>Horse</strong> chestnut.
+    </p>
+  </div>
+
+  <div class="branching-diagram">
+    <div class="branch-box">
+      <h4>Opposite</h4>
+      <svg width="120" height="160" viewBox="0 0 120 160">
+        <line x1="60" y1="20" x2="60" y2="150" stroke="#6b4423" stroke-width="6" stroke-linecap="round"/>
+        <line x1="60" y1="55" x2="20" y2="40" stroke="#6b4423" stroke-width="4" stroke-linecap="round"/>
+        <line x1="60" y1="55" x2="100" y2="40" stroke="#6b4423" stroke-width="4" stroke-linecap="round"/>
+        <line x1="60" y1="95" x2="20" y2="80" stroke="#6b4423" stroke-width="4" stroke-linecap="round"/>
+        <line x1="60" y1="95" x2="100" y2="80" stroke="#6b4423" stroke-width="4" stroke-linecap="round"/>
+        <line x1="60" y1="135" x2="20" y2="120" stroke="#6b4423" stroke-width="4" stroke-linecap="round"/>
+        <line x1="60" y1="135" x2="100" y2="120" stroke="#6b4423" stroke-width="4" stroke-linecap="round"/>
+        <circle cx="20" cy="40" r="5" fill="#7a8a4f"/>
+        <circle cx="100" cy="40" r="5" fill="#7a8a4f"/>
+        <circle cx="20" cy="80" r="5" fill="#7a8a4f"/>
+        <circle cx="100" cy="80" r="5" fill="#7a8a4f"/>
+        <circle cx="20" cy="120" r="5" fill="#7a8a4f"/>
+        <circle cx="100" cy="120" r="5" fill="#7a8a4f"/>
+      </svg>
+      <p style="font-size:0.85rem;color:var(--text-muted);margin-top:8px;">Buds paired directly across from each other.</p>
+    </div>
+    <div class="branch-box">
+      <h4>Alternate</h4>
+      <svg width="120" height="160" viewBox="0 0 120 160">
+        <line x1="60" y1="20" x2="60" y2="150" stroke="#6b4423" stroke-width="6" stroke-linecap="round"/>
+        <line x1="60" y1="45" x2="20" y2="30" stroke="#6b4423" stroke-width="4" stroke-linecap="round"/>
+        <line x1="60" y1="75" x2="100" y2="60" stroke="#6b4423" stroke-width="4" stroke-linecap="round"/>
+        <line x1="60" y1="105" x2="20" y2="90" stroke="#6b4423" stroke-width="4" stroke-linecap="round"/>
+        <line x1="60" y1="135" x2="100" y2="120" stroke="#6b4423" stroke-width="4" stroke-linecap="round"/>
+        <circle cx="20" cy="30" r="5" fill="#7a8a4f"/>
+        <circle cx="100" cy="60" r="5" fill="#7a8a4f"/>
+        <circle cx="20" cy="90" r="5" fill="#7a8a4f"/>
+        <circle cx="100" cy="120" r="5" fill="#7a8a4f"/>
+      </svg>
+      <p style="font-size:0.85rem;color:var(--text-muted);margin-top:8px;">Buds staggered along the stem.</p>
+    </div>
+  </div>
+</section>
+
+<!-- CONIFERS -->
+<section id="conifers">
+  <h2>Conifer needle cheat sheet</h2>
+  <p class="lead">The conifers sort themselves cleanly by how their needles attach. Learn these six and you can ID most conifers from a single sprig.</p>
+  <div class="conifer-grid" id="conifer-grid"></div>
+</section>
+
+<!-- PHASE 1 -->
+<section id="phase1">
+  <h2>Core 20 <span class="phase-tag">Phase 1 · Months 1–2</span></h2>
+  <p class="lead">These are the trees you will see constantly in parks, neighborhoods, conservation areas, and roadsides across Southern Ontario. Master these in any season and you'll recognize most of what you walk past. Click any image to open the full Wikipedia page.</p>
+  <div class="species-grid" id="phase1-grid"></div>
+</section>
+
+<!-- PHASE 2 -->
+<section id="phase2">
+  <h2>Filling in the region <span class="phase-tag">Phase 2 · Months 3–6</span></h2>
+  <p class="lead">Once the Core 20 are automatic, layer in these. Group your study around themes so similar species reinforce each other.</p>
+
+  <h3>Carolinian specialties <span class="subcount">— Southern Ontario only</span></h3>
+  <p>Concentrated south of a line roughly from Toronto to Grand Bend, with the densest pockets at Point Pelee, Rondeau, Backus Woods, and the Niagara River corridor.</p>
+  <div class="species-grid" id="carolinian-grid"></div>
+
+  <h3>Additional conifers</h3>
+  <p>Extends your conifer vocabulary into wetter and more northern habitats.</p>
+  <div class="species-grid" id="conifers2-grid"></div>
+
+  <h3>Trickier hardwoods</h3>
+  <p>Common natives that beginners often pass over or misidentify. Several elms, ashes, and poplars to learn carefully.</p>
+  <div class="species-grid" id="hardwoods2-grid"></div>
+
+  <h3>Common introduced &amp; planted trees</h3>
+  <p>You'll see these constantly in cities and need to recognize them so you don't mis-key them as natives.</p>
+  <div class="species-grid" id="introduced-grid"></div>
+
+  <h3>Look-alike pairs worth practicing</h3>
+  <p>Sugar vs. black maple · red vs. black vs. pin oak · white vs. green ash · American beech vs. blue beech (very different despite the name) · white vs. yellow birch · trembling vs. largetooth aspen · white vs. red spruce. Also: native vs. invasive look-alikes — buckthorn, Norway maple, tree-of-heaven, black locust, Siberian elm.</p>
+</section>
+
+<!-- PHASE 3 -->
+<section id="phase3">
+  <h2>Branching out <span class="phase-tag">Phase 3 · Month 6+</span></h2>
+  <p class="lead">Once Southern Ontario feels comfortable, the framework transfers fast. Each new region adds species but rarely changes the method.</p>
+
+  <div class="group">
+    <h4>Canadian Shield / Algonquin</h4>
+    <p>More boreal species (more black spruce, jack pine, balsam fir) and less Carolinian diversity. Good practice for terrain-driven species changes within a single province.</p>
+  </div>
+  <div class="group">
+    <h4>Eastern Canada (Maritimes / Gaspé)</h4>
+    <p>Adds red spruce, pitch pine, grey birch, and more abundant balsam fir.</p>
+  </div>
+  <div class="group">
+    <h4>Boreal forest</h4>
+    <p>Black spruce, white spruce, tamarack, jack pine, balsam poplar, paper birch dominate. Species diversity collapses but the few species are essential.</p>
+  </div>
+  <div class="group">
+    <h4>Pacific coast (BC)</h4>
+    <p>Entirely different conifer palette: Douglas-fir, western red cedar, western hemlock, Sitka spruce, grand fir, big-leaf maple, red alder.</p>
+  </div>
+  <div class="group">
+    <h4>Appalachian / Southeastern US</h4>
+    <p>Explosion of oaks and hickories, plus longleaf pine, magnolias, baldcypress, eastern redcedar.</p>
+  </div>
+
+  <h3>Sample species from other ecoregions</h3>
+  <p>A small taster of trees you'll meet when you travel.</p>
+  <div class="species-grid" id="phase3-grid"></div>
+
+  <h3>Specializations worth pursuing</h3>
+  <ul>
+    <li><strong>Winter twig ID</strong> — buds, leaf scars, bundle scars, and bark become your only tools. Master this and you can identify trees on a January walk.</li>
+    <li><strong>Bark-only ID</strong> — useful for trees too tall to see the leaves of.</li>
+    <li><strong>Tree silhouette and form</strong> — distant identification from a roadside.</li>
+    <li><strong>Native vs. invasive forestry</strong> — practical conservation knowledge.</li>
+    <li><strong>Dendrochronology</strong> — reading tree rings.</li>
+  </ul>
+</section>
+
+<!-- RESOURCES -->
+<section id="resources">
+  <h2>Resources</h2>
+  <p class="lead">A short, opinionated list. Owning Farrar and installing iNaturalist will carry you most of the way.</p>
+
+  <div class="resources">
+    <div class="resource-card">
+      <h4>Books</h4>
+      <ul>
+        <li><em>Trees in Canada</em> — John Laird Farrar (the canonical reference)</li>
+        <li><em>Peterson Field Guide to Eastern Trees</em> — George Petrides</li>
+        <li><em>The Sibley Guide to Trees</em> — David Allen Sibley</li>
+        <li><em>Bark: A Field Guide to Trees of the Northeast</em> — Michael Wojtech</li>
+        <li><em>Forest Plants of Central Ontario</em> — Brenda Chambers et al.</li>
+      </ul>
+    </div>
+    <div class="resource-card">
+      <h4>Apps</h4>
+      <ul>
+        <li><a href="https://www.inaturalist.org/" target="_blank" rel="noopener">iNaturalist</a> — log observations, get community confirmation</li>
+        <li><a href="https://www.inaturalist.org/pages/seek_app" target="_blank" rel="noopener">Seek</a> — real-time camera ID, no account needed</li>
+        <li><a href="https://merlin.allaboutbirds.org/" target="_blank" rel="noopener">Merlin Bird ID</a> — pairs naturally with tree learning</li>
+      </ul>
+    </div>
+    <div class="resource-card">
+      <h4>Websites</h4>
+      <ul>
+        <li><a href="https://ontariotrees.com/" target="_blank" rel="noopener">ontariotrees.com</a> — clear photos of every Ontario species</li>
+        <li><a href="https://dendro.cnre.vt.edu/dendrology/" target="_blank" rel="noopener">Virginia Tech Dendrology</a> — consistent format, Eastern NA</li>
+        <li>Ontario Tree Atlas — range maps</li>
+        <li>eFlora of Ontario — academic but comprehensive</li>
+      </ul>
+    </div>
+    <div class="resource-card">
+      <h4>Places to practice</h4>
+      <ul>
+        <li><strong>Royal Botanical Gardens</strong> (Burlington) — labeled specimens</li>
+        <li><strong>Backus Woods</strong> — old-growth Carolinian</li>
+        <li><strong>Point Pelee &amp; Rondeau</strong> — southernmost Carolinian</li>
+        <li><strong>Algonquin Park</strong> — boreal transition</li>
+        <li><strong>Bruce Peninsula</strong> — ancient cedars</li>
+        <li><strong>Guelph Arboretum</strong></li>
+      </ul>
+    </div>
+    <div class="resource-card">
+      <h4>People &amp; programs</h4>
+      <ul>
+        <li><a href="https://ontarionature.org/" target="_blank" rel="noopener">Ontario Nature</a> — member naturalist clubs</li>
+        <li>Ontario Master Naturalist program (Lakehead University)</li>
+        <li><a href="https://yourleaf.org/" target="_blank" rel="noopener">LEAF</a> — Toronto urban forestry</li>
+        <li>Forests Ontario — stewardship and planting</li>
+        <li>Your local conservation authority — guided walks</li>
+      </ul>
+    </div>
+    <div class="resource-card">
+      <h4>Field practice habits</h4>
+      <ul>
+        <li><strong>Three-photo rule:</strong> form, bark, leaf — every unknown.</li>
+        <li><strong>Same-trail strategy:</strong> walk one trail across all four seasons.</li>
+        <li><strong>One species per week:</strong> learn it, then notice it everywhere.</li>
+        <li><strong>Journal what you find</strong> — paper or iNaturalist.</li>
+        <li><strong>Be wrong publicly</strong> — post guesses, get corrected.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- SEASONS -->
+<section id="seasons">
+  <h2>Seasonal calendar</h2>
+  <p class="lead">Different seasons unlock different ID features. Don't waste fall trying to study buds, or winter trying to study leaves.</p>
+  <div class="seasons">
+    <div class="season-card spring">
+      <h4>🌱 Late winter / early spring</h4>
+      <p>Bud and twig ID is at its peak — no leaves to distract you. Maple sap runs. Catkins on alders, willows, hazels, aspens.</p>
+    </div>
+    <div class="season-card spring">
+      <h4>🌿 Spring</h4>
+      <p>Leaf-out, flowering, peak observation richness. Many trees flower briefly before leaves emerge — great study window for ashes, elms, oaks, maples.</p>
+    </div>
+    <div class="season-card summer">
+      <h4>☀️ Summer</h4>
+      <p>Full leaves; the easiest season for beginners. Practice on every species in full canopy. Look for galls, insect damage, fruits forming.</p>
+    </div>
+    <div class="season-card fall">
+      <h4>🍂 Fall</h4>
+      <p>Fall color is a strong ID hint — different species peak at different times and in different colors. Acorns, walnuts, hickories drop; samaras spiral down.</p>
+    </div>
+    <div class="season-card winter">
+      <h4>❄️ Winter</h4>
+      <p>Bark, form, silhouette, persistent fruit, and twig ID. Hardest mode — but mastering it makes you fluent year-round.</p>
+    </div>
+  </div>
+</section>
+
+<!-- QUICK REF -->
+<section id="quickref">
+  <h2>Quick reference card</h2>
+  <p class="lead">Print this. Carry it. Reference it on every walk until it's automatic.</p>
+  <div class="quickref">
+    <ul>
+      <li><strong>Opposite branching</strong> = MAD Cap Horse (Maple, Ash, Dogwood, Caprifoliaceae, Horse chestnut). Everything else is alternate.</li>
+      <li><strong>Five-needle pine</strong> = white pine. <strong>Two long-needle</strong> = red pine. <strong>Two short twisted</strong> = jack pine.</li>
+      <li><strong>Sharp needles on pegs</strong> = spruce. <strong>Flat soft needles</strong> = fir. <strong>Flat short, two white stripes</strong> = hemlock. <strong>Scaly sprays</strong> = cedar.</li>
+      <li><strong>Deciduous conifer</strong> = tamarack (larch).</li>
+      <li><strong>Sugar maple lobes</strong> = U-shaped. <strong>Red maple lobes</strong> = V-shaped and toothed.</li>
+      <li><strong>Acorns, rounded lobes</strong> = white oak group (1-year acorns). <strong>Pointed bristle-tipped lobes</strong> = red oak group (2-year acorns).</li>
+      <li><strong>Smooth grey bark in forest</strong> = beech (or young maple/musclewood — check leaves).</li>
+      <li><strong>Chalk-white peeling bark, black marks</strong> = paper birch. <strong>Bronze/golden peeling curls</strong> = yellow birch.</li>
+      <li><strong>Compound opposite leaves</strong> = ash (or Manitoba maple, if 3–7 leaflets).</li>
+      <li><strong>Compound alternate leaves, 15+ leaflets</strong> = walnut or hickory.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- CADENCE -->
+<section id="cadence">
+  <h2>A reasonable first-year cadence</h2>
+  <p class="lead">One person's calendar, not a prescription. Adjust to your weather, your walks, and your patience.</p>
+  <div class="cadence">
+    <div class="cadence-card"><div class="when">Weeks 1–2</div><p>Learn the five features. Describe trees out loud on a familiar trail without naming them.</p></div>
+    <div class="cadence-card"><div class="when">Weeks 3–4</div><p>Memorize MAD Cap Horse and the conifer cheat sheet. Identify all maples, ashes, and conifers you encounter.</p></div>
+    <div class="cadence-card"><div class="when">Months 2–3</div><p>Add the rest of the Core 20, one or two species per week.</p></div>
+    <div class="cadence-card"><div class="when">Months 4–6</div><p>Phase 2: Carolinian specialties, similar pairs, common urban introductions.</p></div>
+    <div class="cadence-card"><div class="when">Months 6–9</div><p>Build winter twig and bark ID skills with the species you already know.</p></div>
+    <div class="cadence-card"><div class="when">Months 9–12</div><p>Begin Phase 3 with a trip to a different ecoregion (Algonquin, the East Coast, BC) and apply the framework.</p></div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <p>Images and source data from <a href="https://commons.wikimedia.org/" target="_blank" rel="noopener">Wikimedia Commons</a> via the Wikipedia REST API.</p>
+  <p style="margin-top:6px;">Built as a personal study companion. Walk often, observe slowly, and be patient with yourself.</p>
+</footer>
+
+<script>
+/* =================== DATA =================== */
+
+const phase1 = [
+  { common: "Sugar maple", sci: "Acer saccharum", slug: "Acer_saccharum", tag: "hardwood",
+    notes: "Five-lobed leaf with rounded U-shaped notches, opposite branching, grey deeply furrowed bark, brilliant orange-red fall color. Ontario's flag." },
+  { common: "Red maple", sci: "Acer rubrum", slug: "Acer_rubrum", tag: "hardwood",
+    notes: "Three- to five-lobed leaf with sharp V-shaped notches and serrated edges, red twigs and buds, red flowers in very early spring, scarlet fall color." },
+  { common: "Silver maple", sci: "Acer saccharinum", slug: "Acer_saccharinum", tag: "hardwood",
+    notes: "Deeply cut five-lobed leaf with silvery underside, often near water, brittle limbs, shaggy peeling bark on mature trunks." },
+  { common: "Manitoba maple", sci: "Acer negundo", slug: "Acer_negundo", tag: "hardwood",
+    notes: "The oddball — compound leaves (3–7 leaflets), often confused with ash or young walnut. Opposite branching gives it away." },
+  { common: "White oak", sci: "Quercus alba", slug: "Quercus_alba", tag: "hardwood",
+    notes: "Leaf with 7–9 rounded lobes (no bristle tips), light grey scaly/plated bark, acorns mature in one season." },
+  { common: "Northern red oak", sci: "Quercus rubra", slug: "Quercus_rubra", tag: "hardwood",
+    notes: "Leaf with 7–11 pointed lobes ending in tiny bristle tips, bark with smooth shiny vertical 'ski tracks', acorns take two years to mature." },
+  { common: "Bur oak", sci: "Quercus macrocarpa", slug: "Quercus_macrocarpa", tag: "hardwood",
+    notes: "Fiddle-shaped leaf with a large rounded end lobe, massive acorns in shaggy bur-fringed caps, corky-ridged twigs, often grows as an open-grown pasture tree." },
+  { common: "Eastern white pine", sci: "Pinus strobus", slug: "Pinus_strobus", tag: "conifer",
+    notes: "Five soft needles per bundle (count W-H-I-T-E), tall straight trunk, layered horizontal branching. Ontario's provincial tree." },
+  { common: "Red pine", sci: "Pinus resinosa", slug: "Pinus_resinosa", tag: "conifer",
+    notes: "Two long stiff needles per bundle that snap cleanly when bent, reddish plated bark on the upper trunk." },
+  { common: "Eastern hemlock", sci: "Tsuga canadensis", slug: "Tsuga_canadensis", tag: "conifer",
+    notes: "Short flat single needles with two white stripes underneath, small cones at branch tips, droopy leader at top." },
+  { common: "Eastern white-cedar", sci: "Thuja occidentalis", slug: "Thuja_occidentalis", tag: "conifer",
+    notes: "Flat scaly sprays of foliage, shreddy reddish bark, fragrant. Ancient specimens on Niagara Escarpment cliffs can be over 1000 years old." },
+  { common: "Paper birch", sci: "Betula papyrifera", slug: "Betula_papyrifera", tag: "hardwood",
+    notes: "Chalk-white peeling bark with black horizontal lenticels, small triangular toothed leaves." },
+  { common: "American beech", sci: "Fagus grandifolia", slug: "Fagus_grandifolia", tag: "hardwood",
+    notes: "Smooth silvery-grey bark, elliptical leaves with parallel veins. Leaves often persist tan/dry through winter on young trees; smooth pointed cigar-shaped buds." },
+  { common: "Black cherry", sci: "Prunus serotina", slug: "Prunus_serotina", tag: "hardwood",
+    notes: "Alternate simple leaves with finely serrated edges, distinctive 'burnt potato chip' scaly bark on mature trees, broken twigs smell faintly of bitter almond." },
+  { common: "American basswood", sci: "Tilia americana", slug: "Tilia_americana", tag: "hardwood",
+    notes: "Large heart-shaped leaves with asymmetric base, fragrant pale yellow flowers in early summer on a leafy bract, pea-sized nutlets that helicopter down." },
+  { common: "Trembling aspen", sci: "Populus tremuloides", slug: "Populus_tremuloides", tag: "hardwood",
+    notes: "Small round leaves with flattened petioles that tremble in the slightest breeze, smooth pale greenish-white bark with dark diamond marks." },
+  { common: "Ironwood (hop-hornbeam)", sci: "Ostrya virginiana", slug: "Ostrya_virginiana", tag: "understory",
+    notes: "Small understory tree, shreddy vertical strips of bark, birch-like toothed leaves, papery hop-like fruit clusters in late summer." },
+  { common: "Black walnut", sci: "Juglans nigra", slug: "Juglans_nigra", tag: "hardwood",
+    notes: "Large alternate compound leaves (15–23 leaflets), chambered pith if you slice a twig lengthwise, green tennis-ball husked nuts, allelopathic." },
+  { common: "White ash", sci: "Fraxinus americana", slug: "Fraxinus_americana", tag: "hardwood",
+    notes: "Opposite compound leaves (5–9 leaflets), diamond-pattern ridged bark. Mature trees are now rare due to emerald ash borer, but saplings everywhere." },
+  { common: "White spruce", sci: "Picea glauca", slug: "Picea_glauca", tag: "conifer",
+    notes: "Single sharp four-sided needles on woody pegs, hanging cylindrical cones 3–6 cm long, pyramidal form. Crushed needles smell skunky to some noses." }
+];
+
+const carolinian = [
+  { common: "Shagbark hickory", sci: "Carya ovata", slug: "Carya_ovata", tag: "hardwood",
+    notes: "Massive shaggy curved bark plates pulling away from the trunk — utterly distinctive. Compound alternate leaves with 5 leaflets, edible nuts in thick green husks." },
+  { common: "Bitternut hickory", sci: "Carya cordiformis", slug: "Carya_cordiformis", tag: "hardwood",
+    notes: "Tight grey bark (unlike shaggy shagbark), bright sulfur-yellow buds in winter that are unique to this species, compound leaves with 7–11 leaflets." },
+  { common: "Tulip tree", sci: "Liriodendron tulipifera", slug: "Liriodendron_tulipifera", tag: "hardwood",
+    notes: "Strange tulip-shaped leaves with a flat or notched tip, large yellow-green tulip flowers in early summer, very tall straight trunk. Carolinian icon." },
+  { common: "Sassafras", sci: "Sassafras albidum", slug: "Sassafras_albidum", tag: "hardwood",
+    notes: "Three different leaf shapes on the same branch — single oval, two-lobed mitten, three-lobed. Aromatic root and bark; brilliant fall color." },
+  { common: "Eastern redbud", sci: "Cercis canadensis", slug: "Cercis_canadensis", tag: "understory",
+    notes: "Small tree with heart-shaped leaves; bursts into magenta-pink flowers directly on the bark in early spring, before leaves." },
+  { common: "Kentucky coffeetree", sci: "Gymnocladus dioicus", slug: "Gymnocladus_dioicus", tag: "hardwood",
+    notes: "Massive bipinnately compound leaves up to a meter long; ridged scaly bark; large brown leathery seed pods that hang on through winter." },
+  { common: "American sycamore", sci: "Platanus occidentalis", slug: "Platanus_occidentalis", tag: "hardwood",
+    notes: "Unmistakable mottled camo-pattern bark in patches of cream, tan, and olive; huge maple-like leaves; round seed balls dangling on stalks." },
+  { common: "Black gum (tupelo)", sci: "Nyssa sylvatica", slug: "Nyssa_sylvatica", tag: "hardwood",
+    notes: "Glossy oval leaves that turn crimson very early in fall, blocky alligator-skin bark, small blue-black fruits much loved by birds." },
+  { common: "Hackberry", sci: "Celtis occidentalis", slug: "Celtis_occidentalis", tag: "hardwood",
+    notes: "Distinctive corky-warty ridged bark — looks like cork bumps glued on. Asymmetric pointed leaves, pea-sized purple fruits." },
+  { common: "Blue beech (musclewood)", sci: "Carpinus caroliniana", slug: "Carpinus_caroliniana", tag: "understory",
+    notes: "Smooth grey bark with rippled 'muscular' fluted trunk — unmistakable once you've seen it. Small understory tree of moist woods." },
+  { common: "Pawpaw", sci: "Asimina triloba", slug: "Asimina_triloba", tag: "understory",
+    notes: "Tropical-looking long droopy leaves clustered at branch tips; produces Canada's largest native fruit, a mango-banana-custard pulpy berry." }
+];
+
+const conifers2 = [
+  { common: "Jack pine", sci: "Pinus banksiana", slug: "Pinus_banksiana", tag: "conifer",
+    notes: "Two short twisted needles per bundle; small curved cones often serotinous (opened by fire); pioneer species on sandy soils and burns." },
+  { common: "Balsam fir", sci: "Abies balsamea", slug: "Abies_balsamea", tag: "conifer",
+    notes: "Soft flat needles with two white stripes underneath; resin-blistered smooth grey bark; upright purple cones that disintegrate on the branch." },
+  { common: "Black spruce", sci: "Picea mariana", slug: "Picea_mariana", tag: "conifer",
+    notes: "Short stubby needles on a peg; small egg-shaped cones clustered near the top; characteristic 'club top' on stunted bog trees." },
+  { common: "Tamarack (eastern larch)", sci: "Larix laricina", slug: "Larix_laricina", tag: "conifer",
+    notes: "The only deciduous conifer in eastern Canada — soft tufted needles in clusters that turn brilliant gold in autumn before dropping. Loves bogs." },
+  { common: "Eastern red cedar", sci: "Juniperus virginiana", slug: "Juniperus_virginiana", tag: "conifer",
+    notes: "Actually a juniper, not a cedar. Scaly foliage; small frosty-blue berry-like cones; aromatic red heartwood. Common in old fields and limestone barrens." }
+];
+
+const hardwoods2 = [
+  { common: "Yellow birch", sci: "Betula alleghaniensis", slug: "Betula_alleghaniensis", tag: "hardwood",
+    notes: "Shiny bronze-gold curling bark on younger trunks; wintergreen scent in broken twigs; toothed leaves like paper birch but the bark color is the giveaway." },
+  { common: "Butternut", sci: "Juglans cinerea", slug: "Juglans_cinerea", tag: "hardwood",
+    notes: "Walnut relative with oblong sticky-fuzzy nuts; alternate compound leaves; bark with diamond-pattern ridges. Endangered due to butternut canker." },
+  { common: "American elm", sci: "Ulmus americana", slug: "Ulmus_americana", tag: "hardwood",
+    notes: "Iconic vase-shaped form when mature; asymmetric leaf base; once dominant in cities until Dutch elm disease — surviving mature specimens are precious." },
+  { common: "Slippery elm", sci: "Ulmus rubra", slug: "Ulmus_rubra", tag: "hardwood",
+    notes: "Rougher leaf texture than American elm (sandpapery on top); inner bark slimy/mucilaginous when chewed (gave it the name)." },
+  { common: "Largetooth aspen", sci: "Populus grandidentata", slug: "Populus_grandidentata", tag: "hardwood",
+    notes: "Same trembling habit as quaking aspen but with much larger coarse teeth on the leaf margin; fuzzy young leaves." },
+  { common: "Balsam poplar", sci: "Populus balsamifera", slug: "Populus_balsamifera", tag: "hardwood",
+    notes: "Wonderful sweet balsam scent from sticky resinous buds in spring; lance-shaped leaves; loves wet ground and riverbanks." },
+  { common: "Eastern cottonwood", sci: "Populus deltoides", slug: "Populus_deltoides", tag: "hardwood",
+    notes: "Massive triangular toothed leaves; huge rugged trunk on riverbanks; cottony seeds drift in early summer." },
+  { common: "Black willow", sci: "Salix nigra", slug: "Salix_nigra", tag: "hardwood",
+    notes: "Narrow lance-shaped leaves; deeply furrowed dark bark; multi-stemmed riverside tree." },
+  { common: "Green ash", sci: "Fraxinus pennsylvanica", slug: "Fraxinus_pennsylvanica", tag: "hardwood",
+    notes: "Opposite compound leaves like white ash but leaflets are stalked and green on both sides; also devastated by emerald ash borer." },
+  { common: "Black ash", sci: "Fraxinus nigra", slug: "Fraxinus_nigra", tag: "hardwood",
+    notes: "Sessile (stalkless) leaflets; loves swampy ground; bark splits easily into long strips — historically used for basketry by Indigenous nations." }
+];
+
+const introduced = [
+  { common: "Norway maple", sci: "Acer platanoides", slug: "Acer_platanoides", tag: "invasive",
+    notes: "Invasive in Ontario. Five-lobed leaf like sugar maple but bigger and with bristle-tipped lobes; broken leafstalk oozes milky sap (sugar maple doesn't)." },
+  { common: "Horse chestnut", sci: "Aesculus hippocastanum", slug: "Aesculus_hippocastanum", tag: "hardwood",
+    notes: "Big palmately compound leaves (5–7 leaflets radiating from one point), showy white flower spikes in May, spiky green husks around shiny brown nuts (inedible)." },
+  { common: "Ginkgo", sci: "Ginkgo biloba", slug: "Ginkgo_biloba", tag: "hardwood",
+    notes: "Living fossil — fan-shaped leaves with parallel veins, no other tree like it. Brilliant yellow fall color; female trees produce smelly fruit." },
+  { common: "Honey locust", sci: "Gleditsia triacanthos", slug: "Gleditsia_triacanthos", tag: "hardwood",
+    notes: "Delicate bipinnate compound leaves give a dappled airy shade; wild trees have ferocious branched thorns (cultivars are thornless); long twisty seed pods." },
+  { common: "Norway spruce", sci: "Picea abies", slug: "Picea_abies", tag: "conifer",
+    notes: "Largest spruce you'll see in Ontario landscaping. Drooping side branches with hanging cones up to 15 cm long (much longer than native spruces)." },
+  { common: "Scots pine", sci: "Pinus sylvestris", slug: "Pinus_sylvestris", tag: "conifer",
+    notes: "Two blue-green twisted needles per bundle; flaky orange-red upper bark is the giveaway; Christmas tree plantings everywhere." },
+  { common: "Colorado blue spruce", sci: "Picea pungens", slug: "Picea_pungens", tag: "conifer",
+    notes: "Very stiff sharp needles with strong blue-silver cast; common ornamental yard tree; native to the Rocky Mountains, not here." },
+  { common: "Littleleaf linden", sci: "Tilia cordata", slug: "Tilia_cordata", tag: "hardwood",
+    notes: "Small heart-shaped leaves (much smaller than native basswood); planted heavily as a street tree; same fragrant summer flowers on a leafy bract." }
+];
+
+const phase3 = [
+  { common: "Douglas-fir", sci: "Pseudotsuga menziesii", slug: "Pseudotsuga_menziesii", tag: "conifer",
+    notes: "Pacific coast giant. Not a true fir — cones hang down (vs. firs which are upright) with distinctive three-pronged 'mouse tails' poking out between the scales." },
+  { common: "Western red cedar", sci: "Thuja plicata", slug: "Thuja_plicata", tag: "conifer",
+    notes: "Massive Pacific cedar with reddish fibrous shreddy bark; flat scaly sprays much larger than eastern white cedar; foundational tree of Coast Salish culture." },
+  { common: "Big-leaf maple", sci: "Acer macrophyllum", slug: "Acer_macrophyllum", tag: "hardwood",
+    notes: "West coast maple with the largest leaves of any maple — up to 30 cm across; mossy trunks in coastal rainforest." },
+  { common: "Red spruce", sci: "Picea rubens", slug: "Picea_rubens", tag: "conifer",
+    notes: "Maritime and Appalachian spruce; reddish-tinged bark; needles shorter than white spruce but on similar pegs." },
+  { common: "Longleaf pine", sci: "Pinus palustris", slug: "Pinus_palustris", tag: "conifer",
+    notes: "Southeastern US icon. Extremely long needles (20–45 cm) in bundles of three, fire-dependent ecosystem; juvenile 'grass stage' looks like a clump of grass." },
+  { common: "Baldcypress", sci: "Taxodium distichum", slug: "Taxodium_distichum", tag: "conifer",
+    notes: "Deciduous southern swamp conifer with feathery needles that turn rust before dropping; sends up 'knees' from the roots; classic of Louisiana bayous." }
+];
+
+const concepts = {
+  leaves: [
+    { label: "Simple lobed leaf — sugar maple", slug: "Acer_saccharum" },
+    { label: "Pinnately compound — white ash", slug: "Fraxinus_americana" },
+    { label: "Pinnately compound, many leaflets — black walnut", slug: "Juglans_nigra" },
+    { label: "Palmately compound — horse chestnut", slug: "Aesculus_hippocastanum" },
+    { label: "Three-shape leaves — sassafras", slug: "Sassafras_albidum" },
+    { label: "Fan leaves — ginkgo", slug: "Ginkgo_biloba" },
+    { label: "Heart-shaped — basswood", slug: "Tilia_americana" },
+    { label: "Tulip-shaped — tulip tree", slug: "Liriodendron_tulipifera" }
+  ],
+  bark: [
+    { label: "Smooth grey — American beech", slug: "Fagus_grandifolia" },
+    { label: "Peeling white — paper birch", slug: "Betula_papyrifera" },
+    { label: "Curly bronze — yellow birch", slug: "Betula_alleghaniensis" },
+    { label: "Shaggy plates — shagbark hickory", slug: "Carya_ovata" },
+    { label: "Mottled camo — sycamore", slug: "Platanus_occidentalis" },
+    { label: "Furrowed ridges — red oak", slug: "Quercus_rubra" },
+    { label: "Burnt chips — black cherry", slug: "Prunus_serotina" },
+    { label: "Corky warts — hackberry", slug: "Celtis_occidentalis" },
+    { label: "Muscular fluted — blue beech", slug: "Carpinus_caroliniana" },
+    { label: "Shreddy red — white cedar", slug: "Thuja_occidentalis" }
+  ],
+  form: [
+    { label: "Pyramidal conifer — white spruce", slug: "Picea_glauca" },
+    { label: "Layered horizontal — white pine", slug: "Pinus_strobus" },
+    { label: "Rounded crown — white oak", slug: "Quercus_alba" },
+    { label: "Vase-shaped — American elm", slug: "Ulmus_americana" },
+    { label: "Open pasture form — bur oak", slug: "Quercus_macrocarpa" },
+    { label: "Slender multi-stem — birches", slug: "Betula_papyrifera" }
+  ],
+  fruits: [
+    { label: "Acorn — oak", slug: "Quercus_alba" },
+    { label: "Winged samara — maple", slug: "Acer_saccharum" },
+    { label: "Single samara — ash", slug: "Fraxinus_americana" },
+    { label: "Cone, hanging — white spruce", slug: "Picea_glauca" },
+    { label: "Cone, upright — balsam fir", slug: "Abies_balsamea" },
+    { label: "Nut in husk — black walnut", slug: "Juglans_nigra" },
+    { label: "Bur-fringed acorn — bur oak", slug: "Quercus_macrocarpa" },
+    { label: "Catkin — paper birch", slug: "Betula_papyrifera" },
+    { label: "Cherry — black cherry", slug: "Prunus_serotina" },
+    { label: "Long pod — Kentucky coffeetree", slug: "Gymnocladus_dioicus" }
+  ]
+};
+
+const coniferCards = [
+  { label: "Pines — bundles of 2, 3, or 5", slug: "Pinus_strobus",
+    notes: "White pine = 5 (\"W-H-I-T-E\"); red pine = 2 long stiff; jack pine = 2 short twisted." },
+  { label: "Spruces — single, sharp, on a peg", slug: "Picea_glauca",
+    notes: "Four-sided needles roll between fingers. \"Spiky spruce.\"" },
+  { label: "Firs — single, flat, soft", slug: "Abies_balsamea",
+    notes: "Suction-cup base; won't roll between fingers. \"Friendly fir.\"" },
+  { label: "Hemlocks — single, short, flat", slug: "Tsuga_canadensis",
+    notes: "Two white stripes underneath; tiny stalk; droopy leader at top." },
+  { label: "Cedars — scaly sprays", slug: "Thuja_occidentalis",
+    notes: "No true needles; fragrant when crushed." },
+  { label: "Tamarack — soft tufts, deciduous", slug: "Larix_laricina",
+    notes: "The only conifer here that drops its needles each fall — bright gold first." }
+];
+
+/* =================== RENDER =================== */
+
+function escapeAttr(s) { return s.replace(/"/g, "&quot;"); }
+
+function renderSpeciesCard(grid, sp) {
+  const card = document.createElement("div");
+  card.className = "species-card";
+  card.innerHTML = `
+    <a href="https://en.wikipedia.org/wiki/${sp.slug}" target="_blank" rel="noopener" class="species-img lazy-img" data-slug="${sp.slug}" data-label="${escapeAttr(sp.common)}" aria-label="View ${escapeAttr(sp.common)} on Wikipedia">
+      <div class="placeholder">Loading photo…</div>
+    </a>
+    <div class="species-body">
+      <span class="species-tag ${sp.tag}">${sp.tag}</span>
+      <div class="species-name">${sp.common}</div>
+      <div class="species-sci">${sp.sci}</div>
+      <div class="species-notes">${sp.notes}</div>
+      <a class="species-link" href="https://en.wikipedia.org/wiki/${sp.slug}" target="_blank" rel="noopener">Wikipedia →</a>
+    </div>
+  `;
+  grid.appendChild(card);
+}
+
+function renderConceptCard(grid, c) {
+  const card = document.createElement("div");
+  card.className = "concept-card";
+  card.innerHTML = `
+    <a href="https://en.wikipedia.org/wiki/${c.slug}" target="_blank" rel="noopener" class="concept-img lazy-img" data-slug="${c.slug}" data-label="${escapeAttr(c.label)}" aria-label="${escapeAttr(c.label)}">
+      <div class="placeholder">Loading…</div>
+    </a>
+    <div class="concept-label">${c.label}</div>
+  `;
+  grid.appendChild(card);
+}
+
+function renderConiferCard(grid, c) {
+  const card = document.createElement("div");
+  card.className = "conifer-card";
+  card.innerHTML = `
+    <a href="https://en.wikipedia.org/wiki/${c.slug}" target="_blank" rel="noopener" class="conifer-img lazy-img" data-slug="${c.slug}" data-label="${escapeAttr(c.label)}" aria-label="${escapeAttr(c.label)}">
+      <div class="placeholder">Loading…</div>
+    </a>
+    <div class="conifer-body">
+      <div class="conifer-label">${c.label}</div>
+      <p>${c.notes}</p>
+    </div>
+  `;
+  grid.appendChild(card);
+}
+
+/* Render all grids */
+function $(id) { return document.getElementById(id); }
+
+phase1.forEach(sp => renderSpeciesCard($("phase1-grid"), sp));
+carolinian.forEach(sp => renderSpeciesCard($("carolinian-grid"), sp));
+conifers2.forEach(sp => renderSpeciesCard($("conifers2-grid"), sp));
+hardwoods2.forEach(sp => renderSpeciesCard($("hardwoods2-grid"), sp));
+introduced.forEach(sp => renderSpeciesCard($("introduced-grid"), sp));
+phase3.forEach(sp => renderSpeciesCard($("phase3-grid"), sp));
+
+concepts.leaves.forEach(c => renderConceptCard($("leaves-grid"), c));
+concepts.bark.forEach(c => renderConceptCard($("bark-grid"), c));
+concepts.form.forEach(c => renderConceptCard($("form-grid"), c));
+concepts.fruits.forEach(c => renderConceptCard($("fruits-grid"), c));
+
+coniferCards.forEach(c => renderConiferCard($("conifer-grid"), c));
+
+/* =================== LAZY IMAGE LOADING =================== */
+
+const imageCache = new Map();
+
+async function loadSpeciesImage(container, slug, label) {
+  try {
+    if (imageCache.has(slug)) {
+      attachImage(container, imageCache.get(slug), label);
+      return;
+    }
+    const resp = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(slug)}`);
+    if (!resp.ok) throw new Error("HTTP " + resp.status);
+    const data = await resp.json();
+    const url = data.thumbnail && data.thumbnail.source;
+    if (!url) throw new Error("no thumbnail");
+    imageCache.set(slug, url);
+    attachImage(container, url, label);
+  } catch (e) {
+    showPlaceholder(container, label);
+  }
+}
+
+function attachImage(container, url, label) {
+  const upscaled = url.replace(/\/\d+px-/, "/600px-");
+  const img = new Image();
+  img.alt = label;
+  img.onload = () => {
+    container.innerHTML = "";
+    container.appendChild(img);
+  };
+  img.onerror = () => {
+    const fallback = new Image();
+    fallback.alt = label;
+    fallback.src = url;
+    fallback.onload = () => {
+      container.innerHTML = "";
+      container.appendChild(fallback);
+    };
+    fallback.onerror = () => showPlaceholder(container, label);
+  };
+  img.src = upscaled;
+}
+
+function showPlaceholder(container, label) {
+  container.innerHTML = `<div class="placeholder">${label}</div>`;
+}
+
+if ("IntersectionObserver" in window) {
+  const io = new IntersectionObserver((entries, observer) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const el = entry.target;
+        loadSpeciesImage(el, el.dataset.slug, el.dataset.label);
+        observer.unobserve(el);
+      }
+    });
+  }, { rootMargin: "300px" });
+
+  document.querySelectorAll(".lazy-img").forEach(el => io.observe(el));
+} else {
+  // Fallback: load everything immediately
+  document.querySelectorAll(".lazy-img").forEach(el => {
+    loadSpeciesImage(el, el.dataset.slug, el.dataset.label);
+  });
+}
+</script>
+
+</body>
+</html>
