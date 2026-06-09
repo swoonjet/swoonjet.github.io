@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SUMFLUX — Waffle House Contest · Judging</title>
+<style>
+  :root{
+    --bg:#ffffff; --card:#ffffff; --ink:#161616; --muted:#666;
+    --line:#e4e4e4; --accent:#161616; --accent2:#333;
+    --panel:#f3f3f3;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0;background:var(--bg);color:var(--ink);
+    font:16px/1.6 -apple-system,"Helvetica Neue",Arial,sans-serif;
+  }
+  .wrap{max-width:860px;margin:0 auto;padding:0 22px}
+  header.hero{
+    position:relative;
+    background:
+      linear-gradient(180deg,rgba(0,0,0,.45) 0%,rgba(0,0,0,.5) 45%,rgba(0,0,0,.82) 100%),
+      url('header.png') center 40%/cover no-repeat;
+    color:#fff;padding:150px 0 40px;border-bottom:5px solid #161616;
+  }
+  .hero .wrap{position:relative}
+  .kicker{letter-spacing:.32em;text-transform:uppercase;font-size:12px;color:#d8d8d8;font-weight:700;margin:0 0 12px}
+  h1{font:700 42px/1.04 Georgia,"Times New Roman",serif;margin:0 0 14px;letter-spacing:-.01em;text-shadow:0 1px 14px rgba(0,0,0,.4)}
+  .brief{font-size:18px;color:#ededed;max-width:620px;margin:0}
+  .brief em{color:#fff;font-style:italic}
+  nav.toc{position:sticky;top:0;z-index:10;background:rgba(255,255,255,.94);
+    backdrop-filter:blur(6px);border-bottom:1px solid var(--line)}
+  nav.toc .wrap{display:flex;gap:6px;flex-wrap:wrap;padding-top:10px;padding-bottom:10px}
+  nav.toc a{color:var(--muted);text-decoration:none;font-size:13px;font-weight:600;
+    padding:6px 12px;border-radius:4px}
+  nav.toc a:hover{background:#161616;color:#fff}
+  section{padding:40px 0;border-bottom:1px solid var(--line)}
+  h2{font:700 26px/1.2 Georgia,serif;margin:0 0 6px}
+  h2 .num{color:var(--accent);font-size:18px;vertical-align:6px;margin-right:8px}
+  h3{font-size:16px;margin:26px 0 8px;letter-spacing:.02em}
+  p{margin:10px 0}
+  .lead{color:var(--muted)}
+  ul{margin:10px 0;padding-left:22px}li{margin:6px 0}
+  table{border-collapse:collapse;width:100%;margin:16px 0;background:var(--card);
+    border:1px solid var(--ink);font-size:14.5px}
+  th,td{border:1px solid var(--line);padding:9px 11px;text-align:left;vertical-align:top}
+  th{background:#161616;color:#fff;font-weight:700;border-color:#161616}
+  td.c,th.c{text-align:center;white-space:nowrap}
+  .formula{background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:10px 14px;font-family:ui-monospace,Menlo,monospace;font-size:13.5px;overflow-x:auto}
+  .pill{display:inline-block;background:var(--accent2);color:#fff;font-size:12px;font-weight:700;padding:2px 9px;border-radius:4px;margin-left:6px}
+  /* calculator */
+  .calc{background:var(--card);border:1px solid var(--ink);border-radius:6px;padding:22px;margin-top:14px}
+  .crit-row{display:grid;grid-template-columns:1fr 120px;gap:12px;align-items:center;margin:14px 0}
+  .crit-row label{font-weight:600}
+  .crit-row .w{color:var(--muted);font-size:13px;font-weight:400}
+  .crit-row input[type=range]{width:100%;accent-color:#161616}
+  .scorebox{display:flex;align-items:center;gap:8px;justify-content:flex-end}
+  .scorebox input[type=number]{width:64px;padding:7px;border:1px solid var(--line);border-radius:4px;font-size:16px;text-align:center}
+  .result{margin-top:18px;padding:18px;border-radius:4px;background:#161616;color:#fff;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}
+  .result .total{font:700 34px/1 Georgia,serif}
+  .result .label{color:#bcbcbc;font-size:13px;text-transform:uppercase;letter-spacing:.1em}
+  .badge{font-weight:700;padding:6px 14px;border-radius:4px;font-size:14px}
+  .badge.ok{background:#fff;color:#161616}
+  .badge.dq{background:#fff;color:#161616;outline:2px solid #161616;outline-offset:-2px}
+  /* downloads */
+  .dls{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
+  @media(max-width:640px){.dls{grid-template-columns:1fr}.crit-row{grid-template-columns:1fr}}
+  .dl{display:block;background:var(--card);border:1px solid var(--line);border-radius:6px;
+    padding:18px;text-decoration:none;color:var(--ink);transition:.12s;cursor:pointer}
+  .dl:hover{border-color:var(--ink);transform:translateY(-1px);box-shadow:0 4px 14px rgba(0,0,0,.1)}
+  .dl .t{font-weight:700;font-size:16px}
+  .dl .d{color:var(--muted);font-size:13.5px;margin-top:4px}
+  .dl .tag{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.08em;
+    background:var(--panel);color:var(--muted);padding:3px 8px;border-radius:4px;margin-top:10px}
+  .dl-group-label{font-size:13px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);margin:8px 0 2px}
+  .admin{margin-top:30px;padding:20px 22px 24px;background:var(--panel);border:1px solid var(--line);border-radius:6px}
+  .admin .dl-group-label{color:var(--accent2)}
+  .admin .lead{margin-top:2px}
+  footer{padding:30px 0 60px;color:var(--muted);font-size:13px;text-align:center}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <p class="kicker">SUMFLUX · Fiction Contest</p>
+    <h1>Waffle House — Judging Criteria</h1>
+    <p class="brief">Each story must involve a waffle house, or the <em>idea</em> of a waffle house.</p>
+  </div>
+</header>
+
+<nav class="toc"><div class="wrap">
+  <a href="#shortlist">1 · Shortlisting</a>
+  <a href="#matrix">2 · Scoring Matrix</a>
+  <a href="#calc">Score Calculator</a>
+  <a href="#tiebreak">3 · Tiebreakers</a>
+  <a href="#downloads">Downloads</a>
+</div></nav>
+
+<section id="shortlist"><div class="wrap">
+  <h2><span class="num">1</span>Shortlisting</h2>
+  <p class="lead">Narrow the entries to a manageable shortlist before anyone does detailed scoring.</p>
+  <ul>
+    <li><strong>Two reads per story.</strong> Every story is seen by at least two judges, not one — so one judge's off-day can't sink a good entry.</li>
+    <li><strong>Simple gate here.</strong> Each reader marks <strong>Advance / Maybe / Cut</strong> + one sentence why.</li>
+    <li><strong>Resolve:</strong> two <em>Advance</em> → in · two <em>Cut</em> → out · any split → quick group look.</li>
+    <li><strong>Target shortlist: 8–10 stories.</strong> Then all judges score that set with the matrix below.</li>
+  </ul>
+</div></section>
+
+<section id="matrix"><div class="wrap">
+  <h2><span class="num">2</span>The Scoring Matrix</h2>
+  <p class="lead">Shortlisted stories only. Each criterion scored 1–100, multiplied by its weight. Weights sum to 100%.</p>
+  <table>
+    <thead><tr><th class="c">#</th><th>Criterion</th><th>What we're rewarding</th><th class="c">Weight</th></tr></thead>
+    <tbody>
+      <tr><td class="c">1</td><td><strong>Craft / Writing Quality</strong></td><td>Prose, control of language, structure, pacing, an ending that lands</td><td class="c"><strong>35%</strong></td></tr>
+      <tr><td class="c">2</td><td><strong>Idea &amp; Originality</strong></td><td>Freshness of concept, surprise, a take we haven't seen ten times</td><td class="c"><strong>30%</strong></td></tr>
+      <tr><td class="c">3</td><td><strong>Brief Fit — Waffle House</strong> <span class="pill">gate</span></td><td>How meaningfully the waffle house (literal <em>or</em> as idea/metaphor) is woven in — not just name-dropped</td><td class="c"><strong>20%</strong></td></tr>
+      <tr><td class="c">4</td><td><strong>Overall Impact</strong></td><td>The gut score: did it move you, stay with you, would you publish it?</td><td class="c"><strong>15%</strong></td></tr>
+    </tbody>
+  </table>
+  <p class="formula">Weighted total = (Craft×.35) + (Idea×.30) + (Brief×.20) + (Impact×.15) → out of 100</p>
+  <ul>
+    <li><strong>Judges only enter a 1–100 per criterion.</strong> Each judge's scorecard works out that judge's weighted total automatically.</li>
+    <li><strong>Final score per story</strong> = the average of the judges' weighted totals, computed in the separate master tally sheet.</li>
+    <li><strong>Brief Fit is a gate:</strong> any story scoring <strong>30 or below</strong> on criterion 3 is <strong>disqualified</strong>, whatever its total.</li>
+  </ul>
+
+  <h3>Anchor the 1–100 scale</h3>
+  <table>
+    <thead><tr><th class="c">Score</th><th>Meaning</th></tr></thead>
+    <tbody>
+      <tr><td class="c">90–100</td><td>Exceptional — publish as-is</td></tr>
+      <tr><td class="c">70–89</td><td>Strong</td></tr>
+      <tr><td class="c">50–69</td><td>Solid but flawed</td></tr>
+      <tr><td class="c">30–49</td><td>Notable problems</td></tr>
+      <tr><td class="c">1–29</td><td>Doesn't work</td></tr>
+    </tbody>
+  </table>
+</div></section>
+
+<section id="calc"><div class="wrap">
+  <h2>Score Calculator</h2>
+  <p class="lead">A reference for how raw scores combine — judges only enter 1–100 per criterion; the weighting is applied for them. Drag or type to see the weighted total update live, with the gate flagging any Brief Fit of 30 or below.</p>
+  <div class="calc">
+    <div class="crit-row">
+      <label>Craft / Writing Quality <span class="w">· 35%</span></label>
+      <div class="scorebox"><input type="range" min="1" max="100" value="70" data-k="craft"><input type="number" min="1" max="100" value="70" data-n="craft"></div>
+    </div>
+    <div class="crit-row">
+      <label>Idea &amp; Originality <span class="w">· 30%</span></label>
+      <div class="scorebox"><input type="range" min="1" max="100" value="70" data-k="idea"><input type="number" min="1" max="100" value="70" data-n="idea"></div>
+    </div>
+    <div class="crit-row">
+      <label>Brief Fit — Waffle House <span class="w">· 20% · gate</span></label>
+      <div class="scorebox"><input type="range" min="1" max="100" value="70" data-k="brief"><input type="number" min="1" max="100" value="70" data-n="brief"></div>
+    </div>
+    <div class="crit-row">
+      <label>Overall Impact <span class="w">· 15%</span></label>
+      <div class="scorebox"><input type="range" min="1" max="100" value="70" data-k="impact"><input type="number" min="1" max="100" value="70" data-n="impact"></div>
+    </div>
+    <div class="result">
+      <div><div class="label">Weighted total</div><div class="total" id="total">70.0</div></div>
+      <div class="badge ok" id="gate">Passes brief gate</div>
+    </div>
+  </div>
+</div></section>
+
+<section id="tiebreak"><div class="wrap">
+  <h2><span class="num">3</span>Tiebreakers</h2>
+  <p class="lead">If two stories finish with the same final score, work down this list until the tie breaks:</p>
+  <ol>
+    <li><strong>Higher Craft score</strong> — reward the better-written piece.</li>
+    <li><strong>Higher Idea &amp; Originality score</strong> — then the more original.</li>
+    <li><strong>Ranked head-to-head vote.</strong> Each judge ranks the tied stories; lowest total ranking wins. A ranked vote can itself end in a tie — in that case the lead/editor casts the deciding vote.</li>
+  </ol>
+</div></section>
+
+<section id="downloads"><div class="wrap">
+  <h2>Downloads</h2>
+
+  <p class="dl-group-label">For the judges</p>
+  <p class="lead">Each judge takes the shortlist (Phase 1) and the scoring matrix (Phase 2), and adds their name at the top. CSVs open in Excel or Google Sheets.</p>
+  <div class="dls">
+    <a class="dl" id="dl-short">
+      <div class="t">⬇ Shortlist</div>
+      <div class="d">Phase 1. Add your name, then mark each entry you read Advance / Maybe / Cut + one line why.</div>
+      <span class="tag">CSV · SPREADSHEET</span>
+    </a>
+    <a class="dl" id="dl-score">
+      <div class="t">⬇ Scoring Matrix <span class="pill">auto</span></div>
+      <div class="d">Phase 2. Score each shortlisted story 1–100 per criterion — your weighted total &amp; brief-gate fill in automatically.</div>
+      <span class="tag">CSV · SPREADSHEET</span>
+    </a>
+  </div>
+
+  <div class="admin">
+    <p class="dl-group-label">Admin · Wendy</p>
+    <p class="lead">Coordination and final tally — not needed by the judges.</p>
+    <div class="dls">
+      <a class="dl" id="dl-master">
+        <div class="t">⬇ Master Tally <span class="pill">auto</span></div>
+        <div class="d">Copy each judge's weighted total off their card (one number each) — final score &amp; rank calculate automatically. DQ is flagged on each judge's own card.</div>
+        <span class="tag">CSV · SPREADSHEET</span>
+      </a>
+      <a class="dl" href="SUMFLUX-Judging-Criteria.pdf">
+        <div class="t">⬇ Criteria (PDF)</div>
+        <div class="d">The full judging criteria as a printable one-pager.</div>
+        <span class="tag">PDF</span>
+      </a>
+      <a class="dl" href="SUMFLUX-Judging-Criteria.md">
+        <div class="t">⬇ Criteria (Markdown)</div>
+        <div class="d">The same criteria in editable plain text.</div>
+        <span class="tag">MARKDOWN</span>
+      </a>
+    </div>
+  </div>
+</div></section>
+
+<footer><div class="wrap">SUMFLUX · Waffle House Contest · Judging criteria &amp; tools</div></footer>
+
+<script>
+// ---- live calculator ----
+const W={craft:.35,idea:.30,brief:.20,impact:.15};
+const vals={craft:70,idea:70,brief:70,impact:70};
+function clamp(v){v=Math.round(+v||0);return Math.max(1,Math.min(100,v));}
+function sync(k,v){
+  vals[k]=clamp(v);
+  document.querySelector(`[data-k="${k}"]`).value=vals[k];
+  document.querySelector(`[data-n="${k}"]`).value=vals[k];
+  render();
+}
+function render(){
+  const t=vals.craft*W.craft+vals.idea*W.idea+vals.brief*W.brief+vals.impact*W.impact;
+  document.getElementById('total').textContent=t.toFixed(1);
+  const g=document.getElementById('gate');
+  if(vals.brief<=30){g.className='badge dq';g.textContent='DISQUALIFIED · brief fit ≤ 30';}
+  else{g.className='badge ok';g.textContent='Passes brief gate';}
+}
+document.querySelectorAll('[data-k]').forEach(el=>el.addEventListener('input',e=>sync(e.target.dataset.k,e.target.value)));
+document.querySelectorAll('[data-n]').forEach(el=>el.addEventListener('input',e=>sync(e.target.dataset.n,e.target.value)));
+render();
+
+// ---- CSV downloads (generated client-side, works offline) ----
+const SCORECARD_CSV=`SUMFLUX Waffle House Contest — Judge Scoring Sheet
+Judge name:
+Scale: 1-100 (90-100 exceptional / 70-89 strong / 50-69 solid but flawed / 30-49 notable problems / 1-29 doesn't work)
+Enter a 1-100 for each criterion. The Weighted Total and Gate columns calculate automatically.
+Brief Fit of 30 or below = automatic disqualification.
+
+Story (title or #),Craft (35%),Idea & Originality (30%),Brief Fit (20%),Overall Impact (15%),Weighted Total /100,Gate
+${Array.from({length:10},(_,i)=>{const r=i+8;
+  const total=`=IF(COUNT(B${r}:E${r})<4,"""",ROUND(B${r}*0.35+C${r}*0.3+D${r}*0.2+E${r}*0.15,1))`;
+  const gate=`=IF(D${r}="""","""",IF(D${r}<=30,""DQ"",""ok""))`;
+  return `Story ${i+1},,,,,"${total}","${gate}"`;}).join("\n")}
+`;
+const JUDGES=['Will','Keith','Jon','Sandolore'];
+// generic shortlist: name field + blank rows the judge fills with their assigned entries
+const SHORTLIST_CSV=`SUMFLUX Waffle House Contest — Shortlist
+Judge name:
+Mark each entry you read Advance / Maybe / Cut, plus one line why.
+
+Entry (title or #),Verdict (Advance/Maybe/Cut),Why (one line)
+${Array.from({length:25},()=>`,,`).join("\n")}
+`;
+// lean master: collect each judge's weighted total only; auto Final + Rank (DQ flagged on each card)
+const MASTER_HDR='Entry (title or #),'+JUDGES.map(j=>`${j}·Total`).join(',')+',Final /100,Rank,DQ?';
+const MASTER_CSV=`SUMFLUX Waffle House Contest — Master Tally (organizer)
+Copy each judge's Weighted Total per story (one number each). Final and Rank calculate automatically. DQ is flagged on each judge's own card (brief fit 30 or below).
+${MASTER_HDR}
+${Array.from({length:10},(_,i)=>{const r=i+4;
+  const final=`=IF(COUNT(B${r}:E${r})<4,"""",ROUND(AVERAGE(B${r}:E${r}),1))`;
+  const rank=`=IF(F${r}="""","""",RANK(F${r},F$4:F$13,0))`;
+  return `Entry ${i+1},,,,,"${final}","${rank}",`;}).join("\n")}
+`;
+function download(name,text){
+  const blob=new Blob([text],{type:'text/csv;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();
+  setTimeout(()=>{URL.revokeObjectURL(url);a.remove();},100);
+}
+document.getElementById('dl-short').addEventListener('click',()=>download('SUMFLUX-Shortlist-Template.csv',SHORTLIST_CSV));
+document.getElementById('dl-score').addEventListener('click',()=>download('SUMFLUX-Scorecard-Template.csv',SCORECARD_CSV));
+document.getElementById('dl-master').addEventListener('click',()=>download('SUMFLUX-Master-Tally.csv',MASTER_CSV));
+</script>
+</body>
+</html>
