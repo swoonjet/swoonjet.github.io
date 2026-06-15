@@ -202,7 +202,7 @@
     <div class="dls">
       <a class="dl" id="dl-master">
         <div class="t">⬇ Master Tally <span class="pill">auto</span></div>
-        <div class="d">Copy each judge's weighted total off their card (one number each) — final score &amp; rank calculate automatically. DQ is flagged on each judge's own card.</div>
+        <div class="d">Copy each judge's weighted total off their card (one number each) — final score &amp; rank calculate automatically. Mark a story <strong>y</strong> in the DQ? column and it drops out of both the final and the ranking.</div>
         <span class="tag">CSV · SPREADSHEET</span>
       </a>
       <a class="dl" href="SUMFLUX-Judging-Criteria.pdf">
@@ -265,15 +265,22 @@ Mark each entry you read Advance / Maybe / Cut, plus one line why.
 Entry (title or #),Verdict (Advance/Maybe/Cut),Why (one line)
 ${Array.from({length:25},()=>`,,`).join("\n")}
 `;
-// lean master: collect each judge's weighted total only; auto Final + Rank (DQ flagged on each card)
-const MASTER_HDR='Entry (title or #),'+JUDGES.map(j=>`${j}·Total`).join(',')+',Final /100,Rank,DQ?';
+// lean master: collect each judge's weighted total only; auto Final + Rank, DQ drops a story
+const TITLES=['The Daybreak Double','House of Gofry','No Quick Death','Shear Thinning','Silverware Spirits','The Last Place Open','Twatwaffle','Viaticum'];
+const NJ=JUDGES.length;
+const col=n=>String.fromCharCode(65+n);                 // 0->A, 1->B, …
+const firstJ='B', lastJ=col(NJ);                        // judge totals: B … NJ-th column
+const fCol=col(NJ+1), hCol=col(NJ+3);                   // Final col, DQ? col
+const R0=4, R1=R0+TITLES.length-1;                      // first/last data row
+const MASTER_HDR='Story (title or #),'+JUDGES.map(j=>`${j}·Total`).join(',')+',Final /100,Rank,DQ? (y)';
 const MASTER_CSV=`SUMFLUX Waffle House Contest — Master Tally (organizer)
-Copy each judge's Weighted Total per story (one number each). Final and Rank calculate automatically. DQ is flagged on each judge's own card (brief fit 30 or below).
+Copy each judge's Weighted Total per story (one number each). Final & Rank calculate automatically.
+A story disqualified by the brief gate (Brief Fit 30 or below on a judge's card) is out regardless of total — mark 'y' in the DQ? column and it drops from both Final and Rank.
 ${MASTER_HDR}
-${Array.from({length:10},(_,i)=>{const r=i+4;
-  const final=`=IF(COUNT(B${r}:E${r})<4,"""",ROUND(AVERAGE(B${r}:E${r}),1))`;
-  const rank=`=IF(F${r}="""","""",RANK(F${r},F$4:F$13,0))`;
-  return `Entry ${i+1},,,,,"${final}","${rank}",`;}).join("\n")}
+${TITLES.map((title,i)=>{const r=R0+i;
+  const final=`=IF(${hCol}${r}=""y"","""",IF(COUNT(${firstJ}${r}:${lastJ}${r})<${NJ},"""",ROUND(AVERAGE(${firstJ}${r}:${lastJ}${r}),1)))`;
+  const rank=`=IF(${hCol}${r}=""y"",""DQ"",IF(${fCol}${r}="""","""",RANK(${fCol}${r},${fCol}$${R0}:${fCol}$${R1},0)))`;
+  return `"${title.replace(/"/g,'""')}",${Array(NJ).fill("").join(",")},"${final}","${rank}",`;}).join("\n")}
 `;
 function download(name,text){
   const blob=new Blob([text],{type:'text/csv;charset=utf-8'});
