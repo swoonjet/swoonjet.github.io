@@ -271,17 +271,22 @@ const NJ=JUDGES.length;
 const col=n=>String.fromCharCode(65+n);                 // 0->A, 1->B, …
 const firstJ='B', lastJ=col(NJ);                        // judge totals: B … NJ-th column
 const fCol=col(NJ+1), hCol=col(NJ+3);                   // Final col, DQ? col
-const R0=4, R1=R0+TITLES.length-1;                      // first/last data row
 const MASTER_HDR='Story (title or #),'+JUDGES.map(j=>`${j}·Total`).join(',')+',Final /100,Rank,DQ? (y)';
-const MASTER_CSV=`SUMFLUX Waffle House Contest — Master Tally (organizer)
-Copy each judge's Weighted Total per story (one number each). Final & Rank calculate automatically.
-A story disqualified by the brief gate (Brief Fit 30 or below on a judge's card) is out regardless of total — mark 'y' in the DQ? column and it drops from both Final and Rank.
-${MASTER_HDR}
-${TITLES.map((title,i)=>{const r=R0+i;
+// Everything above the first data row, in order. R0 derives from this so the
+// formulas always reference the row they actually sit in — add/remove a
+// preamble line and the references follow automatically.
+const MASTER_PREAMBLE=[
+  'SUMFLUX Waffle House Contest — Master Tally (organizer)',
+  "Copy each judge's Weighted Total per story (one number each). Final & Rank calculate automatically.",
+  "A story disqualified by the brief gate (Brief Fit 30 or below on a judge's card) is out regardless of total — mark 'y' in the DQ? column and it drops from both Final and Rank.",
+  MASTER_HDR,
+];
+const R0=MASTER_PREAMBLE.length+1, R1=R0+TITLES.length-1; // first/last data row
+const MASTER_ROWS=TITLES.map((title,i)=>{const r=R0+i;
   const final=`=IF(${hCol}${r}=""y"","""",IF(COUNT(${firstJ}${r}:${lastJ}${r})<${NJ},"""",ROUND(AVERAGE(${firstJ}${r}:${lastJ}${r}),1)))`;
   const rank=`=IF(${hCol}${r}=""y"",""DQ"",IF(${fCol}${r}="""","""",RANK(${fCol}${r},${fCol}$${R0}:${fCol}$${R1},0)))`;
-  return `"${title.replace(/"/g,'""')}",${Array(NJ).fill("").join(",")},"${final}","${rank}",`;}).join("\n")}
-`;
+  return `"${title.replace(/"/g,'""')}",${Array(NJ).fill("").join(",")},"${final}","${rank}",`;});
+const MASTER_CSV=MASTER_PREAMBLE.concat(MASTER_ROWS).join("\n")+"\n";
 function download(name,text){
   const blob=new Blob([text],{type:'text/csv;charset=utf-8'});
   const url=URL.createObjectURL(blob);
