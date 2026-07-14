@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CHORD LOOM</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%231d1712'/%3E%3Crect x='2' y='6' width='12' height='4' fill='%23c96f43'/%3E%3C/svg%3E">
+<style>
+  /* ── CHORD LOOM · Japanese wood-panel treatment ──
+     charred ground under overlapping dot lattices (moiré), lacquered
+     panels, paper chips. Three lattices — 6px, 6.25px, and a 45°
+     diamond of cell 10 — all divide a 600px tile, so the background
+     repeats seamlessly while the interference lives at ~30–150px.
+     Separation by tone, shadow and space — never by rule lines. */
+  :root {
+    --wood-deep: #1d1712;     /* charred ground */
+    --panel:     #2b2219;     /* lacquered panel */
+    --panel-lift:#332920;     /* raised chip */
+    --paper:     #e7dcc3;     /* washi */
+    --ink:       #d8cfbe;     /* text on wood */
+    --dim:       #9a8d79;
+    --faint:     #6a5f4f;
+    --sel:       #c96f43;     /* persimmon */
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body {
+    background-color: var(--wood-deep);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='600'%3E%3Cdefs%3E%3Cpattern id='a' width='6' height='6' patternUnits='userSpaceOnUse'%3E%3Ccircle cx='3' cy='3' r='0.65' fill='%23c9b795' fill-opacity='0.10'/%3E%3C/pattern%3E%3Cpattern id='b' width='6.25' height='6.25' patternUnits='userSpaceOnUse'%3E%3Ccircle cx='3.125' cy='3.125' r='0.65' fill='%23c9b795' fill-opacity='0.07'/%3E%3C/pattern%3E%3Cpattern id='c' width='10' height='10' patternUnits='userSpaceOnUse'%3E%3Ccircle cx='2.5' cy='2.5' r='0.6' fill='%23c9b795' fill-opacity='0.05'/%3E%3Ccircle cx='7.5' cy='7.5' r='0.6' fill='%23c9b795' fill-opacity='0.05'/%3E%3C/pattern%3E%3C/defs%3E%3Crect width='600' height='600' fill='url(%23a)'/%3E%3Crect width='600' height='600' fill='url(%23b)'/%3E%3Crect width='600' height='600' fill='url(%23c)'/%3E%3C/svg%3E");
+    color: var(--ink);
+    font-family: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 11px; line-height: 1.6; font-weight: 300;
+    padding: 34px clamp(18px, 4vw, 56px) 48px;
+    max-width: 1280px; margin: 0 auto;
+  }
+  h1 {
+    font-size: 12px; font-weight: 400; letter-spacing: 0.62em;
+    text-align: center; color: var(--ink); margin: 0 0 30px;
+  }
+  .panel {
+    background: var(--panel);
+    border-radius: 2px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.035), 0 3px 14px rgba(0,0,0,0.45);
+  }
+
+  /* keyboard sits in its own wood frame */
+  #kb-frame { padding: 12px; }
+  #kb { display: block; width: 100%; height: 116px; cursor: pointer; }
+
+  #readout-row { display: flex; gap: 14px; align-items: center; margin: 20px 2px 26px; }
+  #readout { flex: 1; font-size: 12px; letter-spacing: 0.06em; color: var(--ink); }
+
+  button, select {
+    font: inherit; font-size: 10px; letter-spacing: 0.12em;
+    color: var(--ink); background: var(--panel-lift);
+    border: 0; padding: 8px 14px; cursor: pointer; border-radius: 2px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.04), 0 1px 4px rgba(0,0,0,0.35);
+    transition: background 0.45s cubic-bezier(.445,.05,.55,.95), color 0.45s cubic-bezier(.445,.05,.55,.95);
+  }
+  button:hover { background: #3d3126; }
+  .accent { background: var(--paper); color: #2a2118; font-weight: 400; }
+  .accent:hover { background: #f2e8d2; }
+
+  #console { display: flex; gap: 30px; align-items: flex-start; }
+  #left { flex: 3; min-width: 0; }
+
+  #slots { display: grid; grid-template-columns: repeat(6, 1fr); gap: 14px; }
+  .slot { display: flex; flex-direction: column; gap: 8px; }
+  .pad-btn {
+    height: 66px; white-space: pre-line; line-height: 1.5;
+    background: var(--panel); color: var(--faint); letter-spacing: 0.05em;
+  }
+  .pad-btn.filled { color: var(--dim); background: var(--panel-lift); }
+  .pad-btn.on { color: #f4ede0; }
+  .row2 { display: flex; gap: 8px; }
+  .row2 .load { flex: 1; }
+  .row2 .del { width: 34px; color: var(--dim); }
+  select { width: 100%; color: var(--dim); }
+
+  #status { color: var(--dim); text-align: center; margin: 24px 0 10px; min-height: 1.6em; letter-spacing: 0.05em; }
+
+  #fx { margin: 18px 0 8px; padding: 18px 24px 20px; }
+  .fx-title, .insp-sec, #insp-title {
+    font-size: 9px; letter-spacing: 0.34em; color: var(--faint); font-weight: 400;
+  }
+  .fx-title { text-align: center; margin-bottom: 16px; }
+  #fx-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 40px; }
+  .fx-row { display: flex; align-items: center; gap: 12px; color: var(--dim); font-size: 10px; letter-spacing: 0.08em; }
+  .fx-row span:first-child { width: 82px; }
+  .fx-val { width: 42px; text-align: right; color: var(--faint); }
+
+  input[type=range] { -webkit-appearance: none; appearance: none; flex: 1; height: 18px; background: transparent; cursor: pointer; }
+  input[type=range]::-webkit-slider-runnable-track { height: 2px; background: #45382a; border-radius: 1px; }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 9px; height: 9px; border-radius: 50%;
+    background: var(--paper); margin-top: -3.5px;
+  }
+  input[type=range]:active::-webkit-slider-thumb { background: var(--sel); }
+  input[type=range]::-moz-range-track { height: 2px; background: #45382a; }
+  input[type=range]::-moz-range-thumb { width: 9px; height: 9px; border: 0; border-radius: 50%; background: var(--paper); }
+
+  #insp { flex: 1.15; min-width: 280px; padding: 18px 20px 22px; }
+  #insp-title { letter-spacing: 0.14em; color: var(--dim); margin-bottom: 14px; line-height: 1.6; }
+  #target-btns { display: flex; gap: 5px; margin-bottom: 8px; }
+  .tbtn { flex: 1; padding: 6px 0; background: var(--panel-lift); color: var(--faint); }
+  .tbtn.on { background: var(--sel); color: #f7f0e4; }
+  .insp-sec { margin: 18px 0 8px; }
+  #insp-grid .fx-row { margin: 7px 0; }
+  #insp-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 20px; }
+  #insp-btns #btn-rec { grid-column: 1 / -1; }
+  #insp-btns #btn-rec.recording { background: var(--sel); color: #f7f0e4; }
+
+  #bottom-row { display: flex; justify-content: center; gap: 10px; margin: 20px 0 4px; }
+
+  /* ── guide flyout ── */
+  #btn-guide { position: fixed; top: 22px; right: 26px; padding: 7px 13px; color: var(--dim); z-index: 30; }
+  #guide-veil {
+    position: fixed; inset: 0; background: rgba(12, 8, 5, 0.55);
+    opacity: 0; pointer-events: none; z-index: 40;
+    transition: opacity 0.55s cubic-bezier(.445,.05,.55,.95);
+  }
+  #guide-panel {
+    position: fixed; top: 0; right: 0; height: 100%; width: min(430px, 92vw);
+    background: var(--panel); z-index: 50;
+    padding: 44px 38px; overflow-y: auto;
+    transform: translateX(105%);
+    transition: transform 0.55s cubic-bezier(.445,.05,.55,.95);
+    box-shadow: -6px 0 30px rgba(0,0,0,0.5);
+  }
+  body.guide-open #guide-veil { opacity: 1; pointer-events: auto; }
+  body.guide-open #guide-panel { transform: translateX(0); }
+  #guide-panel .fx-title { text-align: left; margin-bottom: 22px; }
+  #guide-panel .g-sec {
+    font-size: 9px; letter-spacing: 0.3em; color: var(--sel);
+    margin: 24px 0 10px; font-weight: 400;
+  }
+  #guide-panel .g-note { color: var(--faint); letter-spacing: 0.1em; }
+  #guide-panel p { color: var(--dim); font-size: 10.5px; margin-bottom: 10px; letter-spacing: 0.04em; }
+  #guide-panel p b { color: var(--ink); font-weight: 400; }
+  #guide-close { margin-top: 26px; }
+</style>
+</head>
+<body>
+<h1>CHORD LOOM</h1>
+<button id="btn-guide">guide</button>
+
+<div id="kb-frame" class="panel"><canvas id="kb" height="116"></canvas></div>
+
+<div id="readout-row">
+  <span id="readout">· click keys to build a chord ·</span>
+  <button id="clear">clear</button>
+  <button id="hear" class="accent">hear it</button>
+</div>
+
+<div id="console">
+  <div id="left">
+    <div id="slots"></div>
+    <div id="status">· click keys, LOAD a pad, stack pads ·</div>
+    <div id="fx" class="panel">
+      <div class="fx-title">FX — SHARED AIR</div>
+      <div id="fx-grid"></div>
+    </div>
+    <div id="bottom-row"><button id="fadeall">fade all</button></div>
+  </div>
+  <div id="insp" class="panel">
+    <div id="insp-title">PAD INSPECTOR — editing ALL PADS</div>
+    <div id="target-btns"></div>
+    <div id="insp-grid"></div>
+    <div id="insp-btns">
+      <button id="btn-rec">● record output</button>
+      <button id="btn-save">save bank</button>
+      <button id="btn-reload">reload bank</button>
+    </div>
+  </div>
+</div>
+
+<div id="guide-veil"></div>
+<div id="guide-panel">
+  <div class="fx-title">WHAT EACH CONTROL DOES</div>
+
+  <div class="g-sec">THE KEYS</div>
+  <p><b>keys</b> — click to add or remove a note (up to 8); every click pings so you hear what you're picking.</p>
+  <p><b>hear it</b> — strums the current pick, low to high.</p>
+  <p><b>clear</b> — empties the keyboard.</p>
+
+  <div class="g-sec">THE PADS</div>
+  <p><b>LOAD</b> — burns the keyboard chord onto that pad, fades it in, and points the inspector at it. Loading over a full pad replaces it.</p>
+  <p><b>pad button</b> — toggles the pad on and off. Pads stack; each arrives and leaves at its own rise and fall.</p>
+  <p><b>voice menu</b> — the pad's instrument, switchable while it sounds.</p>
+  <p><b>✕</b> — deletes the pad; its sound leaves at the pad's fall time.</p>
+  <p><b>fade all</b> — every pad breathes out at once, each at its own fall.</p>
+
+  <div class="g-sec">THE VOICES</div>
+  <p><b>saw choir</b> — detuned saws in unison; the classic warm pad.</p>
+  <p><b>glass</b> — pure tones with faint upper partials; the cleanest voice.</p>
+  <p><b>soft FM</b> — a slowly stirred FM tone; hollow, faintly metallic.</p>
+  <p><b>breath</b> — tuned noise; air shaped to the chord.</p>
+  <p><b>organ</b> — a hollow pulse pair; reedy and steady.</p>
+  <p><b>far choir</b> — saws sung through vowel filters, one mouth per note; distant voices.</p>
+  <p><b>tape strings</b> — a wide, worn unison, darker and wobblier; a string machine left in the sun.</p>
+  <p><b>reed</b> — a square wave with the focus tightened; woody, close to a hichiriki.</p>
+  <p><b>undertow</b> — FM whose sidebands fall <i>below</i> the note, over a sub octave; the dark one.</p>
+  <p><b>weave</b> — two pulses drifting through a slow phaser; air that keeps moving.</p>
+
+  <div class="g-sec">PAD INSPECTOR</div>
+  <p><b>1–6</b> — edit one pad alone; the sliders jump to show that pad's settings.</p>
+  <p><b>ALL</b> — edits every pad at once, and sets the defaults new pads inherit.</p>
+  <p>Engine and filter changes lean in over a couple of seconds rather than snapping — the loom moves at its own pace. Rise and fall take hold at the next toggle.</p>
+
+  <div class="g-sec">ENVELOPE</div>
+  <p><b>rise (in)</b> — how long the pad takes to bloom when toggled on: half a second to a full minute.</p>
+  <p><b>fall (out)</b> — the exhale when toggled off, up to ninety seconds. Rise and fall are independent — instant arrivals with minute-long leavings, or the reverse.</p>
+
+  <div class="g-sec">ENGINE</div>
+  <p><b>loudness</b> — the pad's level in the mix.</p>
+  <p><b>memory (fb)</b> — the pad's own tape loop: how much of what it plays is fed back to echo inside it. High settings pile the pad's past onto its present.</p>
+  <p><b>warp (loop)</b> — how much the memory loop's tape speed wanders; the remembered copy smears and detunes as it drifts.</p>
+  <p><b>detune (¢)</b> — the spread, in cents, between each note's twin oscillators. Zero is pure; higher is thicker and more chorused.</p>
+  <p><b>sub</b> — a sine an octave below the lowest note. The pad's keel.</p>
+
+  <div class="g-sec">FILTER + LFO</div>
+  <p><b>cutoff</b> — where the lowpass filter sits. Low is dark and underwater; high is open and present.</p>
+  <p><b>focus (res)</b> — emphasis at the filter's edge; rightward narrows it toward a whistle.</p>
+  <p><b>weather</b> — how far the filter wanders on its own: slow, aimless brightening and darkening, like light through moving clouds. At zero the sky holds still.</p>
+  <p><b>weather rate</b> — how quickly the weather changes.</p>
+  <p><b>breathe</b> — each voice in the chord swells and recedes on its own clock; this sets how deeply.</p>
+  <p><b>breathe rate</b> — how quickly the voices swell.</p>
+  <p><b>drift (pitch)</b> — slow random pitch wobble, per voice; tape stored badly, a choir not quite holding still.</p>
+
+  <div class="g-sec">FX — SHARED AIR <span class="g-note">(one room for every pad, pings included)</span></div>
+  <p><b>echo time</b> — the tape echo's length. Drag it while sounding and the repeats bend in pitch, like real tape.</p>
+  <p><b>echo feed</b> — how much each repeat feeds the next; high settings repeat into the distance.</p>
+  <p><b>echo mix</b> — how much echo joins the dry loom. Zero is off.</p>
+  <p><b>shimmer</b> — an octave-up ghost of everything, fed only into the verb. The halo.</p>
+  <p><b>humidity</b> — how much room you hear around the loom, from dry air to drowned.</p>
+  <p><b>darkness</b> — how muffled the room's tail is; high settings swallow the highs.</p>
+  <p><b>width</b> — the stereo width of the whole air, from nearly mono to wide open.</p>
+  <p><b>master</b> — the room's level; the last hand on the volume.</p>
+
+  <div class="g-sec">KEEPING &amp; TAKING</div>
+  <p><b>save bank</b> — writes the pads, each pad's private settings, and the fx desk. It restores itself, silent, on launch.</p>
+  <p><b>reload bank</b> — brings the saved bank back now; pads return silent, toggle them on.</p>
+  <p><b>● record output</b> — captures everything you hear to a downloadable take.</p>
+
+  <button id="guide-close">close</button>
+</div>
+
+<script type="module" src="./loom.js"></script>
+</body>
+</html>
