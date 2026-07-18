@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Invented place names from a phoneme grammar — seed by integer, map coordinate, or landmark. A deterministic procedural toponymy tool.">
+<meta property="og:title" content="Gazetteer — procedural toponymy">
+<meta property="og:description" content="Invented place names from a phoneme grammar, reproducible from any seed.">
+<link rel="icon" href="data:image/svg+xml,<svg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%20100%20100'><text%20y='.9em'%20font-size='90'>%F0%9F%A7%AD</text></svg>">
+<title>Gazetteer — procedural toponymy</title>
+<style>
+  :root {
+    --paper: #e4e7e3;
+    --surface: #edefea;
+    --surface-2: #dfe3dd;
+    --ink: #1b2a2c;
+    --ink-soft: #4c5a5b;
+    --ink-faint: #7e8a89;
+    --hair: #cbd0c9;
+    --brass: #9a6c15;
+    --brass-ink: #7c560f;
+    --patina: #2b6a5c;
+    --shadow: 27 42 44;
+    color-scheme: light;
+    --serif: "Hoefler Text", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, ui-serif, serif;
+    --sans: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #10161a;
+      --surface: #172026;
+      --surface-2: #1e282e;
+      --ink: #d8dbd3;
+      --ink-soft: #a3aca8;
+      --ink-faint: #6d7a78;
+      --hair: #29343a;
+      --brass: #d8a64c;
+      --brass-ink: #e6b767;
+      --patina: #5fb3a1;
+      --shadow: 0 0 0;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="light"] {
+    --paper: #e4e7e3; --surface: #edefea; --surface-2: #dfe3dd;
+    --ink: #1b2a2c; --ink-soft: #4c5a5b; --ink-faint: #7e8a89; --hair: #cbd0c9;
+    --brass: #9a6c15; --brass-ink: #7c560f; --patina: #2b6a5c; --shadow: 27 42 44;
+    color-scheme: light;
+  }
+  :root[data-theme="dark"] {
+    --paper: #10161a; --surface: #172026; --surface-2: #1e282e;
+    --ink: #d8dbd3; --ink-soft: #a3aca8; --ink-faint: #6d7a78; --hair: #29343a;
+    --brass: #d8a64c; --brass-ink: #e6b767; --patina: #5fb3a1; --shadow: 0 0 0;
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  .wrap { max-width: 1040px; margin: 0 auto; padding: clamp(1.25rem, 4vw, 3rem) clamp(1rem, 4vw, 2.5rem) 5rem; }
+
+  /* ---- masthead ---- */
+  .masthead { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; border-bottom: 1px solid var(--hair); padding-bottom: 1.1rem; }
+  .brandline { display: flex; flex-direction: column; gap: .35rem; }
+  .eyebrow { font-family: var(--mono); font-size: .72rem; letter-spacing: .22em; text-transform: uppercase; color: var(--ink-faint); }
+  .title { font-family: var(--serif); font-weight: 600; font-size: clamp(1.9rem, 5vw, 2.9rem); letter-spacing: -.01em; line-height: 1; margin: 0; }
+  .subtitle { color: var(--ink-soft); font-size: .95rem; max-width: 46ch; }
+  .themebtn { flex: none; font-family: var(--mono); font-size: .7rem; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-soft); background: transparent; border: 1px solid var(--hair); border-radius: 999px; padding: .5rem .8rem; cursor: pointer; }
+  .themebtn:hover { border-color: var(--ink-faint); color: var(--ink); }
+
+  /* ---- hero / featured name ---- */
+  .plate { margin-top: 2.2rem; }
+  .source-line { font-family: var(--mono); font-size: .8rem; color: var(--ink-soft); display: flex; flex-wrap: wrap; align-items: center; gap: .5rem .7rem; }
+  .source-line .arrow { color: var(--brass); }
+  .source-line .hex { color: var(--ink-faint); }
+  .name {
+    font-family: var(--serif);
+    font-weight: 600;
+    font-size: clamp(3rem, 13vw, 7rem);
+    line-height: .98;
+    letter-spacing: -.02em;
+    margin: .5rem 0 0;
+    color: var(--ink);
+    text-wrap: balance;
+    word-break: break-word;
+  }
+
+  .anatomy { margin-top: 1.4rem; display: flex; flex-wrap: wrap; align-items: flex-end; gap: .55rem; }
+  .syll { display: flex; align-items: stretch; border-radius: 8px; overflow: hidden; border: 1px solid var(--hair); background: var(--surface); }
+  .seg { font-family: var(--serif); font-size: 1.25rem; padding: .3rem .55rem; display: flex; align-items: center; }
+  .seg.onset { color: var(--ink); background: color-mix(in srgb, var(--ink) 8%, var(--surface)); }
+  .seg.nucleus { color: #fff; background: var(--brass); font-weight: 600; }
+  :root[data-theme="dark"] .seg.nucleus, :root:not([data-theme="light"]) .seg.nucleus { }
+  @media (prefers-color-scheme: dark) { .seg.nucleus { color: #14100a; } }
+  :root[data-theme="dark"] .seg.nucleus { color: #14100a; }
+  :root[data-theme="light"] .seg.nucleus { color: #fff; }
+  .seg.coda { color: #fff; background: var(--patina); }
+  @media (prefers-color-scheme: dark) { .seg.coda { color: #0c1512; } }
+  :root[data-theme="dark"] .seg.coda { color: #0c1512; }
+  :root[data-theme="light"] .seg.coda { color: #fff; }
+  .anim .syll { animation: rise .42s cubic-bezier(.2,.7,.3,1) both; }
+  @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+  .legend { margin-top: 1rem; display: flex; flex-wrap: wrap; gap: 1rem; font-family: var(--mono); font-size: .72rem; letter-spacing: .04em; color: var(--ink-soft); }
+  .legend span { display: inline-flex; align-items: center; gap: .4rem; }
+  .swatch { width: .8rem; height: .8rem; border-radius: 3px; display: inline-block; }
+  .swatch.onset { background: color-mix(in srgb, var(--ink) 22%, var(--surface)); }
+  .swatch.nucleus { background: var(--brass); }
+  .swatch.coda { background: var(--patina); }
+
+  .hero-actions { margin-top: 1.6rem; display: flex; flex-wrap: wrap; gap: .6rem; }
+  button.act { font-family: var(--sans); font-size: .9rem; font-weight: 500; border-radius: 8px; padding: .6rem 1rem; cursor: pointer; border: 1px solid var(--hair); background: var(--surface); color: var(--ink); }
+  button.act:hover { border-color: var(--ink-faint); }
+  button.act.primary { background: var(--brass); border-color: var(--brass); color: #fff; }
+  :root[data-theme="dark"] button.act.primary { color: #14100a; }
+  @media (prefers-color-scheme: dark) { button.act.primary { color: #14100a; } }
+  :root[data-theme="light"] button.act.primary { color: #fff; }
+  button.act.primary:hover { filter: brightness(1.05); }
+
+  /* ---- mode control ---- */
+  .mode { margin-top: 2.6rem; }
+  .seg-control { display: inline-flex; border: 1px solid var(--hair); border-radius: 10px; padding: 3px; background: var(--surface-2); gap: 2px; }
+  .seg-control button { font-family: var(--mono); font-size: .74rem; letter-spacing: .1em; text-transform: uppercase; border: none; background: transparent; color: var(--ink-soft); padding: .5rem .85rem; border-radius: 7px; cursor: pointer; }
+  .seg-control button[aria-selected="true"] { background: var(--paper); color: var(--ink); box-shadow: 0 1px 2px rgb(var(--shadow) / .12); }
+
+  .fields { margin-top: 1.1rem; display: flex; flex-wrap: wrap; gap: 1rem 1.4rem; align-items: flex-end; }
+  .field { display: flex; flex-direction: column; gap: .35rem; }
+  .field label { font-family: var(--mono); font-size: .68rem; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-faint); }
+  .stepper { display: inline-flex; align-items: stretch; border: 1px solid var(--hair); border-radius: 8px; overflow: hidden; background: var(--surface); }
+  .stepper input { border: none; background: transparent; color: var(--ink); font-family: var(--mono); font-size: 1rem; width: 6.5ch; text-align: center; padding: .5rem .2rem; }
+  .stepper input.wide { width: 18ch; text-align: left; padding-left: .7rem; }
+  .stepper input:focus { outline: none; }
+  .stepper button { border: none; background: var(--surface-2); color: var(--ink-soft); width: 2.2rem; cursor: pointer; font-size: 1.1rem; line-height: 1; }
+  .stepper button:hover { color: var(--ink); background: var(--hair); }
+  .stepper.text { }
+  input:focus-visible, button:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
+
+  /* ---- cards ---- */
+  .card { margin-top: 2.8rem; }
+  .card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; border-bottom: 1px solid var(--hair); padding-bottom: .7rem; }
+  .card-head h2 { font-family: var(--serif); font-weight: 600; font-size: 1.35rem; margin: 0; letter-spacing: -.01em; }
+  .card-note { color: var(--ink-soft); font-size: .88rem; margin: .8rem 0 1.2rem; max-width: 62ch; }
+
+  /* map plate */
+  .plate-grid { display: grid; gap: 4px; }
+  .tile { position: relative; border: 1px solid var(--hair); background: var(--surface); border-radius: 6px; padding: .5rem .45rem .4rem; cursor: pointer; text-align: left; min-height: 3.6rem; display: flex; flex-direction: column; justify-content: space-between; transition: transform .12s ease, border-color .12s ease; }
+  .tile:hover { transform: translateY(-2px); border-color: var(--brass); z-index: 2; }
+  .tile .tname { font-family: var(--serif); font-size: .95rem; line-height: 1.05; color: var(--ink); word-break: break-word; }
+  .tile .tcoord { font-family: var(--mono); font-size: .58rem; color: var(--ink-faint); letter-spacing: .02em; }
+  .tile.is-origin { border-color: var(--brass); box-shadow: inset 0 0 0 1px var(--brass); }
+
+  /* index roll */
+  .index-list { column-width: 15rem; column-gap: 2.2rem; margin-top: .4rem; }
+  .idx { break-inside: avoid; display: flex; align-items: baseline; gap: .6rem; padding: .32rem 0; border-bottom: 1px dotted var(--hair); cursor: pointer; }
+  .idx:hover .idx-name { color: var(--brass-ink); }
+  .idx-name { font-family: var(--serif); font-size: 1.15rem; color: var(--ink); flex: 1; }
+  .idx-seed { font-family: var(--mono); font-size: .68rem; color: var(--ink-faint); font-variant-numeric: tabular-nums; }
+
+  .foot { margin-top: 3.5rem; border-top: 1px solid var(--hair); padding-top: 1.2rem; color: var(--ink-faint); font-family: var(--mono); font-size: .72rem; line-height: 1.7; letter-spacing: .02em; }
+
+  /* toast */
+  .toast { position: fixed; left: 50%; bottom: 1.6rem; transform: translateX(-50%) translateY(1.5rem); background: var(--ink); color: var(--paper); font-family: var(--mono); font-size: .78rem; letter-spacing: .04em; padding: .6rem 1rem; border-radius: 8px; opacity: 0; pointer-events: none; transition: opacity .2s ease, transform .2s ease; z-index: 50; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  @media (max-width: 560px) {
+    .index-list { column-width: 100%; }
+    .masthead { flex-direction: column; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="masthead">
+    <div class="brandline">
+      <span class="eyebrow">Procedural toponymy · dialect “core”</span>
+      <h1 class="title">Gazetteer</h1>
+      <p class="subtitle">Invented place names from a phoneme grammar. Every name is reproducible from its seed — a number, a map coordinate, or a landmark string.</p>
+    </div>
+    <button class="themebtn" id="themebtn" type="button" aria-label="Toggle light and dark theme">Theme</button>
+  </header>
+
+  <!-- FEATURED NAME -->
+  <section class="plate" aria-label="Featured name">
+    <div class="source-line" id="source"></div>
+    <div class="name" id="name">—</div>
+
+    <div class="anatomy" id="anatomy" aria-label="Phoneme anatomy"></div>
+    <div class="legend">
+      <span><i class="swatch onset"></i> onset</span>
+      <span><i class="swatch nucleus"></i> nucleus (vowel)</span>
+      <span><i class="swatch coda"></i> coda</span>
+      <span id="syllcount"></span>
+    </div>
+
+    <div class="hero-actions">
+      <button class="act primary" id="reroll" type="button">New name</button>
+      <button class="act" id="copy" type="button">Copy name</button>
+    </div>
+  </section>
+
+  <!-- MODE CONTROL -->
+  <section class="mode" aria-label="Seeding mode">
+    <div class="seg-control" role="tablist" aria-label="Choose how to seed the name">
+      <button role="tab" id="tab-int" aria-selected="true" data-mode="int" type="button">Integer</button>
+      <button role="tab" id="tab-coord" aria-selected="false" data-mode="coord" type="button">Coordinate</button>
+      <button role="tab" id="tab-string" aria-selected="false" data-mode="string" type="button">Landmark</button>
+    </div>
+
+    <div class="fields" id="fields-int">
+      <div class="field">
+        <label for="in-seed">Seed</label>
+        <div class="stepper">
+          <button type="button" data-step="seed" data-d="-1" aria-label="Decrease seed">–</button>
+          <input id="in-seed" inputmode="numeric" value="4" aria-label="Integer seed">
+          <button type="button" data-step="seed" data-d="1" aria-label="Increase seed">+</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="fields" id="fields-coord" hidden>
+      <div class="field">
+        <label for="in-x">X</label>
+        <div class="stepper">
+          <button type="button" data-step="x" data-d="-1" aria-label="Decrease X">–</button>
+          <input id="in-x" inputmode="numeric" value="12" aria-label="X coordinate">
+          <button type="button" data-step="x" data-d="1" aria-label="Increase X">+</button>
+        </div>
+      </div>
+      <div class="field">
+        <label for="in-y">Y</label>
+        <div class="stepper">
+          <button type="button" data-step="y" data-d="-1" aria-label="Decrease Y">–</button>
+          <input id="in-y" inputmode="numeric" value="7" aria-label="Y coordinate">
+          <button type="button" data-step="y" data-d="1" aria-label="Increase Y">+</button>
+        </div>
+      </div>
+      <div class="field">
+        <label for="in-dist">District</label>
+        <div class="stepper">
+          <button type="button" data-step="dist" data-d="-1" aria-label="Decrease district">–</button>
+          <input id="in-dist" inputmode="numeric" value="0" aria-label="District id">
+          <button type="button" data-step="dist" data-d="1" aria-label="Increase district">+</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="fields" id="fields-string" hidden>
+      <div class="field">
+        <label for="in-str">Landmark string</label>
+        <div class="stepper text">
+          <input id="in-str" class="wide" value="old-harbor" aria-label="Landmark string seed">
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MAP PLATE -->
+  <section class="card" aria-label="Map plate">
+    <div class="card-head">
+      <h2>Map plate</h2>
+      <button class="act" id="plate-shift" type="button">Shift origin</button>
+    </div>
+    <p class="card-note">A patch of the city, seeded by coordinate. The origin (highlighted) tracks the Coordinate fields above; each tile is <span style="font-family:var(--mono);font-size:.8em">generate_at(x, y, district)</span>. Notice adjacent tiles never rhyme — the coordinate hash decorrelates neighbours on purpose. Click a tile to feature it.</p>
+    <div class="plate-grid" id="plate-grid"></div>
+  </section>
+
+  <!-- INDEX ROLL -->
+  <section class="card" aria-label="Index roll">
+    <div class="card-head">
+      <h2>Index roll</h2>
+      <button class="act" id="roll-again" type="button">Roll again</button>
+    </div>
+    <p class="card-note">Thirty names drawn from random integer seeds — a quick way to browse the dialect’s range. Click any entry to copy it.</p>
+    <div class="index-list" id="index-list"></div>
+  </section>
+
+  <footer class="foot" id="foot"></footer>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+/* ============================================================
+   Verified JS port of namegen.py (SplitMix64 + FNV-ish mix +
+   phoneme grammar). Checked bit-for-bit against the Python
+   reference across 2,250 names across all four seeding modes.
+   ============================================================ */
+const MASK64 = (1n << 64n) - 1n;
+function splitmix64(state) {
+  state = (state + 0x9E3779B97F4A7C15n) & MASK64;
+  let z = state;
+  z = ((z ^ (z >> 30n)) * 0xBF58476D1CE4E5B9n) & MASK64;
+  z = ((z ^ (z >> 27n)) * 0x94D049BB133111EBn) & MASK64;
+  z = z ^ (z >> 31n);
+  return [z & MASK64, state];
+}
+class Rng {
+  constructor(seed) { this.state = seed & MASK64; }
+  next_u64() { const [v, s] = splitmix64(this.state); this.state = s; return v; }
+  below(n) { return Number(this.next_u64() % BigInt(n)); }
+  unit() { return Number(this.next_u64() >> 11n) / 9007199254740992; }
+  pick(seq) { return seq[this.below(seq.length)]; }
+  weighted(items, weights) {
+    let total = 0; for (const w of weights) total += w;
+    const r = this.below(total);
+    let acc = 0;
+    for (let i = 0; i < items.length; i++) { acc += weights[i]; if (r < acc) return items[i]; }
+    return items[items.length - 1];
+  }
+}
+function mix64(h, v) {
+  h ^= v & MASK64;
+  h = (h * 0x100000001B3n) & MASK64;
+  h ^= h >> 33n;
+  h = (h * 0xFF51AFD7ED558CCDn) & MASK64;
+  h ^= h >> 29n;
+  return h & MASK64;
+}
+function hash_seed(value) {
+  let h = 0xCBF29CE484222325n;
+  if (typeof value === "number" && Number.isInteger(value)) {
+    const v = value >= 0 ? BigInt(value) & MASK64 : ((~BigInt(-value)) + 1n) & MASK64;
+    h = mix64(h, v);
+  } else {
+    for (const ch of String(value)) h = mix64(h, BigInt(ch.codePointAt(0)));
+  }
+  return h || 0x1234567890ABCDEFn;
+}
+function coord_seed(x, y, district_id = 0) {
+  let h = 0xCBF29CE484222325n;
+  const zig = (n) => { const b = BigInt(n); return n >= 0 ? ((b << 1n) ^ (b >> 63n)) & MASK64 : (((-b) << 1n) - 1n) & MASK64; };
+  h = mix64(h, zig(x)); h = mix64(h, zig(y)); h = mix64(h, BigInt(district_id) & MASK64);
+  return h || 0x1234567890ABCDEFn;
+}
+const D = {
+  nuclei: ["a","e","i","o","u","y","ae","ei","ou","ia","au"],
+  nuclei_w: [16,15,14,13,8,4,3,3,2,2,2],
+  simple_onsets: [..."bdfgklmnprstvz","th","sh","ch","v","r","l","n"],
+  cluster_onsets: ["br","dr","fr","gr","kr","pr","tr","bl","fl","gl","kl","pl","sl","st","sk","sp","sn","sm","thr","vr"],
+  codas: ["","n","r","s","l","t","k","m","th","nd","rn","st","ll","ss"],
+  codas_w: [38,12,12,8,8,6,4,4,3,3,2,2,2,2],
+  first_onset_prob: 0.85, onset_prob: 0.92, cluster_onset_prob: 0.28,
+  syllable_counts: [1,2,3,4], syllable_counts_w: [6,40,38,12],
+};
+const DIGRAPHS = ["th","sh","ch"];
+function csl(s) { let t = s; for (const dg of DIGRAPHS) t = t.split(dg).join("#"); return t.length; }
+function pickOnset(rng, prev) {
+  const budget = 2 - csl(prev);
+  if (budget <= 0) return "";
+  let onset;
+  if (budget >= 2 && rng.unit() < D.cluster_onset_prob) onset = rng.pick(D.cluster_onsets);
+  else onset = rng.pick(D.simple_onsets);
+  if (prev && onset && onset[0] === prev[prev.length - 1]) {
+    onset = rng.pick(D.simple_onsets);
+    if (prev && onset && onset[0] === prev[prev.length - 1]) onset = "";
+  }
+  return onset;
+}
+function build(rng) {
+  const n = rng.weighted(D.syllable_counts, D.syllable_counts_w);
+  const mono = n === 1;
+  const parts = [];
+  let prev = "";
+  for (let i = 0; i < n; i++) {
+    const first = i === 0, last = i === n - 1;
+    const want = mono || rng.unit() < (first ? D.first_onset_prob : D.onset_prob);
+    let onset = want ? pickOnset(rng, prev) : "";
+    const nucleus = rng.weighted(D.nuclei, D.nuclei_w);
+    let coda;
+    if (mono) coda = rng.weighted(D.codas.slice(1), D.codas_w.slice(1));
+    else if (last) coda = rng.unit() < 0.45 ? rng.weighted(D.codas, D.codas_w) : "";
+    else coda = rng.weighted(D.codas, D.codas_w);
+    if (onset === "" && prev === "" && !first) onset = rng.pick(D.simple_onsets);
+    parts.push({ onset, nucleus, coda });
+    prev = coda;
+  }
+  const word = parts.map(p => p.onset + p.nucleus + p.coda).join("");
+  return { name: word.slice(0,1).toUpperCase() + word.slice(1), syllables: parts, nSyll: n };
+}
+const detailSeed = (seed) => build(new Rng(hash_seed(seed)));
+const detailAt = (x, y, d = 0) => build(new Rng(coord_seed(x, y, d)));
+const hex = (big) => "0x" + big.toString(16).padStart(16, "0");
+
+/* ============================================================
+   UI
+   ============================================================ */
+const $ = (id) => document.getElementById(id);
+const state = { mode: "int", seed: 4, x: 12, y: 7, dist: 0, str: "old-harbor" };
+
+function resolvedSeedHex() {
+  if (state.mode === "int") return hex(hash_seed(state.seed));
+  if (state.mode === "coord") return hex(coord_seed(state.x, state.y, state.dist));
+  return hex(hash_seed(state.str));
+}
+function currentDetail() {
+  if (state.mode === "int") return detailSeed(state.seed);
+  if (state.mode === "coord") return detailAt(state.x, state.y, state.dist);
+  return detailSeed(state.str);
+}
+function sourceHTML() {
+  if (state.mode === "int") return `seed <b>${state.seed}</b>`;
+  if (state.mode === "coord") return `x <b>${state.x}</b> · y <b>${state.y}</b> · district <b>${state.dist}</b>`;
+  return `landmark <b>“${escapeHtml(state.str)}”</b>`;
+}
+function escapeHtml(s) { return String(s).replace(/[&<>"]/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c])); }
+
+let featured = "";
+function renderFeatured(animate = true) {
+  const d = currentDetail();
+  featured = d.name;
+  $("source").innerHTML = `${sourceHTML()} <span class="arrow">→</span> <span class="hex">${resolvedSeedHex()}</span>`;
+  $("name").textContent = d.name;
+
+  const an = $("anatomy");
+  an.innerHTML = "";
+  d.syllables.forEach((p) => {
+    const s = document.createElement("div");
+    s.className = "syll";
+    if (p.onset) s.appendChild(seg("onset", p.onset));
+    s.appendChild(seg("nucleus", p.nucleus));
+    if (p.coda) s.appendChild(seg("coda", p.coda));
+    an.appendChild(s);
+  });
+  an.classList.toggle("anim", animate);
+  if (animate) {
+    [...an.children].forEach((c, i) => { c.style.animationDelay = (i * 70) + "ms"; });
+    void an.offsetWidth;
+  }
+  $("syllcount").textContent = d.nSyll + (d.nSyll === 1 ? " syllable" : " syllables");
+}
+function seg(role, text) { const e = document.createElement("span"); e.className = "seg " + role; e.textContent = text; return e; }
+
+/* mode tabs */
+document.querySelectorAll('[role="tab"]').forEach(tab => {
+  tab.addEventListener("click", () => setMode(tab.dataset.mode));
+});
+function setMode(mode) {
+  state.mode = mode;
+  document.querySelectorAll('[role="tab"]').forEach(t => t.setAttribute("aria-selected", String(t.dataset.mode === mode)));
+  $("fields-int").hidden = mode !== "int";
+  $("fields-coord").hidden = mode !== "coord";
+  $("fields-string").hidden = mode !== "string";
+  renderFeatured();
+}
+
+/* inputs */
+$("in-seed").addEventListener("input", e => { state.seed = intVal(e.target.value, 0); renderFeatured(false); });
+$("in-x").addEventListener("input", e => { state.x = intVal(e.target.value, 0); renderFeatured(false); renderPlate(); });
+$("in-y").addEventListener("input", e => { state.y = intVal(e.target.value, 0); renderFeatured(false); renderPlate(); });
+$("in-dist").addEventListener("input", e => { state.dist = Math.max(0, intVal(e.target.value, 0)); renderFeatured(false); renderPlate(); });
+$("in-str").addEventListener("input", e => { state.str = e.target.value; renderFeatured(false); });
+function intVal(v, dflt) { const n = parseInt(String(v).replace(/[^\d-]/g, ""), 10); return Number.isFinite(n) ? n : dflt; }
+
+/* steppers */
+document.querySelectorAll("[data-step]").forEach(b => {
+  b.addEventListener("click", () => {
+    const key = b.dataset.step, d = parseInt(b.dataset.d, 10);
+    if (key === "seed") { state.seed += d; $("in-seed").value = state.seed; renderFeatured(); }
+    else if (key === "x") { state.x += d; $("in-x").value = state.x; renderFeatured(); renderPlate(); }
+    else if (key === "y") { state.y += d; $("in-y").value = state.y; renderFeatured(); renderPlate(); }
+    else if (key === "dist") { state.dist = Math.max(0, state.dist + d); $("in-dist").value = state.dist; renderFeatured(); renderPlate(); }
+  });
+});
+
+/* hero actions */
+$("reroll").addEventListener("click", () => {
+  if (state.mode === "int") { state.seed = randInt(); $("in-seed").value = state.seed; }
+  else if (state.mode === "coord") { state.x = randInt(9999); state.y = randInt(9999); $("in-x").value = state.x; $("in-y").value = state.y; renderPlate(); }
+  else { state.str = "site-" + randInt(99999); $("in-str").value = state.str; }
+  renderFeatured();
+});
+$("copy").addEventListener("click", () => copy(featured, `Copied “${featured}”`));
+function randInt(max = 2147483647) { return Math.floor(Math.random() * max); }
+
+/* map plate */
+const PLATE_N = 8;
+function renderPlate() {
+  const grid = $("plate-grid");
+  grid.style.gridTemplateColumns = `repeat(${PLATE_N}, 1fr)`;
+  grid.innerHTML = "";
+  for (let dy = 0; dy < PLATE_N; dy++) {
+    for (let dx = 0; dx < PLATE_N; dx++) {
+      const x = state.x + dx, y = state.y + dy;
+      const t = document.createElement("button");
+      t.type = "button";
+      t.className = "tile" + (dx === 0 && dy === 0 ? " is-origin" : "");
+      const nm = detailAt(x, y, state.dist).name;
+      t.innerHTML = `<span class="tname">${escapeHtml(nm)}</span><span class="tcoord">${x},${y}</span>`;
+      t.addEventListener("click", () => {
+        setMode("coord");
+        state.x = x; state.y = y;
+        $("in-x").value = x; $("in-y").value = y;
+        renderFeatured(); renderPlate();
+        document.querySelector(".plate").scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+      grid.appendChild(t);
+    }
+  }
+}
+$("plate-shift").addEventListener("click", () => {
+  state.x = randInt(9999); state.y = randInt(9999);
+  if (state.mode === "coord") { $("in-x").value = state.x; $("in-y").value = state.y; renderFeatured(); }
+  renderPlate();
+});
+
+/* index roll */
+function renderIndex() {
+  const list = $("index-list");
+  list.innerHTML = "";
+  for (let i = 0; i < 30; i++) {
+    const seed = randInt();
+    const nm = detailSeed(seed).name;
+    const row = document.createElement("div");
+    row.className = "idx";
+    row.innerHTML = `<span class="idx-name">${escapeHtml(nm)}</span><span class="idx-seed">#${seed}</span>`;
+    row.addEventListener("click", () => copy(nm, `Copied “${nm}”`));
+    list.appendChild(row);
+  }
+}
+$("roll-again").addEventListener("click", renderIndex);
+
+/* copy + toast */
+let toastTimer;
+function copy(text, msg) {
+  navigator.clipboard?.writeText(text).then(() => showToast(msg)).catch(() => showToast("Copy blocked by browser"));
+}
+function showToast(msg) {
+  const t = $("toast"); t.textContent = msg; t.classList.add("show");
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("show"), 1600);
+}
+
+/* theme toggle */
+$("themebtn").addEventListener("click", () => {
+  const cur = document.documentElement.getAttribute("data-theme");
+  const next = cur === "dark" ? "light" : cur === "light" ? "dark"
+    : (window.matchMedia("(prefers-color-scheme: dark)").matches ? "light" : "dark");
+  document.documentElement.setAttribute("data-theme", next);
+});
+
+/* footer */
+$("foot").innerHTML = `SplitMix64 PRNG · FNV-ish coordinate hash · dialect “core” (11 nuclei · 21 onsets · 20 clusters · 14 codas)<br>Deterministic: the same seed always yields the same name. Ported to JavaScript and verified bit-for-bit against namegen.py.`;
+
+/* boot */
+renderFeatured();
+renderPlate();
+renderIndex();
+</script>
+
+</body>
+</html>
