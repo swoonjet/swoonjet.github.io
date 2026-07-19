@@ -30,7 +30,7 @@
     font-family: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Helvetica Neue", Helvetica, Arial, sans-serif;
     font-size: 11px; line-height: 1.6; font-weight: 300;
     padding: 34px clamp(18px, 4vw, 56px) 48px;
-    max-width: 1280px; margin: 0 auto;
+    max-width: 1380px; margin: 0 auto;
   }
   h1 {
     font-size: 12px; font-weight: 400; letter-spacing: 0.62em;
@@ -63,17 +63,18 @@
   #console { display: flex; gap: 30px; align-items: flex-start; }
   #left { flex: 3; min-width: 0; }
 
-  #slots { display: grid; grid-template-columns: repeat(6, 1fr); gap: 14px; }
-  .slot { display: flex; flex-direction: column; gap: 8px; }
+  #slots { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px 10px; }
+  .slot { display: flex; flex-direction: column; gap: 6px; }
+  .slot button, .slot select { padding: 6px 8px; font-size: 9.5px; }
   .pad-btn {
-    height: 66px; white-space: pre-line; line-height: 1.5;
+    height: 54px; white-space: pre-line; line-height: 1.45;
     background: var(--panel); color: var(--faint); letter-spacing: 0.05em;
   }
   .pad-btn.filled { color: var(--dim); background: var(--panel-lift); }
   .pad-btn.on { color: #f4ede0; }
-  .row2 { display: flex; gap: 8px; }
+  .row2 { display: flex; gap: 6px; }
   .row2 .load { flex: 1; }
-  .row2 .del { width: 34px; color: var(--dim); }
+  .row2 .del { width: 28px; color: var(--dim); }
   select { width: 100%; color: var(--dim); }
 
   #status { color: var(--dim); text-align: center; margin: 24px 0 10px; min-height: 1.6em; letter-spacing: 0.05em; }
@@ -100,8 +101,9 @@
 
   #insp { flex: 1.15; min-width: 280px; padding: 18px 20px 22px; }
   #insp-title { letter-spacing: 0.14em; color: var(--dim); margin-bottom: 14px; line-height: 1.6; }
-  #target-btns { display: flex; gap: 5px; margin-bottom: 8px; }
-  .tbtn { flex: 1; padding: 6px 0; background: var(--panel-lift); color: var(--faint); }
+  #target-btns { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; margin-bottom: 8px; }
+  .tbtn { padding: 6px 0; background: var(--panel-lift); color: var(--faint); }
+  .tbtn:last-child { grid-column: 1 / -1; }
   .tbtn.on { background: var(--sel); color: #f7f0e4; }
   .insp-sec { margin: 18px 0 8px; }
   #insp-grid .fx-row { margin: 7px 0; }
@@ -202,7 +204,7 @@
   <p><b>weave</b> — two pulses drifting through a slow phaser; air that keeps moving.</p>
 
   <div class="g-sec">PAD INSPECTOR</div>
-  <p><b>1–6</b> — edit one pad alone; the sliders jump to show that pad's settings.</p>
+  <p><b>1–12</b> — edit one pad alone; the sliders jump to show that pad's settings.</p>
   <p><b>ALL</b> — edits every pad at once, and sets the defaults new pads inherit.</p>
   <p>Engine and filter changes lean in over a couple of seconds rather than snapping — the loom moves at its own pace. Rise and fall take hold at the next toggle.</p>
 

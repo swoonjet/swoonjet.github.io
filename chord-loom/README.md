@@ -1,6 +1,6 @@
 # Chord Loom
 
-A slow instrument. Build a chord on the keyboard, load it onto one of six
+A slow instrument. Build a chord on the keyboard, load it onto one of twelve
 pads, and let it bloom — each pad carries its own envelope, tape-loop
 memory, filter weather, and breath, all sharing one air of tape echo,
 shimmer, and reverb.

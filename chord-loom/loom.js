@@ -15,14 +15,16 @@ import {
 } from './vendor/superdough.mjs';
 import { createRoom, createPadMemory } from './room.js';
 
-// ── loom constants (verbatim from the SC build) ──
-const N_SLOTS = 6, MAX_NOTES = 8;
+// ── loom constants (from the SC build; slots doubled 2026-07-19) ──
+const N_SLOTS = 12, MAX_NOTES = 8;
 const KB_LO = 36, KB_HI = 72;                       // C2..C5
 const NOTE_NAMES = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
 const OSC_NAMES = ['saw choir', 'glass', 'soft FM', 'breath', 'organ',
   'far choir', 'tape strings', 'reed', 'undertow', 'weave'];
-// muted natural-dye tones: pine, moss, persimmon, indigo, plum, kaki
-const PAD_COLORS = ['#44523f', '#5c5a38', '#8a5433', '#3d5260', '#4b4159', '#6d4548'];
+// muted natural-dye tones: pine, moss, persimmon, indigo, plum, kaki,
+// then tetsu, karashi, nibi, azuki, matcha, fuji for the second row
+const PAD_COLORS = ['#44523f', '#5c5a38', '#8a5433', '#3d5260', '#4b4159', '#6d4548',
+  '#3a4f4d', '#71603a', '#565e68', '#6b4a41', '#506047', '#5e4a63'];
 const WHITE_PCS = [0, 2, 4, 5, 7, 9, 11];
 const SEL_COL = '#c96f43';
 
@@ -108,7 +110,9 @@ const padMemories = Array(N_SLOTS).fill(null);
 function ensureAudio() {
   if (!audioPromise) {
     audioPromise = (async () => {
-      await initAudio();
+      // 12 pads × 8 notes × layered events can pass the default 128-voice
+      // cap when the whole loom sounds at once — give it headroom
+      await initAudio({ maxPolyphony: 512 });
       registerSynthSounds();
       // the shared air: build the room, then pull every loom orbit out
       // of superdough's own output and into it (pad memory loops ride
