@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- Published as jontoews.com/earshot/, so the tab has to answer to the link that
+     was clicked. The masthead keeps the work's full name. -->
+<title>Earshot — Live Spectrogram Ambient Collage</title>
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body data-ducking="0">
+
+<div class="frame">
+
+  <header class="masthead">
+    <h1 class="masthead__title">Live<br>Spectrogram<br>Ambient Collage</h1>
+    <p class="masthead__note">
+      Open microphones, permanently installed in places around the world, are
+      streaming right now. This piece listens to several at once — chosen to be
+      as far apart as possible — and composes from whatever happens to coincide.
+      Everything you hear is arriving live. Nothing was recorded in advance.
+    </p>
+  </header>
+
+  <section class="rail rail--left">
+    <div class="block">
+      <h2 class="label label--withAction">
+        Open microphones
+        <button class="linkbutton" id="locations-open" type="button" disabled>library</button>
+      </h2>
+      <ul class="sources" id="sources"></ul>
+      <div class="map" id="map"></div>
+    </div>
+
+    <div class="block">
+      <h2 class="label">Reference library</h2>
+      <ul class="library" id="library"></ul>
+      <p class="footnote">Shapes, not samples.</p>
+    </div>
+
+    <div class="block">
+      <h2 class="label">Credits</h2>
+      <ul class="credits" id="credits"></ul>
+    </div>
+  </section>
+
+  <main class="stage">
+    <div class="stage__view">
+      <canvas id="stage" class="stage__canvas"></canvas>
+      <canvas id="bloom" class="stage__canvas stage__canvas--bloom" hidden></canvas>
+      <canvas id="contour" class="stage__canvas stage__canvas--bloom" hidden></canvas>
+      <div class="stage__axes" aria-hidden="true">
+        <span class="axis axis--x">frequency&nbsp;→</span>
+        <span class="axis axis--z">← time</span>
+        <span class="axis axis--y">amplitude&nbsp;↑</span>
+      </div>
+    </div>
+    <p class="stage__caption">
+      One layer per microphone. Vertical threads mark a chord: two places
+      holding the same frequency in the same moment.
+    </p>
+  </main>
+
+  <footer class="statusbar">
+    <span class="statusbar__cell"><span class="label">State</span><span class="value" id="act">listening</span></span>
+    <span class="statusbar__cell statusbar__cell--tension">
+      <span class="label">Tension</span>
+      <span class="tension"><i id="tension-fill"></i></span>
+    </span>
+    <span class="statusbar__cell"><span class="label">Elapsed</span><span class="value" id="clock">00:00</span></span>
+    <span class="statusbar__cell"><span class="label">Spread</span><span class="value" id="spread">—</span></span>
+    <span class="statusbar__cell"><span class="label">Voices</span><span class="value" id="voices">00</span></span>
+    <span class="statusbar__cell">
+      <button class="linkbutton" id="mixer-open" type="button" disabled>mixer</button>
+    </span>
+    <span class="statusbar__cell statusbar__cell--view">
+      <button class="linkbutton" id="view-open" type="button"
+              aria-haspopup="true" aria-expanded="false">view · bloom</button>
+      <div class="viewmenu" id="view-menu" role="menu" aria-label="Readings" hidden>
+        <h2 class="label">Reading</h2>
+        <ul class="viewmenu__list" id="view-menu-list"></ul>
+        <p class="viewmenu__hint">Or press 1, 2, 3 — the same data, read three ways.</p>
+      </div>
+    </span>
+    <span class="statusbar__cell">
+      <button class="linkbutton" id="narration-open" type="button">narration</button>
+    </span>
+    <span class="statusbar__warning" id="warning" hidden></span>
+  </footer>
+
+</div>
+
+<div class="locations" id="locations" data-state="closed" hidden>
+  <div class="locations__panel" role="dialog" aria-label="Library of places">
+    <header class="locations__head">
+      <h2 class="locations__title">Library of places</h2>
+      <span class="locations__count" id="locations-count"></span>
+      <button class="linkbutton" id="locations-random" type="button">random spread</button>
+      <button class="linkbutton" id="locations-close" type="button">close</button>
+    </header>
+
+    <div class="locations__playingBlock">
+      <h3 class="label">Playing now</h3>
+      <div class="locations__playing" id="locations-playing"></div>
+    </div>
+
+    <div class="locations__controls">
+      <input class="search" id="locations-search" type="search" autocomplete="off"
+             placeholder="Search a place, a country, a person" aria-label="Search places">
+      <p class="locations__hint" id="locations-hint"></p>
+    </div>
+
+    <div class="locations__list" id="locations-list"></div>
+    <p class="locations__empty" id="locations-empty" hidden></p>
+    <p class="locations__foot">
+      Distances are to the nearest microphone already playing — how much a place
+      would actually add. Every one of these is someone's installation.
+    </p>
+  </div>
+</div>
+
+<div class="mixer" id="mixer" hidden>
+  <div class="mixer__panel" role="dialog" aria-label="Mixer">
+    <header class="locations__head">
+      <h2 class="locations__title">Mixer</h2>
+      <span class="locations__count" id="mixer-count"></span>
+      <button class="linkbutton" id="mixer-match" type="button" data-on="1">match levels</button>
+      <button class="linkbutton" id="mixer-geo" type="button">pan by longitude</button>
+      <button class="linkbutton" id="mixer-flat" type="button">reset</button>
+      <button class="linkbutton" id="mixer-close" type="button">close</button>
+    </header>
+
+    <p class="mixer__note">
+      Faders move a place as a whole — the live stream and the layers the piece
+      generates from it. None of this touches the analysis: pull one to nothing and
+      the spectrogram, the pattern matching and the narration carry on.
+      <span class="mixer__note-line">Level matching sits upstream of the faders: over a few seconds it lifts the
+      quiet places a long way and trims the loud ones a little, toward a common
+      level. Each strip shows what it is doing, in dB. Turn it off to hear the set
+      as it really arrives.</span>
+    </p>
+
+    <div class="mixer__strips" id="mixer-strips"></div>
+
+    <div class="mixer__master">
+      <label class="ctl ctl--wide">
+        <span class="ctl__label">balance</span>
+        <input class="ctl__range" id="mixer-balance" type="range" min="0" max="1" step="0.01">
+        <span class="ctl__value ctl__value--wide" id="mixer-balance-value"></span>
+      </label>
+      <label class="ctl ctl--wide">
+        <span class="ctl__label">master</span>
+        <input class="ctl__range" id="mixer-master" type="range" min="0" max="0.9" step="0.01">
+        <span class="ctl__value" id="mixer-master-value"></span>
+      </label>
+    </div>
+  </div>
+</div>
+
+<div class="narration" id="narration" hidden>
+  <div class="narration__panel" role="dialog" aria-label="Narration">
+    <header class="locations__head">
+      <h2 class="locations__title">Narration</h2>
+      <span class="locations__count" id="narration-count"></span>
+      <button class="linkbutton" id="narration-close" type="button">close</button>
+    </header>
+    <div class="narration__body">
+      <div class="narration__col">
+        <h3 class="label">Figures</h3>
+        <ul class="figures" id="figures"></ul>
+      </div>
+      <div class="narration__col narration__col--motifs">
+        <h3 class="label">Motifs</h3>
+        <ul class="motifs" id="motifs"></ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="boot" id="boot" data-state="running">
+  <div class="boot__panel">
+    <h2 class="boot__heading">Starting</h2>
+    <p class="boot__lede">
+      Everything below advances on its own — the microphone list is fetched, the
+      furthest-apart set is chosen, and each stream is opened as it is reached.
+      There is nothing to configure and nothing to click through.
+    </p>
+    <ol class="boot__list" id="boot-steps"></ol>
+    <p class="boot__status" id="boot-status">Waiting for the first gesture — browsers will not start audio without one.</p>
+    <button class="boot__start" id="start" type="button">Begin listening</button>
+    <p class="boot__caution">
+      These are live installations maintained by the people credited in the
+      sidebar and relayed by the Locus Sonus soundmap. Some are in quiet places
+      at quiet hours — silence is the material, not a fault. Start at a low volume.
+    </p>
+  </div>
+</div>
+
+<script type="module" src="src/main.js"></script>
+</body>
+</html>
