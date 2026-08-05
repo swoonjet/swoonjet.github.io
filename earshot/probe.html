@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Earshot — routing probe</title>
+<style>
+  :root { --paper:#f2f0eb; --ink:#16150f; --ink-45:rgba(22,21,15,.45); --accent:#d93d18; --good:#1b6b3a; }
+  * { box-sizing:border-box; }
+  body { margin:0; padding:20px; background:var(--paper); color:var(--ink);
+         font:14px/1.5 "Helvetica Neue",Helvetica,Arial,sans-serif; -webkit-text-size-adjust:100%; }
+  h1 { font-size:17px; font-weight:500; margin:0 0 6px; letter-spacing:-.01em; }
+  p  { margin:0 0 14px; color:var(--ink-45); font-size:12.5px; max-width:46ch; }
+  button { appearance:none; border:0; background:var(--ink); color:var(--paper);
+           font:inherit; font-size:13px; letter-spacing:.1em; text-transform:uppercase;
+           padding:16px 22px; width:100%; cursor:pointer; }
+  ul { list-style:none; margin:18px 0 0; padding:0; }
+  li { padding:12px 0; }
+  .name { font-size:12px; letter-spacing:.1em; text-transform:uppercase; }
+  .verdict { font-family:"SF Mono",ui-monospace,Menlo,monospace; font-size:13px; font-weight:600; }
+  .detail { font-family:"SF Mono",ui-monospace,Menlo,monospace; font-size:11px; color:var(--ink-45);
+            word-break:break-word; }
+  .pass { color:var(--good); }
+  .fail { color:var(--accent); }
+  .env { margin-top:22px; font-family:"SF Mono",ui-monospace,Menlo,monospace;
+         font-size:10.5px; color:var(--ink-45); word-break:break-all; }
+</style>
+</head>
+<body>
+
+<h1>Routing probe</h1>
+<p>
+  Not part of the piece. Each test plays a live open microphone and asks whether an
+  AnalyserNode can actually see it — which is the thing that fails on iOS while the
+  audio itself plays perfectly. Tap once, wait about a minute, then send me the
+  results.
+</p>
+<button id="run" type="button">Run the tests</button>
+<ul id="out"></ul>
+<div class="env" id="env"></div>
+
+<script>
+// Two CORS-enabled Icecast mounts, verified 2026-08-05. Hardcoded on purpose: this
+// page tests routing, not selection.
+const STREAMS = [
+  'https://locus.creacast.com:9443/chania_stream.mp3',
+  'https://mp3s.nc.u-tokyo.ac.jp/OTSUCHI_CyberForest.mp3',
+];
+const SILENCE = 'data:audio/wav;base64,UklGRiUAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQEAAACA';
+const out = document.getElementById('out');
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+function row(name) {
+  const li = document.createElement('li');
+  li.innerHTML = `<div class="name">${name}</div>`
+    + `<div class="verdict" data-v>running…</div><div class="detail" data-d></div>`;
+  out.appendChild(li);
+  return {
+    done: (pass, verdict, detail) => {
+      const v = li.querySelector('[data-v]');
+      v.textContent = `${pass ? 'PASS' : 'FAIL'} — ${verdict}`;
+      v.className = `verdict ${pass ? 'pass' : 'fail'}`;
+      li.querySelector('[data-d]').textContent = detail;
+    },
+  };
+}
+
+/**
+ * A suspended context renders nothing, so every analyser reads silence and every
+ * test would report a false FAIL. Checked before anything is judged.
+ */
+function contextRunning(ctx) { return ctx.state === 'running'; }
+
+/** Peak dB an analyser sees over `ms`, plus whether the element's clock moved. */
+async function watch(analyser, el, ms = 6000) {
+  const buf = new Float32Array(analyser.frequencyBinCount);
+  let peak = -Infinity;
+  const t0 = el ? el.currentTime : 0;
+  const step = 200;
+  for (let i = 0; i < ms / step; i++) {
+    await sleep(step);
+    analyser.getFloatFrequencyData(buf);
+    for (let k = 0; k < buf.length; k++) if (buf[k] > peak) peak = buf[k];
+    if (peak > -90) break;                 // heard something; no need to wait it out
+  }
+  return {
+    peak,
+    clockMoved: el ? el.currentTime > t0 : true,
+    clock: el ? +el.currentTime.toFixed(2) : null,
+    readyState: el ? el.readyState : null,
+  };
+}
+
+const verdict = (r) => `peak ${Number.isFinite(r.peak) ? r.peak.toFixed(1) + ' dB' : 'silence'}`
+  + `, clock ${r.clockMoved ? 'moving' : 'stopped'} (${r.clock}), readyState ${r.readyState}`;
+
+/**
+ * 1 — a fresh element whose FIRST and only source is the stream, routed after the
+ *     src is set. If this passes, the fix is to create elements in the tap with
+ *     their real URLs already known (which means fetching the mic list before the
+ *     tap, and it needs no permission).
+ */
+async function freshLate(ctx, url) {
+  const el = new Audio();
+  el.crossOrigin = 'anonymous';
+  el.preload = 'auto';
+  el.playsInline = true;
+  el.src = url + '?probe=1';
+  const node = ctx.createMediaElementSource(el);
+  const an = ctx.createAnalyser();
+  an.fftSize = 2048;
+  node.connect(an);
+  const monitor = ctx.createGain();
+  monitor.gain.value = 0.3;                // audible on purpose: the failure being
+  node.connect(monitor);                   // hunted is "plays fine, cannot be read"
+  monitor.connect(ctx.destination);
+  el.play().catch(() => {});
+  const r = await watch(an, el);
+  el.pause();
+  return r;
+}
+
+/** 2 — same, but routed BEFORE the src is set. */
+async function freshEarly(ctx, url) {
+  const el = new Audio();
+  el.crossOrigin = 'anonymous';
+  el.preload = 'auto';
+  el.playsInline = true;
+  const node = ctx.createMediaElementSource(el);
+  const an = ctx.createAnalyser();
+  an.fftSize = 2048;
+  node.connect(an);
+  const monitor = ctx.createGain();
+  monitor.gain.value = 0.3;
+  node.connect(monitor); monitor.connect(ctx.destination);
+  el.src = url + '?probe=2';
+  el.play().catch(() => {});
+  const r = await watch(an, el);
+  el.pause();
+  return r;
+}
+
+/**
+ * 3 — what the piece does today: primed on silence in the tap, then re-pointed at
+ *     the stream, then routed. Expected to fail, and worth confirming.
+ */
+async function pooledSilence(ctx, url, primed) {
+  const el = primed;
+  el.src = url + '?probe=3';
+  const node = ctx.createMediaElementSource(el);
+  const an = ctx.createAnalyser();
+  an.fftSize = 2048;
+  node.connect(an);
+  const monitor = ctx.createGain();
+  monitor.gain.value = 0.3;
+  node.connect(monitor); monitor.connect(ctx.destination);
+  el.play().catch(() => {});
+  const r = await watch(an, el);
+  el.pause();
+  return r;
+}
+
+/**
+ * 4 — no media element at all: fetch the stream, decode a chunk, play it through a
+ *     buffer source. If only this passes, the piece has to decode for itself on iOS
+ *     rather than routing an element, which is a much bigger build — so it matters
+ *     to know whether it is even possible.
+ */
+async function fetchDecode(ctx, url) {
+  const res = await fetch(url + '?probe=4');
+  if (!res.ok) throw new Error(`fetch ${res.status}`);
+  const reader = res.body.getReader();
+  const parts = [];
+  let bytes = 0;
+  while (bytes < 160000) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    parts.push(value);
+    bytes += value.length;
+  }
+  reader.cancel().catch(() => {});
+  const all = new Uint8Array(bytes);
+  let at = 0;
+  for (const p of parts) { all.set(p, at); at += p.length; }
+  const audio = await ctx.decodeAudioData(all.buffer);
+  // Judged on the decoded samples, not on an analyser: this is the one test that
+  // does not need the context to be rendering, so it stays meaningful regardless.
+  const pcm = audio.getChannelData(0);
+  let samplePeak = 0;
+  for (let i = 0; i < pcm.length; i++) { const a = Math.abs(pcm[i]); if (a > samplePeak) samplePeak = a; }
+  const src = ctx.createBufferSource();
+  src.buffer = audio;
+  const an = ctx.createAnalyser();
+  an.fftSize = 2048;
+  src.connect(an);
+  const monitor = ctx.createGain();
+  monitor.gain.value = 0.3;
+  src.connect(monitor); monitor.connect(ctx.destination);
+  src.start();
+  const r = await watch(an, null, 3000);
+  src.stop();
+  return { ...r, bytes, seconds: +audio.duration.toFixed(2),
+    samplePeak: +samplePeak.toFixed(4),
+    decodedRealAudio: samplePeak > 0.0005 };
+}
+
+document.getElementById('run').addEventListener('click', async () => {
+  const button = document.getElementById('run');
+  button.disabled = true;
+  button.textContent = 'Running…';
+  out.innerHTML = '';
+
+  // Everything that must happen inside the tap happens here, before any await.
+  const Ctx = window.AudioContext || window.webkitAudioContext;
+  const ctx = new Ctx({ latencyHint: 'interactive' });
+  ctx.resume?.().catch(() => {});
+  // One element primed on silence in the gesture, for test 3.
+  const primed = new Audio();
+  primed.crossOrigin = 'anonymous';
+  primed.preload = 'auto';
+  primed.playsInline = true;
+  primed.src = SILENCE;
+  primed.play?.().catch(() => {});
+
+  document.getElementById('env').textContent =
+    `${navigator.userAgent} · ctx ${ctx.state} @ ${ctx.sampleRate} Hz · dpr ${devicePixelRatio}`;
+
+  const tests = [
+    ['1 · fresh element, routed after src', (c) => freshLate(c, STREAMS[0])],
+    ['2 · fresh element, routed before src', (c) => freshEarly(c, STREAMS[1])],
+    ['3 · primed on silence, then re-pointed', (c) => pooledSilence(c, STREAMS[0], primed)],
+    ['4 · no element: fetch and decode', (c) => fetchDecode(c, STREAMS[1])],
+  ];
+
+  // Nothing below can be judged on a context that is not rendering.
+  //
+  // `resume()` is raced, never awaited on its own: a context held down by an
+  // autoplay policy returns a promise that simply never settles, and awaiting it
+  // leaves this page saying "Running…" forever — which is the least useful thing a
+  // diagnostic can do.
+  await sleep(300);
+  if (!contextRunning(ctx)) {
+    await Promise.race([ctx.resume?.().catch(() => {}) ?? sleep(0), sleep(800)]);
+  }
+  if (!contextRunning(ctx)) {
+    row('audio context').done(false, `context is ${ctx.state}, not running`,
+      'Every test would read silence from a context that is not rendering, so none '
+      + 'of them would mean anything. Tap "Run again" — and if it stays suspended, '
+      + 'that is itself the finding.');
+    button.textContent = 'Run again';
+    button.disabled = false;
+    return;
+  }
+
+  for (const [name, run] of tests) {
+    const r = row(name);
+    try {
+      const result = await run(ctx);
+      // Passing means the ANALYSER heard it. Audible-but-unanalysable is the whole
+      // failure this page exists to find, so it counts as a fail. Test 4 is judged
+      // on its decoded samples instead, since it does not depend on rendering.
+      const heard = 'decodedRealAudio' in result
+        ? result.decodedRealAudio
+        : Number.isFinite(result.peak) && result.peak > -100;
+      r.done(heard, verdict(result), `ctx ${ctx.state} · ${JSON.stringify(result)}`);
+    } catch (err) {
+      r.done(false, 'threw', String(err));
+    }
+  }
+  button.textContent = 'Run again';
+  button.disabled = false;
+  document.getElementById('env').textContent += ` · ctx now ${ctx.state}`;
+});
+</script>
+</body>
+</html>
