@@ -55,6 +55,22 @@ keeps its own `MediaElementAudioSourceNode` for life, because an element may be
 given exactly one, ever: a second call throws `InvalidStateError`, verified in a
 browser. Recycling the *pair* is the only way to recycle an element at all.
 
+**The route into the graph is made late**, once the real stream URL is on the
+element, and this distinction is the difference between hearing the piece and merely
+hearing the streams. WebKit does not reliably keep an element routed when its `src`
+changes after the node exists, and a broken route fails in the cruellest possible
+way: the element plays out of the speaker exactly as it should while every analyser
+reads nothing. The piece then sounds like four microphones and draws a frozen
+picture — which is what the first version of this pool did on an iPhone. The pool
+also spends never-yet-routed elements first, and a stream that cannot be routed at
+all now fails outright rather than playing unheard.
+
+Because that failure looks like health from every other angle, the piece watches for
+it: a stream that has been live for four seconds without the analyser ever seeing a
+single finite reading is reported on the page as *"playing, but not reaching the
+analyser"*. A suspended audio context is named in the status bar for the same
+reason.
+
 Two bugs of the project's own showed up alongside it, and both were worse than the
 platform policy:
 
@@ -513,7 +529,7 @@ collapse into a smudge — 56 read as a landscape.
 ## Tests
 
 ```
-node test/run.js       # 94 tests, no browser needed
+node test/run.js       # 98 tests, no browser needed
 ```
 
 The audio graph and WebGL need a browser, but everything that decides what the

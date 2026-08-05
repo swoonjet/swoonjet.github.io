@@ -130,14 +130,31 @@ export class RemoteStream {
     });
 
     // A MediaElementAudioSourceNode may only be created once per element, and once
-    // created the element's output belongs to the graph. A pooled element already
-    // has its own, made when the pool was primed.
-    if (this.lease) {
-      this.lease.node.connect(this.node);
-    } else {
-      this.mediaNode = this.ctx.createMediaElementSource(el);
-      this.mediaNode.connect(this.node);
+    // created the element's output belongs to the graph.
+    //
+    // Created only now, with the stream's own URL already on the element. Routing an
+    // element first and re-pointing it afterwards is what leaves WebKit playing the
+    // stream out of the speaker while the graph receives silence — audible, and
+    // invisible to every analyser in the piece.
+    try {
+      this.mediaNode = this.lease
+        ? this.pool.attach(this.lease, this.ctx)
+        : this.ctx.createMediaElementSource(el);
+    } catch {
+      this.mediaNode = null;
     }
+    // Refusing here is the point. An unrouted element still plays, audibly and
+    // convincingly, and the piece would hear nothing while reporting four live
+    // microphones — better to lose the place and say so.
+    if (!this.mediaNode) {
+      const reason = 'could not route this stream into the graph';
+      // Cancel `ready` on the way out: its timer would otherwise fire minutes
+      // later and reject a promise nobody is waiting on any more.
+      settle?.bad(reason);
+      ready.catch(() => {});
+      throw new Error(reason);
+    }
+    this.mediaNode.connect(this.node);
 
     // Deliberately not awaited. A stream that opens a socket but never delivers
     // decodable audio leaves this promise pending forever, and awaiting it here
@@ -245,6 +262,26 @@ export class RemoteStream {
     this.teardownElement();
     try { this.node.disconnect(); } catch { /* already gone */ }
   }
+}
+
+/**
+ * A stream that is playing but whose audio is not arriving in the graph.
+ *
+ * The one condition in this piece that looks exactly like health from every angle
+ * except the only one that matters: the clock advances, the stream is audible, and
+ * the analyser reads nothing — so the piece hears silence, draws a frozen picture,
+ * and reports itself well. Lives here rather than with the run loop so it can be
+ * tested without a browser.
+ *
+ * Judged on the spectrogram's `measured`, which turns true on the first frame
+ * holding any finite dB reading at all, so it stays false only if nothing has ever
+ * arrived — never merely because a place is quiet.
+ */
+export function isUnrouted(channel, nowMs, graceMs = 4000) {
+  const stream = channel?.stream;
+  if (!stream || stream.state !== 'live') return false;
+  if (channel.spectrogram?.measured) return false;
+  return nowMs - (stream.liveSinceMs || 0) > graceMs;
 }
 
 /**

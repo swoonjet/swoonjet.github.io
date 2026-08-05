@@ -15,6 +15,15 @@
 // given exactly one of those, ever — a second call throws InvalidStateError — so
 // recycling the PAIR is the only way to recycle an element at all.
 //
+// That node is created LATE, by `attach`, once the real stream URL is on the
+// element — never here. This is the difference between hearing the piece and merely
+// hearing the streams: WebKit does not reliably keep an element routed into the
+// graph when its `src` changes after the node exists, and a broken route fails in
+// the worst possible way. The element plays out of the speaker exactly as it should
+// while every analyser reads nothing, so the piece sounds like four microphones and
+// draws a frozen picture. That is what an iPhone showed. Priming costs nothing but a
+// moment of silence; the routing is established once, on the stream it will carry.
+//
 // On a browser with no such policy this changes nothing: the elements are ordinary
 // elements that happen to have been created early.
 
@@ -35,6 +44,7 @@ export class MediaPool {
    */
   prime(ctx, count, makeAudio = () => new Audio()) {
     if (this.primed) return this;
+    this.ctx = ctx;
     for (let i = 0; i < count; i++) {
       const el = makeAudio();
       el.crossOrigin = 'anonymous';   // must be set before any src, or media is tainted
@@ -47,39 +57,59 @@ export class MediaPool {
       // inside the gesture.
       const played = el.play?.();
       played?.catch?.(() => {});
-      // One source node per element, for the element's whole life.
-      let node = null;
-      try {
-        node = ctx.createMediaElementSource(el);
-      } catch {
-        // Nothing to recycle without it; a stream will make its own element.
-        continue;
-      }
-      this.entries.push({ el, node, leased: false });
+      this.entries.push({ el, node: null, leased: false });
     }
     this.primed = true;
     this.note = `${this.entries.length} elements unlocked`;
     return this;
   }
 
-  /** An unlocked (element, node) pair, or null if the pool is empty or spent. */
+  /**
+   * An unlocked entry, or null if the pool is spent.
+   *
+   * Prefers one that has never carried a stream. An element that already has a
+   * source node can only be re-pointed by changing its `src`, which is the very
+   * thing that can sever the route into the graph — so spend the untouched ones
+   * first and keep that risk for when there is nothing else left.
+   */
   take() {
-    const free = this.entries.find((e) => !e.leased);
+    const free = this.entries.find((e) => !e.leased && !e.node)
+      ?? this.entries.find((e) => !e.leased);
     if (!free) return null;
     free.leased = true;
     return free;
   }
 
-  /** Hand one back, silent and detached, ready for the next place. */
+  /**
+   * Route this element into the graph, once, now that it carries the stream it will
+   * keep. Returns the node, or null if the element cannot be routed at all — in
+   * which case the caller must not pretend it has been.
+   */
+  attach(entry, ctx = this.ctx) {
+    if (entry.node) return entry.node;
+    try {
+      entry.node = ctx.createMediaElementSource(entry.el);
+    } catch {
+      entry.node = null;
+    }
+    return entry.node;
+  }
+
+  /**
+   * Hand one back, stopped and detached, ready for the next place.
+   *
+   * The source is released rather than parked back on the silence. Parking would
+   * gain nothing — the element is already unlocked, and nothing but a gesture can
+   * change that — while costing another `src` change on an element that may now be
+   * routed, which is the one operation this file exists to avoid. Releasing also
+   * lets go of a socket to someone's Raspberry Pi.
+   */
   give(entry) {
     if (!entry || !this.entries.includes(entry)) return false;
-    try { entry.node.disconnect(); } catch { /* already gone */ }
+    try { entry.node?.disconnect(); } catch { /* already gone */ }
     try {
       entry.el.pause();
-      // Deliberately not removeAttribute('src'): an element with no source at all
-      // is treated as a fresh one by some engines, and freshness is what we spent
-      // the gesture to avoid. Park it back on the silence instead.
-      entry.el.src = SILENCE;
+      entry.el.removeAttribute?.('src');
       entry.el.load?.();
     } catch { /* fine */ }
     entry.leased = false;

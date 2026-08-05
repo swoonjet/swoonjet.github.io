@@ -208,6 +208,19 @@ export class Panel {
     }
   }
 
+  /**
+   * A line about this place that is not about its stream's health.
+   *
+   * Kept separate from `setChannelState` because the condition worth reporting most
+   * is one the stream itself considers fine: playing, clock advancing, and yet
+   * nothing arriving at the analyser.
+   */
+  setChannelNote(index, text) {
+    const row = this.channelRows[index];
+    if (!row?.why) return;
+    row.why.textContent = text || '';
+  }
+
   /** The mics belong to the people who installed them. Say so, always. */
   setCredits(channels) {
     if (!this.el.credits) return;

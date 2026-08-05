@@ -23,7 +23,7 @@ import { Locations } from './ui/locations.js';
 import { ViewMenu } from './ui/viewmenu.js';
 import { VIEWS, DEFAULT_VIEW, viewById } from './ui/views.js';
 import { loadSources, spread, minSeparationKm } from './audio/sources.js';
-import { openStreams } from './audio/remote.js';
+import { openStreams, isUnrouted } from './audio/remote.js';
 import { requestAccess, listInputDevices, openDevices } from './audio/inputs.js';
 
 const STEP_PAUSE = 320;
@@ -403,6 +403,7 @@ function loop(nowMs) {
   if (nowMs - lastHealthMs > 1000) {
     lastHealthMs = nowMs;
     let trouble = 0;
+    let unrouted = 0;
     engine.channels.forEach((ch, i) => {
       if (!ch.stream) return;
       const s = ch.stream.check(nowMs);
@@ -410,9 +411,24 @@ function loop(nowMs) {
       // which is the least useful half of what the stream knows.
       state.panel.setChannelState(i, s, ch.stream.detail);
       if (s !== 'live') trouble++;
+      // The failure that looks like success. A stream can be playing perfectly —
+      // clock advancing, audible — while its audio never reaches the graph, and
+      // then the piece hears nothing, draws nothing, and reports itself healthy.
+      // `measured` turns true on the first frame with any finite reading in it, so
+      // a few seconds of live playback without one means the route is broken.
+      else if (isUnrouted(ch, nowMs)) {
+        unrouted++;
+        state.panel.setChannelNote(i, 'playing, but not reaching the analyser');
+      }
     });
     if (engine.hasLocalMic) engine.checkFeedback(nowMs);
-    state.panel.warn(trouble ? `${trouble} stream${trouble === 1 ? '' : 's'} reconnecting` : '');
+    const notes = [];
+    if (trouble) notes.push(`${trouble} stream${trouble === 1 ? '' : 's'} reconnecting`);
+    if (unrouted) notes.push(`${unrouted} playing outside the graph — the piece cannot hear ${unrouted === 1 ? 'it' : 'them'}`);
+    // Nothing is audible from a suspended context, and nothing is analysed either;
+    // it is worth saying rather than leaving as a mystery.
+    if (engine.ctx.state !== 'running') notes.push(`audio context ${engine.ctx.state} — tap the page`);
+    state.panel.warn(notes.join(' · '));
   }
 
   if (nowMs - lastUiMs > 120) {
