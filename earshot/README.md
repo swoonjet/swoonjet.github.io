@@ -39,6 +39,44 @@ sequence reaches it.
 tabs, so a stream opened there sits at `readyState 0` forever. The piece detects
 this and waits, telling you why, rather than hanging.
 
+### On a phone
+
+iOS is the strict case, and it needed a specific fix. It will not load or play
+media it does not consider user-initiated, and "user-initiated" means *the same
+task as the tap* — not a second later, not after an `await`. It also ignores
+`preload`, so an element never played in a gesture never fetches a byte. This piece
+cannot satisfy that naively: at the moment of the tap it does not yet know which
+microphones exist, because the soundmap has not been asked.
+
+So the tap primes a **pool** of media elements by playing a moment of silence
+through each — that is what unlocks them — and the streams are attached to those
+already-unlocked elements seconds later (`src/audio/mediapool.js`). Each entry
+keeps its own `MediaElementAudioSourceNode` for life, because an element may be
+given exactly one, ever: a second call throws `InvalidStateError`, verified in a
+browser. Recycling the *pair* is the only way to recycle an element at all.
+
+Two bugs of the project's own showed up alongside it, and both were worse than the
+platform policy:
+
+- **`canplay` was treated as "audio is flowing".** It is not — it means enough has
+  buffered to begin, and it fires perfectly happily on a browser that has decided
+  not to let this play. That is why an iPhone reported four live streams and made
+  no sound: the piece believed them, drew them, and only the health check noticed
+  twelve seconds later that no clock had ever advanced. Readiness now means the
+  clock is moving: `playing`, or a `timeupdate` past zero.
+- **The rejection from `play()` was swallowed**, discarding the single most useful
+  thing the browser had said. A `NotAllowedError` now fails the connection
+  immediately and by name, rather than waiting out a timeout for an answer already
+  given — measured at 1 ms instead of 12 s.
+
+And the failure reason is now **on the page**, not only in a `title` attribute. A
+hover tooltip is invisible on a touch device, which is exactly where a stream is
+most likely to be blocked and least likely to explain itself.
+
+One thing no code can fix: on iPhone and iPad the hardware **ring/silent switch
+mutes Web Audio**, and this piece is nothing but Web Audio. The boot screen says so
+on those devices, because otherwise it reads as a bug.
+
 Options:
 
 | | |
@@ -398,6 +436,7 @@ to a link to the soundmap that relays it. If you extend this, keep that.
 | --- | --- | --- |
 | Registry | `src/audio/sources.js` | Live mic list, normalisation, farthest-point selection, haversine |
 | Streams | `src/audio/remote.js` | Holds each open mic open; reconnect, backoff, honest health |
+| Unlocking | `src/audio/mediapool.js` | Gesture-primed media elements, so iOS will load a stream at all |
 | Graph | `src/audio/engine.js` | Per-channel analyser + rolling capture; the audible live mix |
 | Spectrogram | `src/audio/spectrogram.js` | 96 log bands, 45 Hz–16 kHz, 30 fps, ring history |
 | Description | `src/audio/features.js` | Duration, attack, centroid motion, flatness, modulation, onset density |
@@ -474,7 +513,7 @@ collapse into a smudge — 56 read as a landscape.
 ## Tests
 
 ```
-node test/run.js       # 85 tests, no browser needed
+node test/run.js       # 94 tests, no browser needed
 ```
 
 The audio graph and WebGL need a browser, but everything that decides what the

@@ -38,12 +38,14 @@ export class Panel {
       clock: document.getElementById('clock'),
       voices: document.getElementById('voices'),
       warning: document.getElementById('warning'),
+      caution: document.querySelector('.boot__caution'),
     };
     this.steps = new Map();
     this.channelRows = [];
     this.libraryRows = new Map();
     this.buildBoot();
     this.buildLibrary();
+    this.notePlatform();
     this.el.start.addEventListener('click', () => this.onStart());
     // Wired here, invoked by whoever owns the library.
     this.onLibraryOpen = null;
@@ -67,6 +69,23 @@ export class Panel {
     this.unread = 0;
     this.el.libraryOpen = document.getElementById('locations-open');
     this.el.libraryOpen?.addEventListener('click', () => this.onLibraryOpen?.());
+  }
+
+  /**
+   * One platform note, shown only where it applies.
+   *
+   * On iPhone and iPad the hardware ring/silent switch mutes Web Audio, and this
+   * piece is nothing but Web Audio. It is the one cause of "it loads and makes no
+   * sound" that no amount of code can fix or detect, so it has to be said out loud
+   * before anyone starts hunting for a bug.
+   */
+  notePlatform() {
+    if (!isIOS() || !this.el.caution) return;
+    const line = document.createElement('span');
+    line.className = 'boot__caution-line';
+    line.textContent = 'On iPhone and iPad the ring/silent switch mutes web audio. '
+      + 'If the microphones show as live and you hear nothing, check that switch first.';
+    this.el.caution.appendChild(line);
   }
 
   buildBoot() {
@@ -145,7 +164,8 @@ export class Panel {
           Number.isFinite(m.lat) ? ` · ${m.lat.toFixed(1)}, ${m.lng.toFixed(1)}` : ''}</span>
         <button class="source__off" type="button" title="take ${escape(m.place ?? ch.name)} off">off</button>
         <span class="source__meter"><i></i></span>
-        <b class="source__trim"></b>`;
+        <b class="source__trim"></b>
+        <span class="source__why"></span>`;
       this.el.sources.appendChild(li);
       // Turning a place off from the main screen, without opening the library.
       li.querySelector('.source__off').addEventListener('click', () => {
@@ -156,6 +176,7 @@ export class Panel {
         fill: li.querySelector('.source__meter i'),
         state: li.querySelector('.source__state'),
         trim: li.querySelector('.source__trim'),
+        why: li.querySelector('.source__why'),
       };
       this.setChannelState(channels.indexOf(ch), li.dataset.state, '', row);
       return row;
@@ -168,13 +189,23 @@ export class Panel {
     this.setCredits(channels);
   }
 
-  /** Stream health, shown honestly: a quiet mic is live, not broken. */
+  /**
+   * Stream health, shown honestly: a quiet mic is live, not broken.
+   *
+   * Trouble gets a line of plain text on the page, not only a tooltip. A hover
+   * title is invisible on a phone, which is exactly where a stream is most likely
+   * to be blocked and least likely to explain itself.
+   */
   setChannelState(index, state, detail = '', rowOverride = null) {
     const row = rowOverride ?? this.channelRows[index];
     if (!row) return;
     row.el.dataset.state = state;
     row.state.textContent = STATE_MARK[state] ?? '·';
     row.state.title = detail ? `${state} — ${detail}` : state;
+    if (row.why) {
+      const trouble = state === 'failed' || state === 'stalled';
+      row.why.textContent = trouble ? (detail || state) : '';
+    }
   }
 
   /** The mics belong to the people who installed them. Say so, always. */
@@ -296,6 +327,17 @@ export function describeNormalisation(channel) {
   if (gain > 1.05 || gain < 0.95) parts.push(`plot ×${gain.toFixed(2)}`);
   if (Math.abs(match) >= 0.5) parts.push(`heard ${match > 0 ? '+' : ''}${match.toFixed(1)} dB`);
   return parts.length ? parts.join(' · ') : 'nothing adjusted — this place arrives at level';
+}
+
+/**
+ * iPadOS reports itself as MacIntel, so the platform string alone is not enough —
+ * a Mac with a touchscreen does not exist, and that is what makes the touch-point
+ * count decisive.
+ */
+export function isIOS(nav = globalThis.navigator) {
+  if (!nav) return false;
+  if (/iPad|iPhone|iPod/.test(nav.userAgent ?? '')) return true;
+  return nav.platform === 'MacIntel' && (nav.maxTouchPoints ?? 0) > 1;
 }
 
 function rgbCss([r, g, b]) {

@@ -111,6 +111,7 @@ async function boot() {
     panel.step('connect', 'active');
     await ensureVisible(panel);
     const streams = await openStreams(engine.ctx, candidates, SOURCE_COUNT, {
+      pool: engine.mediaPool,
       onNote: (text) => panel.bootStatus(text),
       onState: (source, streamState, detail) => {
         const index = state.engine.channels.findIndex((c) => c.meta?.url === source.url);
@@ -268,6 +269,7 @@ async function toggleLocation(source) {
 
   state.panel.warn(`connecting to ${source.place}…`);
   const [stream] = await openStreams(engine.ctx, [source], 1, {
+    pool: engine.mediaPool,
     onNote: (text) => state.panel.warn(text),
   });
   if (!stream) {
@@ -307,6 +309,7 @@ async function randomSpread() {
 
   state.panel.warn('drawing a new set…');
   const opened = await openStreams(engine.ctx, toOpen, want - engine.channels.length, {
+    pool: engine.mediaPool,
     onNote: (text) => state.panel.warn(text),
   });
   opened.forEach((stream) => {
@@ -403,7 +406,9 @@ function loop(nowMs) {
     engine.channels.forEach((ch, i) => {
       if (!ch.stream) return;
       const s = ch.stream.check(nowMs);
-      state.panel.setChannelState(i, s);
+      // Pass the reason on. Without it the panel could only ever say "failed",
+      // which is the least useful half of what the stream knows.
+      state.panel.setChannelState(i, s, ch.stream.detail);
       if (s !== 'live') trouble++;
     });
     if (engine.hasLocalMic) engine.checkFeedback(nowMs);

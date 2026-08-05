@@ -9,12 +9,17 @@
 const STATES = ['connecting', 'live', 'stalled', 'failed'];
 
 export class RemoteStream {
-  constructor(ctx, source, { onState = () => {}, maxTries = 6, readyTimeoutMs = 12000 } = {}) {
+  constructor(ctx, source, {
+    onState = () => {}, maxTries = 6, readyTimeoutMs = 12000, pool = null,
+    makeAudio = () => new Audio(),
+  } = {}) {
     this.ctx = ctx;
     this.source = source;
     this.onState = onState;
     this.maxTries = maxTries;
     this.readyTimeoutMs = readyTimeoutMs;
+    this.pool = pool;
+    this.makeAudio = makeAudio;
 
     this.state = 'connecting';
     this.tries = 0;
@@ -22,6 +27,8 @@ export class RemoteStream {
     this.node.gain.value = 1;
     this.el = null;
     this.mediaNode = null;
+    this.lease = null;
+    this.playError = null;
     this.lastProgressMs = 0;
     this.liveSinceMs = 0;
     this.lastTime = -1;
@@ -32,62 +39,123 @@ export class RemoteStream {
     if (this.destroyed || this.state === state) return;
     if (!STATES.includes(state)) return;
     this.state = state;
+    this.detail = detail;
     this.onState(state, detail, this);
   }
 
-  /** Open the stream and resolve once audio is genuinely flowing. */
+  /**
+   * A listener that will be taken off again. Every element-lifetime listener goes
+   * through here, because a pooled element outlives the stream that borrowed it:
+   * left alone, a recycled element would collect one `error`-triggers-retry
+   * listener per lease and eventually retry on behalf of places that are long gone.
+   */
+  bind(el, type, fn) {
+    (this.listeners ??= []).push([el, type, fn]);
+    el.addEventListener(type, fn);
+  }
+
+  unbindAll() {
+    for (const [el, type, fn] of this.listeners ?? []) {
+      try { el.removeEventListener(type, fn); } catch { /* already gone */ }
+    }
+    this.listeners = [];
+  }
+
+  /**
+   * Open the stream and resolve once audio is genuinely flowing.
+   *
+   * "Genuinely flowing" means the clock is moving — `playing`, or a `timeupdate`
+   * past zero. It deliberately does NOT mean `canplay`, which only says enough has
+   * buffered to begin, and which fires perfectly happily on a browser that has
+   * decided not to let this play at all. Resolving on `canplay` is why an iPhone
+   * reported four live streams and made no sound: the piece believed them, drew
+   * them, and only the health check noticed twelve seconds later that no clock had
+   * ever advanced.
+   */
   async connect() {
     this.tries++;
     this.setState('connecting');
+    this.playError = null;
 
-    const el = new Audio();
+    // A gesture-unlocked element if the pool has one. On iOS an element made here,
+    // seconds after the tap, will not load a byte.
+    this.lease = this.pool?.take() ?? null;
+    const el = this.lease?.el ?? this.makeAudio();
     // crossOrigin must be set before src, or the media is tainted and every
     // analyser reading comes back as silence.
     el.crossOrigin = 'anonymous';
     el.preload = 'auto';
     el.autoplay = false;
+    el.playsInline = true;
     el.loop = false;
     // Icecast ignores the query string; it defeats any intermediate cache.
     el.src = `${this.source.url}${this.source.url.includes('?') ? '&' : '?'}_=${this.tries}`;
     this.el = el;
 
-    el.addEventListener('stalled', () => this.setState('stalled', 'stalled'));
-    el.addEventListener('playing', () => {
-      this.lastProgressMs = performance.now();
-      this.setState('live');
-    });
+    this.bind(el, 'stalled', () => this.setState('stalled', 'stalled'));
 
+    let settle = null;
     const ready = new Promise((resolve, reject) => {
       const ok = () => { cleanup(); resolve(); };
-      const bad = () => { cleanup(); reject(new Error('could not open stream')); };
-      const timer = setTimeout(() => { cleanup(); reject(new Error('timed out waiting for audio')); }, this.readyTimeoutMs);
+      const bad = (reason) => { cleanup(); reject(new Error(reason)); };
+      const onCanPlay = () => { /* buffered, not playing — not enough */ };
+      const onPlaying = () => {
+        this.lastProgressMs = performance.now();
+        ok();
+      };
+      // Some engines reach a moving clock without ever firing `playing` for a
+      // live stream, so a timeupdate past zero counts too.
+      const onTimeUpdate = () => { if (el.currentTime > 0) onPlaying(); };
+      const onError = () => bad(this.playError
+        ? `blocked by the browser (${this.playError.name})`
+        : 'could not open stream');
+      const timer = setTimeout(() => bad(this.playError
+        ? `blocked by the browser (${this.playError.name})`
+        : 'timed out waiting for audio'), this.readyTimeoutMs);
       const cleanup = () => {
         clearTimeout(timer);
-        el.removeEventListener('canplay', ok);
-        el.removeEventListener('playing', ok);
-        el.removeEventListener('error', bad);
+        settle = null;
+        el.removeEventListener('canplay', onCanPlay);
+        el.removeEventListener('playing', onPlaying);
+        el.removeEventListener('timeupdate', onTimeUpdate);
+        el.removeEventListener('error', onError);
       };
-      el.addEventListener('canplay', ok, { once: true });
-      el.addEventListener('playing', ok, { once: true });
-      el.addEventListener('error', bad, { once: true });
+      // Held so a rejected play() can fail this immediately rather than waiting
+      // out a timeout for an answer the browser has already given.
+      settle = { bad };
+      el.addEventListener('canplay', onCanPlay);
+      el.addEventListener('playing', onPlaying);
+      el.addEventListener('timeupdate', onTimeUpdate);
+      el.addEventListener('error', onError, { once: true });
     });
 
-    // A MediaElementAudioSourceNode may only be created once per element, and
-    // once created the element's output belongs to the graph.
-    this.mediaNode = this.ctx.createMediaElementSource(el);
-    this.mediaNode.connect(this.node);
+    // A MediaElementAudioSourceNode may only be created once per element, and once
+    // created the element's output belongs to the graph. A pooled element already
+    // has its own, made when the pool was primed.
+    if (this.lease) {
+      this.lease.node.connect(this.node);
+    } else {
+      this.mediaNode = this.ctx.createMediaElementSource(el);
+      this.mediaNode.connect(this.node);
+    }
 
     // Deliberately not awaited. A stream that opens a socket but never delivers
     // decodable audio leaves this promise pending forever, and awaiting it here
-    // would hang past the timeout that is supposed to catch exactly that.
-    el.play().catch(() => { /* `ready` decides whether this worked */ });
+    // would hang past the timeout that is supposed to catch exactly that. The
+    // rejection is not swallowed, though — a refusal to play is the most useful
+    // thing this method can report, and it used to be thrown away.
+    const played = el.play?.();
+    played?.catch?.((err) => {
+      this.playError = err;
+      if (err?.name === 'NotAllowedError') settle?.bad(`blocked by the browser (${err.name})`);
+    });
     await ready;
 
     // Only now arm the reconnect listeners. Attaching them before `ready`
     // resolves gives a failed first connection two owners — the rejection the
     // caller is waiting on, and a background retry it never asked for.
-    el.addEventListener('error', () => this.retry('stream error'));
-    el.addEventListener('ended', () => this.retry('stream ended'));
+    this.bind(el, 'error', () => this.retry('stream error'));
+    this.bind(el, 'ended', () => this.retry('stream ended'));
 
     this.lastProgressMs = performance.now();
     this.liveSinceMs = this.lastProgressMs;
@@ -154,11 +222,19 @@ export class RemoteStream {
   }
 
   teardownElement() {
+    this.unbindAll();
     try { this.mediaNode?.disconnect(); } catch { /* already gone */ }
-    if (this.el) {
-      this.el.pause();
-      this.el.removeAttribute('src');
-      try { this.el.load(); } catch { /* fine */ }
+    // A borrowed element goes back to the pool still unlocked. Discarding it would
+    // spend the gesture that unlocked it, and there is only ever one gesture.
+    if (this.lease) {
+      this.pool?.give(this.lease);
+      this.lease = null;
+    } else if (this.el) {
+      try {
+        this.el.pause();
+        this.el.removeAttribute('src');
+        this.el.load();
+      } catch { /* fine */ }
     }
     this.mediaNode = null;
     this.el = null;
@@ -180,7 +256,9 @@ export class RemoteStream {
  * solar-powered field recorders to use four of them. Sequential rounds would
  * mean a boot as long as the sum of every timeout.
  */
-export async function openStreams(ctx, candidates, want, { onNote = () => {}, onState = () => {} } = {}) {
+export async function openStreams(ctx, candidates, want, {
+  onNote = () => {}, onState = () => {}, pool = null, makeAudio,
+} = {}) {
   const opened = [];
   const tried = new Set();
   let round = 0;
@@ -199,6 +277,8 @@ export async function openStreams(ctx, candidates, want, { onNote = () => {}, on
     const results = await Promise.all(batch.map((source) => {
       const stream = new RemoteStream(ctx, source, {
         onState: (state, detail) => onState(source, state, detail, stream),
+        pool,
+        ...(makeAudio ? { makeAudio } : {}),
       });
       return stream.connect()
         .then(() => ({ ok: true, stream, source }))

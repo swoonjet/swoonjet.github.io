@@ -126,12 +126,24 @@ ul { list-style: none; margin: 0; padding: 0; }
   grid-template-areas:
     "swatch name  state"
     ".      where off"
-    ".      meter trim";
+    ".      meter trim"
+    ".      why   why";
   align-items: center;
   column-gap: var(--unit);
   row-gap: 4px;
   margin-bottom: calc(var(--unit) * 2);
 }
+
+/* Why a stream is in trouble, in words, on the page. It used to live only in a
+   title attribute — which a touch device can never show, so an iPhone reporting
+   four failed streams could not say what had happened to any of them. */
+.source__why {
+  grid-area: why;
+  font-size: 10.5px;
+  line-height: 1.35;
+  color: var(--accent);
+}
+.source__why:empty { display: none; }
 
 .source__swatch { grid-area: swatch; width: 8px; height: 8px; align-self: center; }
 
@@ -459,6 +471,8 @@ ul { list-style: none; margin: 0; padding: 0; }
   line-height: 1.5;
   color: var(--ink-45);
 }
+/* Added only on the platform it applies to. */
+.boot__caution-line { display: block; margin-top: var(--unit); color: var(--ink-70); }
 
 /* ----------------------------------------------------------- narrow view */
 

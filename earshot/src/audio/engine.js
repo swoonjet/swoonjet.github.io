@@ -15,6 +15,7 @@ import { Smoother, clamp } from '../core/util.js';
 import { Spectrogram } from './spectrogram.js';
 import { ChannelStrip } from './mixer.js';
 import { matchDbFor } from './levels.js';
+import { MediaPool } from './mediapool.js';
 import { shortLabel, label as deviceLabel } from './inputs.js';
 
 /**
@@ -62,9 +63,22 @@ export class Engine {
     return this.channels.length >= Math.min(CONFIG.sources.max, CHANNEL_INKS.length);
   }
 
+  /**
+   * Everything here up to the first `await` runs inside the gesture that started
+   * the piece, and two things have to: the context's own unlock, and the media
+   * pool's. iOS counts "user-initiated" by task, not by intent — after an await it
+   * is as locked as if nobody had tapped anything.
+   */
   async init() {
     const Ctx = window.AudioContext || window.webkitAudioContext;
     this.ctx = new Ctx({ latencyHint: 'interactive' });
+
+    // Elements for every place this session could hold, plus room to reconnect a
+    // few of them without going back for a gesture that will not come.
+    this.mediaPool = new MediaPool().prime(this.ctx, CONFIG.sources.max + 2);
+    // Asked for here and checked again after the awaits below: on a strict browser
+    // the resume has to be in the gesture, and on a lenient one it costs nothing.
+    this.ctx.resume?.().catch(() => {});
 
     // Two buses into one limiter: the world as it arrives, and the layers the
     // piece generates from it. Keeping them apart is what makes the balance
