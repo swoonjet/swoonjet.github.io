@@ -1,0 +1,149 @@
+:root {
+  --ink: #d1d6e6;
+  --dim: #b8bed1;
+  --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+  --text: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, system-ui, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: #0a0a0f;
+  color: var(--ink);
+  font-family: var(--text);
+  -webkit-font-smoothing: antialiased;
+}
+
+#stage {
+  display: block;
+  position: fixed;
+  inset: 0;
+  touch-action: none;
+  cursor: crosshair;
+}
+
+/* Readout, not a control. Faint enough to ignore, legible when wanted. */
+#hud {
+  position: fixed;
+  left: 22px;
+  bottom: 20px;
+  margin: 0;
+  z-index: 5;
+  pointer-events: none;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  line-height: 1.85;
+  letter-spacing: 0.06em;
+  color: var(--dim);
+  opacity: 0.75;
+  text-shadow: 0 0 12px rgba(0, 0, 0, 0.9);
+}
+
+#hud span {
+  display: inline-block;
+  width: 5.8em;
+  color: #3a3a4a;
+  text-transform: lowercase;
+}
+
+#veil {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: grid;
+  place-items: center;
+  padding: 6vh 7vw;
+  background: radial-gradient(120% 90% at 50% 45%, rgba(10, 10, 15, 0.78), rgba(10, 10, 15, 0.95));
+  backdrop-filter: blur(3px);
+  /* Opacity only. `visibility` is a discrete property, and transitioning it
+     makes the show and hide directions fight over one delay — `esc` ends up
+     looking dead for 1.6s and then popping the title in. Interactivity is
+     already handled by pointer-events; the semantics ride on aria-hidden. */
+  transition: opacity 1.6s cubic-bezier(0.37, 0, 0.63, 1);
+  /* the first gesture belongs to the instrument, not to the legend */
+  pointer-events: none;
+}
+
+#veil.gone {
+  opacity: 0;
+}
+
+#veil .inner {
+  max-width: 46rem;
+  width: 100%;
+}
+
+#veil h1 {
+  margin: 0 0 1.1rem;
+  font-size: clamp(2.1rem, 5.4vw, 3.5rem);
+  font-weight: 300;
+  line-height: 1.04;
+  letter-spacing: -0.022em;
+  color: #ffffff;
+}
+
+#veil .lede {
+  margin: 0 0 2.4rem;
+  max-width: 34rem;
+  font-size: clamp(0.95rem, 1.5vw, 1.06rem);
+  line-height: 1.62;
+  color: #b8bed1;
+}
+
+.gestures {
+  display: grid;
+  grid-template-columns: minmax(9.5rem, max-content) 1fr;
+  gap: 0.44rem 1.9rem;
+  margin: 0 0 2.6rem;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.gestures dt {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  color: #ff00e5;
+  white-space: nowrap;
+}
+
+.gestures dd {
+  margin: 0;
+  color: #b8bed1;
+}
+
+#veil .go {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #1a7aff;
+  animation: breathe 4.4s cubic-bezier(0.37, 0, 0.63, 1) infinite;
+}
+
+@keyframes breathe {
+  0%,
+  100% {
+    opacity: 0.42;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@media (max-width: 620px) {
+  .gestures {
+    grid-template-columns: 1fr;
+    gap: 0.1rem 0;
+  }
+  .gestures dd {
+    margin-bottom: 0.5rem;
+  }
+}
