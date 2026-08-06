@@ -38,10 +38,10 @@
 <h1>Routing probe</h1>
 <div class="device" id="device"></div>
 <p>
-  Not part of the piece. Each test plays a live open microphone and asks whether an
-  AnalyserNode can actually see it — which is the thing that fails on iOS while the
-  audio itself plays perfectly. Tap once, wait about a minute, then send me the
-  results.
+  Not part of the piece. Round two: the first round proved that no media element
+  reaches the graph on iOS whatever order it is wired in, so these three ask what
+  can be done instead. Tap once, wait about twenty seconds, then send me the
+  results. You should hear a short tone and then a microphone.
 </p>
 <button id="run" type="button">Run the tests</button>
 <ul id="out"></ul>
@@ -54,7 +54,6 @@ const STREAMS = [
   'https://locus.creacast.com:9443/chania_stream.mp3',
   'https://mp3s.nc.u-tokyo.ac.jp/OTSUCHI_CyberForest.mp3',
 ];
-const SILENCE = 'data:audio/wav;base64,UklGRiUAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQEAAACA';
 const out = document.getElementById('out');
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -78,7 +77,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   el.innerHTML = wanted
     ? '<b>iPhone or iPad</b>This is the device the question is about. Tap below.'
     : `<b>Not an iOS device</b>This looks like ${blink ? 'a desktop Chrome-family browser' : 'a desktop browser'}`
-      + ', where all four tests pass and nothing is learned. Open this same page on '
+      + ', where these all pass and nothing is learned. Open this same page on '
       + 'the iPhone instead.';
 })();
 
@@ -126,80 +125,71 @@ async function watch(analyser, el, ms = 6000) {
 const verdict = (r) => `peak ${Number.isFinite(r.peak) ? r.peak.toFixed(1) + ' dB' : 'silence'}`
   + `, clock ${r.clockMoved ? 'moving' : 'stopped'} (${r.clock}), readyState ${r.readyState}`;
 
+/** A generated tone, so nothing below depends on a file or on the network. */
+function toneBytes(seconds = 2, hz = 440, sr = 8000) {
+  const n = sr * seconds;
+  const b = new Uint8Array(44 + n);
+  const dv = new DataView(b.buffer);
+  const ascii = (o, t) => { for (let i = 0; i < t.length; i++) b[o + i] = t.charCodeAt(i); };
+  ascii(0, 'RIFF'); dv.setUint32(4, 36 + n, true); ascii(8, 'WAVEfmt ');
+  dv.setUint32(16, 16, true); dv.setUint16(20, 1, true); dv.setUint16(22, 1, true);
+  dv.setUint32(24, sr, true); dv.setUint32(28, sr, true);
+  dv.setUint16(32, 1, true); dv.setUint16(34, 8, true);
+  ascii(36, 'data'); dv.setUint32(40, n, true);
+  for (let i = 0; i < n; i++) b[44 + i] = 128 + Math.round(100 * Math.sin(2 * Math.PI * hz * i / sr));
+  return b;
+}
+
 /**
- * 1 — a fresh element whose FIRST and only source is the stream, routed after the
- *     src is set. If this passes, the fix is to create elements in the tap with
- *     their real URLs already known (which means fetching the mic list before the
- *     tap, and it needs no permission).
+ * A — a media element on a SAME-ORIGIN source (a generated tone as a blob), routed
+ *     into the graph. Separates "iOS cannot route media elements at all" from "iOS
+ *     will not route these cross-origin streams". It does not change the fix — a
+ *     static site cannot proxy the mics — but it says what is actually broken.
  */
-async function freshLate(ctx, url) {
+async function sameOriginElement(ctx) {
+  const url = URL.createObjectURL(new Blob([toneBytes()], { type: 'audio/wav' }));
   const el = new Audio();
-  el.crossOrigin = 'anonymous';
   el.preload = 'auto';
   el.playsInline = true;
-  el.src = url + '?probe=1';
+  el.loop = true;
+  el.src = url;
   const node = ctx.createMediaElementSource(el);
   const an = ctx.createAnalyser();
   an.fftSize = 2048;
   node.connect(an);
   const monitor = ctx.createGain();
-  monitor.gain.value = 0.3;                // audible on purpose: the failure being
-  node.connect(monitor);                   // hunted is "plays fine, cannot be read"
-  monitor.connect(ctx.destination);
+  monitor.gain.value = 0.15;
+  node.connect(monitor); monitor.connect(ctx.destination);
   el.play().catch(() => {});
-  const r = await watch(an, el);
+  const r = await watch(an, el, 5000);
   el.pause();
+  URL.revokeObjectURL(url);
   return r;
 }
 
-/** 2 — same, but routed BEFORE the src is set. */
-async function freshEarly(ctx, url) {
-  const el = new Audio();
-  el.crossOrigin = 'anonymous';
-  el.preload = 'auto';
-  el.playsInline = true;
-  const node = ctx.createMediaElementSource(el);
-  const an = ctx.createAnalyser();
-  an.fftSize = 2048;
-  node.connect(an);
-  const monitor = ctx.createGain();
-  monitor.gain.value = 0.3;
-  node.connect(monitor); monitor.connect(ctx.destination);
-  el.src = url + '?probe=2';
-  el.play().catch(() => {});
-  const r = await watch(an, el);
-  el.pause();
-  return r;
+/** B — can decodeAudioData decode anything at all here? A control, not a question. */
+async function decodeControl(ctx) {
+  const audio = await ctx.decodeAudioData(toneBytes().buffer);
+  const pcm = audio.getChannelData(0);
+  let samplePeak = 0;
+  for (let i = 0; i < pcm.length; i++) { const a = Math.abs(pcm[i]); if (a > samplePeak) samplePeak = a; }
+  return { peak: null, clockMoved: true, clock: null, readyState: null,
+    seconds: +audio.duration.toFixed(2), samplePeak: +samplePeak.toFixed(4),
+    decodedRealAudio: samplePeak > 0.05 };
 }
 
 /**
- * 3 — what the piece does today: primed on silence in the tap, then re-pointed at
- *     the stream, then routed. Expected to fail, and worth confirming.
+ * C — the one that decides the build: fetch the live stream and decode it after
+ *     trimming to whole MP3 frames.
+ *
+ * Last time this threw `EncodingError` here while decoding perfectly on Chrome. An
+ * Icecast mount starts you mid-frame — measured at 216 bytes into one — and WebKit
+ * refuses a buffer that does not begin on a frame where Blink simply hunts for the
+ * next sync word. If this passes, the piece can hear on iOS by decoding for itself.
  */
-async function pooledSilence(ctx, url, primed) {
-  const el = primed;
-  el.src = url + '?probe=3';
-  const node = ctx.createMediaElementSource(el);
-  const an = ctx.createAnalyser();
-  an.fftSize = 2048;
-  node.connect(an);
-  const monitor = ctx.createGain();
-  monitor.gain.value = 0.3;
-  node.connect(monitor); monitor.connect(ctx.destination);
-  el.play().catch(() => {});
-  const r = await watch(an, el);
-  el.pause();
-  return r;
-}
-
-/**
- * 4 — no media element at all: fetch the stream, decode a chunk, play it through a
- *     buffer source. If only this passes, the piece has to decode for itself on iOS
- *     rather than routing an element, which is a much bigger build — so it matters
- *     to know whether it is even possible.
- */
-async function fetchDecode(ctx, url) {
-  const res = await fetch(url + '?probe=4');
+async function fetchAlignedDecode(ctx, url) {
+  const { alignToFrames } = await import('./src/audio/mp3frames.js');
+  const res = await fetch(url + '?probe=C');
   if (!res.ok) throw new Error(`fetch ${res.status}`);
   const reader = res.body.getReader();
   const parts = [];
@@ -214,12 +204,14 @@ async function fetchDecode(ctx, url) {
   const all = new Uint8Array(bytes);
   let at = 0;
   for (const p of parts) { all.set(p, at); at += p.length; }
-  const audio = await ctx.decodeAudioData(all.buffer);
-  // Judged on the decoded samples, not on an analyser: this is the one test that
-  // does not need the context to be rendering, so it stays meaningful regardless.
+
+  const aligned = alignToFrames(all);
+  if (!aligned) throw new Error('no whole MP3 frame found in 160 KB');
+  const audio = await ctx.decodeAudioData(aligned.data.slice().buffer);
   const pcm = audio.getChannelData(0);
   let samplePeak = 0;
   for (let i = 0; i < pcm.length; i++) { const a = Math.abs(pcm[i]); if (a > samplePeak) samplePeak = a; }
+
   const src = ctx.createBufferSource();
   src.buffer = audio;
   const an = ctx.createAnalyser();
@@ -231,9 +223,9 @@ async function fetchDecode(ctx, url) {
   src.start();
   const r = await watch(an, null, 3000);
   src.stop();
-  return { ...r, bytes, seconds: +audio.duration.toFixed(2),
-    samplePeak: +samplePeak.toFixed(4),
-    decodedRealAudio: samplePeak > 0.0005 };
+  return { ...r, startedMidFrame: aligned.start, frames: aligned.frames,
+    seconds: +audio.duration.toFixed(2), rate: aligned.sampleRate,
+    samplePeak: +samplePeak.toFixed(4), decodedRealAudio: samplePeak > 0.0005 };
 }
 
 document.getElementById('run').addEventListener('click', async () => {
@@ -246,22 +238,13 @@ document.getElementById('run').addEventListener('click', async () => {
   const Ctx = window.AudioContext || window.webkitAudioContext;
   const ctx = new Ctx({ latencyHint: 'interactive' });
   ctx.resume?.().catch(() => {});
-  // One element primed on silence in the gesture, for test 3.
-  const primed = new Audio();
-  primed.crossOrigin = 'anonymous';
-  primed.preload = 'auto';
-  primed.playsInline = true;
-  primed.src = SILENCE;
-  primed.play?.().catch(() => {});
-
   document.getElementById('env').textContent =
     `${navigator.userAgent} · ctx ${ctx.state} @ ${ctx.sampleRate} Hz · dpr ${devicePixelRatio}`;
 
   const tests = [
-    ['1 · fresh element, routed after src', (c) => freshLate(c, STREAMS[0])],
-    ['2 · fresh element, routed before src', (c) => freshEarly(c, STREAMS[1])],
-    ['3 · primed on silence, then re-pointed', (c) => pooledSilence(c, STREAMS[0], primed)],
-    ['4 · no element: fetch and decode', (c) => fetchDecode(c, STREAMS[1])],
+    ['A · same-origin element, routed', (c) => sameOriginElement(c)],
+    ['B · can decodeAudioData decode at all', (c) => decodeControl(c)],
+    ['C · fetch, align to frames, decode', (c) => fetchAlignedDecode(c, STREAMS[1])],
   ];
 
   // Nothing below can be judged on a context that is not rendering.
