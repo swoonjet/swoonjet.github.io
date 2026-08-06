@@ -134,6 +134,52 @@ state per channel. It judges health by whether the media clock is advancing,
 and perfectly healthy, and treating quiet as broken would throw away the best
 material in the piece.
 
+## The frame
+
+Three columns, split by what changes. The left is live state — which places are
+playing, how loud each is, and the controls that alter them. The centre is the
+stage. The right is reference: where those places are, the shapes the piece
+listens for, and who installed the microphones. Below 1080px the columns stack in
+that order, with the stage at 46vh.
+
+It was one 260px rail holding all of it, which meant 752px of content
+inner-scrolling through 356px of room — the map and the credits sat two folds
+below anything you were looking at, and at a normal window you could never see the
+microphone list and the map at the same time. Split, both columns fit whole at
+1440×865 with room to spare, and the worst case (six places, the hard cap, in a
+short window) scrolls the live list by a fraction of what it used to hide.
+
+A place's row carries its ink as a **column**, not a bar: full strength for the
+level, a fifth strength behind it so a silent place still says which layer on the
+stage is its. It used to be a horizontal bar under each row, which put a rule line
+under every place in a design whose first principle is that it has no rules — and
+saturated on every channel besides, so it distinguished nothing.
+
+The **reference library** draws each entry as a small spectrogram figure built from
+that entry's own criteria: register profile sets where it sits and how tall it is,
+duration sets its width across two and a half decades of time, spectral flatness
+decides between a line and a broken band, onset density makes it one mark or
+sixteen, modulation wobbles it, a falling centroid tilts it, a short attack gives
+it the broadband edge a click opens with. A bird is a high short arc; a hum is a
+long low line; rain is a fine scatter; wind is a band and a scrape is the same band
+roughened by its own jaggedness. Nothing in the drawing is invented — every
+dimension traces back to a number in `patterns.js`, which is the point, because
+"shapes, not samples" should be shown rather than asserted. `src/ui/shapeglyph.js`,
+and the scatter inside a mark is seeded from the entry's id so a reference does not
+redraw itself differently on every load. A match takes the whole row into accent
+and prints its confidence as a figure; the bar it replaced was the loudest thing in
+the sidebar and the least precise.
+
+The mixer and record controls are a fixed dock, because a thumb reaches the bottom
+edge of a phone and not much else. That put it over the right end of the status bar
+on a desktop, where trouble is reported — "2 places could not be opened" was drawn
+underneath it and read as `2 pl` — and over the whole bar on a phone. The dock's
+size is measured and published as `--dock-w` / `--dock-h` (it widens by a meter
+while recording, so a constant in the stylesheet would be wrong in one state or the
+other), the bar reserves that much, and the page ends above it rather than behind
+it. Trouble also reads as the bar's last cell now instead of being pinned right,
+and the bar wraps rather than crushing its last cell to one word per line.
+
 ## The three views
 
 A menu in the status bar names all three — **bloom**, **contour**, **ridge** —
@@ -263,7 +309,7 @@ a permanent rail; the stage gets the room instead. With the panel closed the
 button carries a count of what has been written since you last looked, which is
 quieter than pulling attention away from the visuals.
 
-The left rail carries a small **world map**: every live microphone as a faint
+The reference rail carries a small **world map**: every live microphone as a faint
 mark, the ones playing in their channel's ink and joined to each other, so the
 spread the selection works so hard to maximise is visible rather than merely
 asserted. Equirectangular, because this is a diagram of relative position rather
@@ -529,7 +575,7 @@ collapse into a smudge — 56 read as a landscape.
 ## Tests
 
 ```
-node test/run.js       # 98 tests, no browser needed
+node test/run.js       # 133 tests, no browser needed
 ```
 
 The audio graph and WebGL need a browser, but everything that decides what the
@@ -565,6 +611,44 @@ screenshot.
 
 `run()` exists because a background tab throttles `requestAnimationFrame` to
 nothing, which makes the plot look broken when it is fine.
+
+## Checking the interface without audio
+
+The piece cannot be started from an automated browser: a driven tab is
+`visibilityState: hidden`, a gesture-less `play()` is refused, and boot correctly
+stops there. That leaves the entire interface unjudgeable, which is how a dock
+ended up drawn over the one line of text that reports trouble. Three harnesses fill
+that gap, none of them shipped.
+
+```js
+// In the console on the real page — fills it with a stand-in set, no audio at all.
+const m = await import('/dev/fill-frame.js');
+await m.fill();                                      // four places
+await m.fill({ mics: 6, trouble: true, recording: true });
+```
+
+Real coordinates from the soundmap, so the map draws a real spread; fixed levels
+rather than random ones, so two screenshots can be compared.
+
+```
+http://localhost:4462/dev/widths.html          # 390, 430, 768 and 1280 side by side
+http://localhost:4462/dev/widths.html?mics=6&scale=1
+```
+
+The layout at four widths, each in a same-origin iframe so the media query and
+`100dvh` resolve against a real device box — a window the session cannot resize
+does not get a vote. Each frame reports what is cut off and whether anything in the
+status bar is under the dock, tested by scrolling to where the page ends and
+checking the bar's *content* rather than its box, since the box spans the full width
+by design.
+
+```
+http://localhost:4462/dev/glyphs.html          # the reference library, at size and 4×
+```
+
+Every library entry drawn from its own criteria, idle and matched, next to the
+numbers each was read from. It imports the module rather than a copy, so it cannot
+go stale while the glyphs are being tuned.
 
 ## Tuning
 

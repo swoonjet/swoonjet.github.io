@@ -4,6 +4,7 @@
 import { PATTERNS } from '../analysis/patterns.js';
 import { LOCUS_CREDIT as LOCUS } from '../audio/sources.js';
 import { formatClock, clamp } from '../core/util.js';
+import { glyphFor } from './shapeglyph.js';
 
 const BOOT_STEPS = [
   ['context',   'Audio context',     'interactive latency, native sample rate'],
@@ -46,6 +47,7 @@ export class Panel {
     this.buildBoot();
     this.buildLibrary();
     this.notePlatform();
+    this.watchDock();
     this.el.start.addEventListener('click', () => this.onStart());
     // Wired here, invoked by whoever owns the library.
     this.onLibraryOpen = null;
@@ -88,6 +90,32 @@ export class Panel {
     this.el.caution.appendChild(line);
   }
 
+  /**
+   * Publish the dock's size, so the layout can keep clear of it.
+   *
+   * The dock is fixed and sits above every panel, which is what a phone needs. It
+   * also meant that on a desktop it covered the right end of the status bar —
+   * exactly where trouble is reported — so "2 places could not be opened" was
+   * drawn underneath it and read as "2 pl". On a phone it covered the status bar
+   * outright.
+   *
+   * Measured rather than assumed: the dock grows by a twelve-character meter the
+   * moment a recording starts, so any reserve written as a constant in the
+   * stylesheet would be wrong in one state or the other.
+   */
+  watchDock() {
+    const dock = document.getElementById('dock');
+    if (!dock) return;
+    const publish = () => {
+      const box = dock.getBoundingClientRect();
+      const root = document.documentElement.style;
+      root.setProperty('--dock-w', `${Math.ceil(box.width)}px`);
+      root.setProperty('--dock-h', `${Math.ceil(box.height)}px`);
+    };
+    publish();
+    if (typeof ResizeObserver === 'function') new ResizeObserver(publish).observe(dock);
+  }
+
   buildBoot() {
     for (const [key, title, note] of BOOT_STEPS) {
       const li = document.createElement('li');
@@ -102,13 +130,25 @@ export class Panel {
     }
   }
 
+  /**
+   * The library, drawn from its own descriptions.
+   *
+   * Each row carries a small spectrogram figure built out of that entry's
+   * criteria — register, duration, attack, how often it repeats — so the row shows
+   * the shape it is listening for. It replaces a progress bar that said nothing
+   * about the shape and drew a rule line under all eleven entries besides.
+   */
   buildLibrary() {
     for (const p of PATTERNS) {
       const li = document.createElement('li');
       li.className = 'library__row';
-      li.innerHTML = `<span class="library__name">${p.short}</span><span class="library__bar"><i></i></span>`;
+      li.dataset.hit = '0';
+      li.title = p.noun;
+      li.innerHTML = `<span class="library__name">${p.short}</span>`
+        + `<span class="library__shape">${glyphFor(p)}</span>`
+        + `<b class="library__conf"></b>`;
       this.el.library.appendChild(li);
-      this.libraryRows.set(p.id, li.querySelector('i'));
+      this.libraryRows.set(p.id, { row: li, conf: li.querySelector('.library__conf'), timer: 0 });
     }
   }
 
@@ -156,15 +196,17 @@ export class Panel {
       const li = document.createElement('li');
       li.className = 'source';
       li.dataset.state = ch.stream?.state ?? 'live';
+      // The level lives in the channel's own ink, as a column at the head of the
+      // row: identity at rest, loudness when it fills. The faint version of the
+      // same ink is the track, so a place at silence still says which layer it is.
       li.innerHTML = `
-        <span class="source__swatch" style="background:${rgbCss(ch.ink.rgb)}"></span>
+        <span class="source__meter" style="background:${rgbCss(ch.ink.rgb, 0.2)}"><i style="background:${rgbCss(ch.ink.rgb)}"></i></span>
         <span class="source__name">${escape(m.city ? m.city : ch.name)}</span>
         <span class="source__state" title="stream state"></span>
         <span class="source__where">${escape(m.country || (m.remote ? '' : 'local input'))}${
           Number.isFinite(m.lat) ? ` · ${m.lat.toFixed(1)}, ${m.lng.toFixed(1)}` : ''}</span>
-        <button class="source__off" type="button" title="take ${escape(m.place ?? ch.name)} off">off</button>
-        <span class="source__meter"><i></i></span>
         <b class="source__trim"></b>
+        <button class="source__off" type="button" title="take ${escape(m.place ?? ch.name)} off">off</button>
         <span class="source__why"></span>`;
       this.el.sources.appendChild(li);
       // Turning a place off from the main screen, without opening the library.
@@ -241,7 +283,7 @@ export class Panel {
     for (let i = 0; i < this.channelRows.length && i < channels.length; i++) {
       const ch = channels[i];
       const row = this.channelRows[i];
-      row.fill.style.transform = `scaleX(${clamp(ch.level * 2.4, 0, 1).toFixed(3)})`;
+      row.fill.style.transform = `scaleY(${clamp(ch.level * 2.4, 0, 1).toFixed(3)})`;
 
       // Show the adaptive trim once it is doing real work, so a quiet place
       // looking active is explained rather than mysterious.
@@ -261,16 +303,22 @@ export class Panel {
     this.el.libraryOpen.textContent = atCapacity ? 'library · full' : 'library';
   }
 
-  /** Light the matched entry in the library at the confidence it was matched with. */
+  /**
+   * Light the matched entry in the library at the confidence it was matched with.
+   *
+   * The confidence is a number rather than a bar. A bar of eleven repeated tracks
+   * was the loudest thing in the sidebar and the least precise: .78 says what a
+   * three-quarters-full 60px rule only gestures at.
+   */
   markPattern(id, confidence) {
-    const bar = this.libraryRows.get(id);
-    if (!bar) return;
-    bar.style.transform = `scaleX(${clamp(confidence, 0, 1).toFixed(3)})`;
-    bar.parentElement.parentElement.dataset.hit = '1';
-    clearTimeout(bar._t);
-    bar._t = setTimeout(() => {
-      bar.style.transform = 'scaleX(0)';
-      bar.parentElement.parentElement.dataset.hit = '0';
+    const entry = this.libraryRows.get(id);
+    if (!entry) return;
+    entry.row.dataset.hit = '1';
+    entry.conf.textContent = formatConfidence(confidence);
+    clearTimeout(entry.timer);
+    entry.timer = setTimeout(() => {
+      entry.row.dataset.hit = '0';
+      entry.conf.textContent = '';
     }, 2400);
   }
 
@@ -353,8 +401,19 @@ export function isIOS(nav = globalThis.navigator) {
   return nav.platform === 'MacIntel' && (nav.maxTouchPoints ?? 0) > 1;
 }
 
-function rgbCss([r, g, b]) {
-  return `rgb(${Math.round(r * 255)} ${Math.round(g * 255)} ${Math.round(b * 255)})`;
+/**
+ * Confidence as a bare two-decimal fraction — ".78", not "0.78" and not "78%".
+ *
+ * It sits in a column of mono numbers a few pixels wide, where a leading zero is
+ * two characters of nothing.
+ */
+export function formatConfidence(confidence) {
+  return clamp(confidence, 0, 1).toFixed(2).replace(/^0\./, '.');
+}
+
+function rgbCss([r, g, b], alpha = 1) {
+  const triplet = `${Math.round(r * 255)} ${Math.round(g * 255)} ${Math.round(b * 255)}`;
+  return alpha >= 1 ? `rgb(${triplet})` : `rgb(${triplet} / ${alpha})`;
 }
 
 function escape(s) {

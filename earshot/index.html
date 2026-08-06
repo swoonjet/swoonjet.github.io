@@ -22,6 +22,12 @@
     </p>
   </header>
 
+  <!-- Two rails, split by what changes. The left is live state — which places are
+       playing, how loud, and the controls that alter them. The right is reference:
+       where those places are, the shapes the piece listens for, and who installed
+       the microphones. It used to be one 260px column holding all of it, which
+       meant 752px of content inner-scrolling through 356px of room, and the map and
+       the credits sat two folds below anything you were looking at. -->
   <section class="rail rail--left">
     <div class="block">
       <h2 class="label label--withAction">
@@ -29,6 +35,12 @@
         <button class="linkbutton" id="locations-open" type="button" disabled>library</button>
       </h2>
       <ul class="sources" id="sources"></ul>
+    </div>
+  </section>
+
+  <section class="rail rail--right">
+    <div class="block">
+      <h2 class="label">Where it is listening</h2>
       <div class="map" id="map"></div>
     </div>
 

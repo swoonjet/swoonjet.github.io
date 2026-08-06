@@ -50,15 +50,18 @@ body[data-ducking="1"] .statusbar__warning { color: var(--accent); }
 
 /* ---------------------------------------------------------------- layout */
 
+/* Three columns: live state, the stage, reference. The right rail spans the
+   masthead's row as well as the rail's, so it has the full height of the column to
+   work in — which is what stops the reference material inner-scrolling. */
 .frame {
   height: 100dvh;
   display: grid;
-  grid-template-columns: minmax(200px, 260px) minmax(0, 1fr);
+  grid-template-columns: minmax(190px, 240px) minmax(0, 1fr) minmax(172px, 210px);
   grid-template-rows: auto minmax(0, 1fr) auto;
   grid-template-areas:
-    "mast  stage"
-    "left  stage"
-    "status status";
+    "mast  stage right"
+    "left  stage right"
+    "status status status";
   column-gap: var(--gutter);
   row-gap: calc(var(--unit) * 4);
   padding: calc(var(--unit) * 4) var(--gutter) calc(var(--unit) * 2.5);
@@ -66,6 +69,13 @@ body[data-ducking="1"] .statusbar__warning { color: var(--accent); }
 
 .masthead { grid-area: mast; }
 .rail--left { grid-area: left; min-height: 0; overflow-y: auto; }
+.rail--right { grid-area: right; min-height: 0; overflow-y: auto; }
+
+/* The reference column carries three blocks where the left carries one, and the
+   credits are the last of them. They are the people whose microphones this piece is
+   using, so they are not the thing that falls off the bottom. */
+.rail--right .block { margin-bottom: calc(var(--unit) * 3); }
+.rail--right .block:last-child { margin-bottom: 0; }
 .stage {
   grid-area: stage;
   min-height: 0;
@@ -120,17 +130,22 @@ ul { list-style: none; margin: 0; padding: 0; }
 
 /* --------------------------------------------------------------- sources */
 
+/* Identity down the left, the two facts about right now at the top right, the one
+   action at the bottom right, trouble across the foot. Three items used to stack in
+   that right column at three different baselines inside 28px and read as a jumble;
+   worse, they crowded the location line until it ellipsised its own longitude.
+   The place's line gets the full width now, because a coordinate that loses its
+   last three characters is not a coordinate. */
 .source {
   display: grid;
-  grid-template-columns: 8px 1fr auto;
+  grid-template-columns: 6px minmax(0, 1fr) auto auto;
   grid-template-areas:
-    "swatch name  state"
-    ".      where off"
-    ".      meter trim"
-    ".      why   why";
-  align-items: center;
+    "meter name  trim  state"
+    "meter where where off"
+    ".     why   why   why";
+  align-items: baseline;
   column-gap: var(--unit);
-  row-gap: 4px;
+  row-gap: 3px;
   margin-bottom: calc(var(--unit) * 2);
 }
 
@@ -145,7 +160,29 @@ ul { list-style: none; margin: 0; padding: 0; }
 }
 .source__why:empty { display: none; }
 
-.source__swatch { grid-area: swatch; width: 8px; height: 8px; align-self: center; }
+/* Identity and loudness in one mark.
+
+   The level used to be a horizontal bar under each row — four places, four rules
+   across the column, which is the one thing this sheet says it does not do, and
+   they were near-saturated on every channel besides. It is a column at the head of
+   the row now: the channel's ink at a fifth strength always, so a place at silence
+   still says which layer on the stage is its, filling to full ink as it gets
+   louder. Vertical, so nothing here reads as a divider. */
+.source__meter {
+  grid-area: meter;
+  align-self: stretch;
+  position: relative;
+  width: 6px;
+  min-height: 22px;
+}
+
+.source__meter i {
+  position: absolute;
+  inset: 0;
+  transform: scaleY(0);
+  transform-origin: bottom center;
+  transition: transform 90ms linear;
+}
 
 /* Stream health. A quiet microphone is live; only a stopped clock is trouble. */
 .source__state {
@@ -200,12 +237,11 @@ ul { list-style: none; margin: 0; padding: 0; }
   text-overflow: ellipsis;
 }
 
-.source__meter, .library__bar, .tension {
+.tension {
   display: block;
   height: 3px;
   background: var(--ink-10);
 }
-.source__meter { grid-area: meter; align-self: center; }
 
 /* Adaptive trim, shown only when it is doing real work. */
 .source__trim {
@@ -219,7 +255,7 @@ ul { list-style: none; margin: 0; padding: 0; }
   color: var(--ink-24);
 }
 
-.source__meter i, .library__bar i, .tension i {
+.tension i {
   display: block;
   height: 100%;
   width: 100%;
@@ -244,15 +280,16 @@ ul { list-style: none; margin: 0; padding: 0; }
 
 .library__row {
   display: grid;
-  grid-template-columns: 62px 1fr;
+  grid-template-columns: 52px 58px auto;
   align-items: center;
   column-gap: var(--unit);
-  margin-bottom: 5px;
+  margin-bottom: 2px;
   color: var(--ink-45);
   transition: color 300ms ease;
 }
-.library__row[data-hit="1"] { color: var(--ink); }
-.library__row[data-hit="1"] .library__bar i { background: var(--accent); }
+/* A match takes the whole row, glyph included — the figure strokes in
+   currentColor, so it goes accent with the name and needs no rule of its own. */
+.library__row[data-hit="1"] { color: var(--accent); }
 
 .library__name {
   font-family: var(--mono);
@@ -260,7 +297,21 @@ ul { list-style: none; margin: 0; padding: 0; }
   letter-spacing: 0.08em;
 }
 
-.library__bar i { transition: transform 400ms cubic-bezier(0.37, 0, 0.63, 1); }
+/* The shape this entry is looking for, built from its own criteria. */
+.library__shape { display: block; line-height: 0; }
+.library__shape .glyph { display: block; overflow: visible; }
+
+/* Confidence, when there is one to report. A number where a bar used to be, and
+   sitting with the shape it belongs to — pinned to the column's right edge it stood
+   76px from its own glyph, and since only one or two are ever showing at a time,
+   there is no column of figures for that alignment to serve. The glyph column is a
+   fixed width, so these still line up with each other. */
+.library__conf {
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 400;
+  color: var(--accent);
+}
 
 /* ----------------------------------------------------------------- stage */
 
@@ -351,11 +402,20 @@ ul { list-style: none; margin: 0; padding: 0; }
 
 /* ------------------------------------------------------------- statusbar */
 
+/* The dock is fixed over the bar's right end, so the bar keeps that much clear.
+   `--dock-w` is measured and published by the panel, because the dock widens by a
+   meter while a recording runs; the fallback covers the moment before script runs
+   and the case where it never does. */
+/* Eight cells and seven gaps is more than a 1100px window has room for, so the bar
+   wraps rather than crushing its last cell to one word per line — which is what it
+   did to the warning, in the four lines it took to do it. */
 .statusbar {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
-  gap: calc(var(--unit) * 5);
+  gap: calc(var(--unit) * 1.5) calc(var(--unit) * 3.5);
   padding-top: calc(var(--unit) * 1.5);
+  padding-right: calc(var(--dock-w, 140px) + var(--unit) * 2);
 }
 
 .statusbar__cell { display: flex; align-items: baseline; gap: var(--unit); }
@@ -377,8 +437,10 @@ ul { list-style: none; margin: 0; padding: 0; }
 
 .tension { flex: 1 1 auto; min-width: 90px; }
 
+/* Trouble reads as the last cell of the bar, not as something pinned to the far
+   right. Pinned, it landed under the fixed dock in every window narrow enough to
+   matter, and wrapping did not save it — it wrapped to the same corner. */
 .statusbar__warning {
-  margin-left: auto;
   font-size: 11px;
   color: var(--ink-45);
 }
@@ -483,9 +545,25 @@ ul { list-style: none; margin: 0; padding: 0; }
     grid-template-areas: "mast" "stage" "left" "right" "status";
     height: auto;
     min-height: 100dvh;
+    /* Here the dock spans the width along the bottom edge, so the page ends above
+       it rather than behind it — scrolled to the end, it used to cover the status
+       bar entirely. */
+    padding-bottom: calc(var(--dock-h, 50px) + var(--unit) * 2);
   }
+  /* And the bar is above the dock in the flow now, not under it, so it keeps the
+     full width. */
+  .statusbar { padding-right: 0; }
   .rail--left, .rail--right { overflow: visible; }
   .stage__caption { margin-top: var(--unit); }
+
+  /* Stacked, a rail is as wide as the screen, and everything in it was sizing
+     itself to that. These blocks are lists and diagrams built for a 200px column;
+     at 700px the state mark of a microphone sat half a screen from its name. */
+  .rail--left .block, .rail--right .block { max-width: 460px; }
+
+  /* The map worst of all: full width on an iPad it drew 350px tall, which makes a
+     diagram of where the piece is listening into the largest thing on the page. */
+  .map { max-width: 340px; }
 }
 
 /* ------------------------------------------------------- library of places */
@@ -713,7 +791,8 @@ ul { list-style: none; margin: 0; padding: 0; }
 
 /* ------------------------------------------------------------------- map */
 
-.map { margin-top: calc(var(--unit) * 2.5); }
+/* The map carries its own heading now, which is all the separation it needs. */
+.map { margin-top: 0; }
 
 .map__svg { display: block; width: 100%; height: auto; }
 
