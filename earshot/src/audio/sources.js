@@ -11,6 +11,8 @@
 // Web Audio graph would hand back silence.
 
 export const LOCUS_ACTIVE_URL = 'https://locusonus.org/soundmap/list/active/json/name';
+import { hydrophoneSources, HYDROPHONES } from './hydrophones.js';
+
 export const LOCUS_CREDIT = { name: 'Locus Sonus — open microphones', url: 'https://locusonus.org/soundmap/' };
 
 /**
@@ -249,9 +251,12 @@ export async function fetchActive({ url = LOCUS_ACTIVE_URL, timeoutMs = 9000 } =
 export async function loadSources(opts = {}) {
   try {
     const live = await fetchActive(opts);
-    return { sources: live, live: true, note: `${live.length} microphones live now` };
+    // The hydrophones are not on the soundmap and are not going to be: they are
+    // Orcasound's, verified growing rather than merely reachable.
+    const sources = [...live, ...hydrophoneSources()];
+    return { sources, live: true, note: `${live.length} microphones live now · ${HYDROPHONES.length} hydrophones` };
   } catch (err) {
-    const list = FALLBACK_SOURCES.map(normalise).filter(Boolean);
+    const list = [...FALLBACK_SOURCES.map(normalise).filter(Boolean), ...hydrophoneSources()];
     return { sources: list, live: false, note: `soundmap unreachable (${err.message}) — using ${list.length} known mics` };
   }
 }

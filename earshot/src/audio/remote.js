@@ -7,6 +7,7 @@
 // that has stopped working from a microphone in a quiet place at night.
 
 import { DecodedStream } from './decoded.js';
+import { HydrophoneStream } from './hydrophones.js';
 
 const STATES = ['connecting', 'live', 'stalled', 'failed'];
 
@@ -339,10 +340,14 @@ export async function openStreams(ctx, candidates, want, {
       : `${need} short, trying ${batch.map((s) => s.city).join(', ')}…`);
 
     const results = await Promise.all(batch.map((source) => {
-      const Kind = decode ? DecodedStream : RemoteStream;
+      // A hydrophone arrives as HLS and is decoded here on every platform: there
+      // is no media element that can play a playlist of transport-stream segments.
+      const Kind = source.ext === 'hls'
+        ? HydrophoneStream
+        : (decode ? DecodedStream : RemoteStream);
       const stream = new Kind(ctx, source, {
         onState: (state, detail) => onState(source, state, detail, stream),
-        ...(decode ? {} : { pool, ...(makeAudio ? { makeAudio } : {}) }),
+        ...(decode || source.ext === 'hls' ? {} : { pool, ...(makeAudio ? { makeAudio } : {}) }),
       });
       return stream.connect()
         .then(() => ({ ok: true, stream, source }))
