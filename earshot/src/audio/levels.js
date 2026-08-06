@@ -76,3 +76,24 @@ export function matchDbFor(loudDb, cfg) {
 
 export const dbToGain = (db) => Math.pow(10, db / 20);
 export const gainToDb = (g) => 20 * Math.log10(Math.max(g, 1e-6));
+
+/**
+ * Bring a stream up rather than switch it on.
+ *
+ * A field microphone opens at whatever the place is doing, which at boot means four
+ * of them arriving at full level in the same instant — a city square, a forest and a
+ * hydrophone all at once, with no warning. It is the one moment in the piece that
+ * ever felt like a machine starting.
+ *
+ * Exponential rather than linear, because loudness is not: a linear ramp does most
+ * of its audible work in the first fifth of its duration and then seems to sit
+ * still. It cannot start at zero — an exponential ramp through silence is
+ * undefined — so it starts inaudibly close to it.
+ */
+export function fadeIn(param, ctx, seconds) {
+  const now = ctx.currentTime;
+  param.cancelScheduledValues(now);
+  param.setValueAtTime(0.0001, now);
+  param.exponentialRampToValueAtTime(1, now + Math.max(0.05, seconds));
+  return param;
+}

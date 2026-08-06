@@ -13,6 +13,10 @@ export const CONFIG = {
     liveBufferSeconds: 24, // rolling capture used by the granular engine
     liveMixGain: 0.55,   // the open microphones themselves, in the output
     responseGain: 1.0,   // the layers the piece generates from them
+    // Every place arrives over this, so nothing ever switches on. Long on purpose:
+    // at three seconds the world seems to come up out of the room rather than be
+    // dropped into it.
+    fadeInSec: 3.0,
     reverbSeconds: 3.4,  // the generated space every strip can send to
     reverbReturn: 0.7,
     geoPanWidth: 0.8,    // how wide "pan by longitude" spreads the set

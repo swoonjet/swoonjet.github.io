@@ -10,7 +10,7 @@
 // nothing and the spectrogram, the pattern matching and the narration carry on.
 
 import { clamp } from '../core/util.js';
-import { dbToGain } from './levels.js';
+import { dbToGain, fadeIn } from './levels.js';
 import { CONFIG } from '../core/config.js';
 
 const OFF_LOWCUT = 20;      // below the streams' content: effectively bypassed
@@ -54,13 +54,26 @@ export class ChannelStrip {
     this.matchGain = ctx.createGain();
     this.matchDb = 0;
 
+    // The fade a place arrives on. Deliberately here and not on the stream itself:
+    // the stream's node feeds the analyser, so fading THAT would fade the piece's
+    // hearing too — the adaptive floor would latch onto a level eighty decibels low
+    // on its first frame and spend twelve seconds correcting, flashing the plot on
+    // the way. The analysis should see the place as it really is from the start; it
+    // is only the ears that need easing in.
+    //
+    // A strip is built exactly when a place joins, so this covers the four that
+    // arrive at boot, one added from the library, and a whole new random spread.
+    this.fade = ctx.createGain();
+    this.fade.gain.value = 0;
+
     this.panner = ctx.createStereoPanner();
     this.liveLevel = ctx.createGain();
 
     source.connect(this.lowcut);
     this.lowcut.connect(this.tone);
     this.tone.connect(this.matchGain);
-    this.matchGain.connect(this.panner);
+    this.matchGain.connect(this.fade);
+    this.fade.connect(this.panner);
     this.panner.connect(this.liveLevel);
     this.liveLevel.connect(buses.world);
 
@@ -83,6 +96,7 @@ export class ChannelStrip {
     this.reverbSend.connect(buses.reverb);
 
     this.applyGains(false);
+    fadeIn(this.fade.gain, ctx, CONFIG.audio.fadeInSec);
   }
 
   /** Ramped, never stepped: a fader jump is a click. */
@@ -164,7 +178,7 @@ export class ChannelStrip {
   }
 
   dispose() {
-    for (const node of [this.lowcut, this.tone, this.matchGain, this.panner, this.liveLevel,
+    for (const node of [this.lowcut, this.tone, this.matchGain, this.fade, this.panner, this.liveLevel,
       this.responseIn, this.responseHP, this.responseLevel, this.reverbSend]) {
       try { node.disconnect(); } catch { /* already gone */ }
     }
