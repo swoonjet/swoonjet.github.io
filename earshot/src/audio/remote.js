@@ -6,6 +6,8 @@
 // reconnects with backoff, reports its state, and distinguishes a microphone
 // that has stopped working from a microphone in a quiet place at night.
 
+import { DecodedStream } from './decoded.js';
+
 const STATES = ['connecting', 'live', 'stalled', 'failed'];
 
 export class RemoteStream {
@@ -285,6 +287,31 @@ export function isUnrouted(channel, nowMs, graceMs = 4000) {
 }
 
 /**
+ * Which kind of stream this browser can actually hear with.
+ *
+ * On iOS a media element hands the graph silence, so there is nothing to decide:
+ * decode or hear nothing. Everywhere else the element is preferred, because the
+ * browser then owns the buffering, the jitter and the clock, and that is a great
+ * deal of delicate work not to have to do.
+ *
+ * `?decode=1` forces the decoder anywhere and `?decode=0` forces elements, which is
+ * the only way to exercise the iOS path on a machine that is not an iPhone.
+ */
+export function preferDecoder(nav = globalThis.navigator, search = globalThis.location?.search) {
+  const forced = new URLSearchParams(search ?? '').get('decode');
+  if (forced === '1') return true;
+  if (forced === '0') return false;
+  if (!nav) return false;
+  const ua = nav.userAgent ?? '';
+  // Every iOS browser is WebKit underneath and reports AppleWebKit/605.x; Blink
+  // freezes its own at 537.36, which is what tells an iPad in desktop mode apart
+  // from an actual desktop.
+  if (/AppleWebKit\/537\.36/.test(ua)) return false;
+  return /iPad|iPhone|iPod/.test(ua)
+    || (nav.platform === 'MacIntel' && (nav.maxTouchPoints ?? 0) > 1);
+}
+
+/**
  * Open `want` working streams out of `candidates`, which arrive in best-spread
  * order.
  *
@@ -294,7 +321,7 @@ export function isUnrouted(channel, nowMs, graceMs = 4000) {
  * mean a boot as long as the sum of every timeout.
  */
 export async function openStreams(ctx, candidates, want, {
-  onNote = () => {}, onState = () => {}, pool = null, makeAudio,
+  onNote = () => {}, onState = () => {}, pool = null, makeAudio, decode = preferDecoder(),
 } = {}) {
   const opened = [];
   const tried = new Set();
@@ -312,10 +339,10 @@ export async function openStreams(ctx, candidates, want, {
       : `${need} short, trying ${batch.map((s) => s.city).join(', ')}…`);
 
     const results = await Promise.all(batch.map((source) => {
-      const stream = new RemoteStream(ctx, source, {
+      const Kind = decode ? DecodedStream : RemoteStream;
+      const stream = new Kind(ctx, source, {
         onState: (state, detail) => onState(source, state, detail, stream),
-        pool,
-        ...(makeAudio ? { makeAudio } : {}),
+        ...(decode ? {} : { pool, ...(makeAudio ? { makeAudio } : {}) }),
       });
       return stream.connect()
         .then(() => ({ ok: true, stream, source }))
