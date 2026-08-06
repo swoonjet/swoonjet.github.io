@@ -62,8 +62,10 @@ export function recordingName(places, date, seconds) {
     .filter(Boolean)
     .slice(0, 4)
     .join('_');
-  const mins = Math.round(seconds / 60);
-  return `earshot-${stamp}-${where || 'listening'}-${mins}min.wav`;
+  // Under a minute is said in seconds: "0min" is not a length, and a short take is
+  // usually a deliberate one.
+  const length = seconds < 60 ? `${Math.max(1, Math.round(seconds))}s` : `${Math.round(seconds / 60)}min`;
+  return `earshot-${stamp}-${where || 'listening'}-${length}.wav`;
 }
 
 export const formatSize = (bytes) => (bytes < 1024 * 1024
