@@ -88,6 +88,40 @@ export function findFirstFrame(bytes, { chain = 3, from = 0 } = {}) {
 }
 
 /**
+ * The tail of an aligned buffer: its last `seconds` worth of whole frames.
+ *
+ * For the burst an Icecast mount sends on connect. That burst is not a head start,
+ * it is the recent past — several seconds of already-happened audio, handed over so
+ * a player can fill its buffer instantly. Playing all of it puts the place that far
+ * behind the world, and since the burst is a different size on every mount, it puts
+ * each place a *different* distance behind. In a piece about two places coinciding,
+ * that is not latency, it is detuning.
+ */
+export function keepLastSeconds(aligned, seconds) {
+  if (!aligned || aligned.seconds <= seconds) return aligned;
+  const perFrame = aligned.samples / aligned.frames / aligned.sampleRate;
+  const keep = Math.max(1, Math.ceil(seconds / perFrame));
+
+  let at = 0;
+  let skip = aligned.frames - keep;
+  while (skip-- > 0) {
+    const h = readHeader(aligned.data, at);
+    if (!h) break;
+    at += h.length;
+  }
+  const data = aligned.data.subarray(at);
+  const frames = aligned.frames - (aligned.frames - keep);
+  return {
+    ...aligned,
+    data,
+    frames,
+    samples: frames * (aligned.samples / aligned.frames),
+    seconds: frames * perFrame,
+    dropped: aligned.frames - frames,
+  };
+}
+
+/**
  * Trim a mid-stream chunk to whole frames.
  *
  * Returns the aligned view plus what the frames say about themselves, or null if

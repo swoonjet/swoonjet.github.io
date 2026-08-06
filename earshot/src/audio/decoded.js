@@ -28,7 +28,7 @@
 // 3. A 2 ms fade at each buffer edge, as insurance against a residual click. Short
 //    enough not to read as a dip, long enough to kill a discontinuity.
 
-import { alignToFrames, readHeader } from './mp3frames.js';
+import { alignToFrames, readHeader, keepLastSeconds } from './mp3frames.js';
 
 const STATES = ['connecting', 'live', 'stalled', 'failed'];
 
@@ -151,7 +151,15 @@ export class DecodedStream {
       pending = [];
       pendingBytes = 0;
 
-      const aligned = alignToFrames(joined);
+      let aligned = alignToFrames(joined);
+      // The first chunk carries the mount's burst-on-connect: several seconds of
+      // audio that has already happened. Keep only the newest of it, or this place
+      // joins the piece that far in the past — and by a different amount on every
+      // mount, which is what would stop two places coinciding.
+      if (aligned && this.scheduled === 0) {
+        aligned = keepLastSeconds(aligned, this.chunkSeconds);
+        if (aligned.dropped) this.droppedBurst = aligned.dropped;
+      }
       if (!aligned) {
         // Nothing decodable yet — keep it and read on. The cap is checked against
         // what is actually being held, carry included: measured against `pending`
