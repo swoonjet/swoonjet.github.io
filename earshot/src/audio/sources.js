@@ -11,13 +11,6 @@
 // Web Audio graph would hand back silence.
 
 export const LOCUS_ACTIVE_URL = 'https://locusonus.org/soundmap/list/active/json/name';
-// Every microphone the soundmap has ever carried — 1,310 usable records across 132
-// countries, against the 48 live on an average afternoon. Most are long gone, and
-// they are fetched anyway: the library is a gazetteer of the project as much as a
-// menu, and browsing the whole archive is worth more than a short list of what
-// happens to be awake. What is live is marked, and only what is live is ever chosen
-// automatically.
-export const LOCUS_ALL_URL = 'https://locusonus.org/soundmap/list/all/json/name';
 export const LOCUS_CREDIT = { name: 'Locus Sonus — open microphones', url: 'https://locusonus.org/soundmap/' };
 
 /**
@@ -227,7 +220,7 @@ export function minSeparationKm(sources) {
 }
 
 /** Ask the soundmap which microphones are live right now. */
-export async function fetchList({ url = LOCUS_ACTIVE_URL, timeoutMs = 9000 } = {}) {
+export async function fetchActive({ url = LOCUS_ACTIVE_URL, timeoutMs = 9000 } = {}) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -243,46 +236,20 @@ export async function fetchList({ url = LOCUS_ACTIVE_URL, timeoutMs = 9000 } = {
   }
 }
 
-/** The live list, kept for callers that only want what is awake. */
-export const fetchActive = (opts = {}) => fetchList(opts);
-
-/**
- * Fold the archive in behind the live list.
- *
- * Order matters and is the whole of the design here: live places first, in the
- * order the soundmap gave them, then everything else. A place is `live` or it is
- * not, and nothing downstream has to guess — the selection only ever draws from
- * the live ones, and the library shows both while saying which is which.
- */
-export function mergeArchive(live, archive) {
-  const seen = new Map();
-  for (const s of live) seen.set(s.id, { ...s, live: true });
-  for (const s of archive) if (!seen.has(s.id)) seen.set(s.id, { ...s, live: false });
-  const all = [...seen.values()];
-  return [...all.filter((s) => s.live), ...all.filter((s) => !s.live)];
-}
-
-export const liveOnly = (sources) => sources.filter((s) => s.live !== false);
-
 /**
  * The live list if it can be had, the verified fallback if not. Never throws —
  * the piece should always have somewhere to listen.
  *
- * The archive is a bonus and never a blocker: it is fetched alongside, and if it is
- * slow or missing the piece carries on with the live list exactly as before.
+ * Only what is live is ever offered. The soundmap also publishes everything it has
+ * ever carried — 1,263 microphones beyond the live list — and on 2026-08-05 every
+ * single one of them was tested: 1,111 answered 404 and not one returned audio.
+ * A library of places you cannot listen to is not a longer library, it is a worse
+ * one.
  */
 export async function loadSources(opts = {}) {
   try {
-    const [live, archive] = await Promise.all([
-      fetchList(opts),
-      fetchList({ ...opts, url: LOCUS_ALL_URL, timeoutMs: (opts.timeoutMs ?? 9000) * 2 })
-        .catch(() => []),
-    ]);
-    const sources = mergeArchive(live, archive);
-    const note = archive.length
-      ? `${live.length} live now · ${sources.length} in the archive`
-      : `${live.length} microphones live now`;
-    return { sources, live: true, note };
+    const live = await fetchActive(opts);
+    return { sources: live, live: true, note: `${live.length} microphones live now` };
   } catch (err) {
     const list = FALLBACK_SOURCES.map(normalise).filter(Boolean);
     return { sources: list, live: false, note: `soundmap unreachable (${err.message}) — using ${list.length} known mics` };

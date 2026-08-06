@@ -23,7 +23,7 @@ import { Panel } from './ui/panel.js';
 import { Locations } from './ui/locations.js';
 import { ViewMenu } from './ui/viewmenu.js';
 import { VIEWS, DEFAULT_VIEW, viewById } from './ui/views.js';
-import { loadSources, spread, minSeparationKm, liveOnly } from './audio/sources.js';
+import { loadSources, spread, minSeparationKm } from './audio/sources.js';
 import { openStreams, isUnrouted } from './audio/remote.js';
 import { requestAccess, listInputDevices, openDevices } from './audio/inputs.js';
 import { Recorder, recordingName, download, formatSize } from './audio/recorder.js';
@@ -103,9 +103,7 @@ async function boot() {
     state.map = new WorldMap(document.getElementById('map'));
     state.map.setSources(sources);
     const seed = SEED ?? (CONFIG.sources.randomStart ? null : 'fixed');
-    // The library carries the whole archive; only what is awake can be chosen.
-    const awake = liveOnly(sources);
-    const candidates = spread(awake, Math.min(awake.length, SOURCE_COUNT * 3), { seed });
+    const candidates = spread(sources, Math.min(sources.length, SOURCE_COUNT * 3), { seed });
     const intended = candidates.slice(0, SOURCE_COUNT);
     panel.step('selection', 'done',
       `${intended.map((s) => s.city).join(' · ')} — ${Math.round(minSeparationKm(intended)).toLocaleString('en-US')} km apart`
@@ -361,8 +359,7 @@ function removeLocation(channel) {
 async function randomSpread() {
   const { engine } = state;
   const want = Math.min(SOURCE_COUNT, CONFIG.sources.max);
-  const awake = liveOnly(state.library);
-  const candidates = spread(awake, Math.min(awake.length, want * 3));
+  const candidates = spread(state.library, Math.min(state.library.length, want * 3));
   const wanted = new Set(candidates.slice(0, want).map((s) => s.id));
 
   // Keep anything already playing that the new set also wants; drop the rest.

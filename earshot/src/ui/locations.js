@@ -53,21 +53,9 @@ export class Locations {
     return !this.el.hidden;
   }
 
-  /**
-   * Live places first, then the archive — each grouped by country.
-   *
-   * Sorting the whole list by country was right when it held 48 live microphones
-   * and wrong the moment the archive arrived: 48 awake places scattered through
-   * 1,267 dead ones across a hundred headings is not a library, it is a haystack,
-   * and the top of the list became a wall of things that cannot be listened to.
-   */
   setSources(sources) {
-    const byPlace = (a, b) =>
-      (a.country || 'zzz').localeCompare(b.country || 'zzz') || a.city.localeCompare(b.city);
-    const live = sources.filter((s) => s.live !== false).sort(byPlace);
-    const archive = sources.filter((s) => s.live === false).sort(byPlace);
-    this.liveCount = live.length;
-    this.sources = [...live, ...archive];
+    this.sources = [...sources].sort((a, b) =>
+      (a.country || 'zzz').localeCompare(b.country || 'zzz') || a.city.localeCompare(b.city));
     this.build();
   }
 
@@ -93,23 +81,7 @@ export class Locations {
     this.groups = [];
 
     let group = null;
-    let section = null;
-    this.sections = [];
     for (const source of this.sources) {
-      // Two sections, each grouped by country. The country heading repeats in the
-      // archive on purpose — it belongs to its section, not to the page.
-      const isLive = source.live !== false;
-      if (section === null || section.live !== isLive) {
-        const sectionEl = document.createElement('div');
-        sectionEl.className = 'locations__section';
-        sectionEl.textContent = isLive
-          ? `live now · ${this.liveCount}`
-          : `the archive · ${this.sources.length - this.liveCount} places, none of them live`;
-        this.listEl.appendChild(sectionEl);
-        section = { live: isLive, el: sectionEl, groups: [] };
-        this.sections.push(section);
-        group = null;
-      }
       const country = source.country || 'elsewhere';
       if (!group || group.country !== country) {
         const headEl = document.createElement('div');
@@ -118,7 +90,6 @@ export class Locations {
         this.listEl.appendChild(headEl);
         group = { country, headEl, entries: [] };
         this.groups.push(group);
-        section.groups.push(group);
       }
       const row = this.makeRow(source);
       this.listEl.appendChild(row);
@@ -132,18 +103,12 @@ export class Locations {
     row.type = 'button';
     row.className = 'location';
     row.dataset.id = source.id;
-    // Archive places are shown and can be tried; they are simply not pretended to
-    // be awake, and the selection never reaches for them.
-    if (source.live === false) row.dataset.archive = '1';
     row.innerHTML = `
       <span class="location__mark" aria-hidden="true"></span>
       <span class="location__city">${escape(source.city)}</span>
       <span class="location__detail">${escape(source.detail || '')}</span>
       <span class="location__artist">${escape(source.artist || '—')}</span>
       <span class="location__distance"></span>`;
-    if (source.live === false) {
-      row.querySelector('.location__artist').textContent += ' · not live now';
-    }
     row.addEventListener('click', () => this.onToggle(source));
     return row;
   }
@@ -160,10 +125,6 @@ export class Locations {
         if (match) { visibleInGroup++; shown++; }
       }
       group.headEl.hidden = visibleInGroup === 0;
-    }
-    // A section with nothing left in it should not sit there labelling emptiness.
-    for (const sec of this.sections ?? []) {
-      sec.el.hidden = sec.groups.every((g) => g.headEl.hidden);
     }
     this.emptyEl.hidden = shown > 0;
     if (!shown) this.emptyEl.textContent = `Nothing matches "${this.searchEl.value}".`;
@@ -205,9 +166,7 @@ export class Locations {
     }
 
     this.renderPlaying(channels);
-    // It said "1315 live", which was a lie by a factor of twenty-seven.
-    this.countEl.textContent = `${this.liveCount} live · ${this.sources.length} in the archive`
-      + ` · ${channels.length} playing`;
+    this.countEl.textContent = `${this.sources.length} live · ${channels.length} playing`;
     this.hintEl.textContent = atCapacity
       ? `At capacity. Take one off to add another.`
       : `Click a place to add it. Click a live one to take it off.`;
