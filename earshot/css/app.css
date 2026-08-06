@@ -1071,3 +1071,15 @@ ul { list-style: none; margin: 0; padding: 0; }
 /* An archive place is offered, not hidden — and not dressed up as available. */
 .location[data-archive="1"] { opacity: 0.55; }
 .location[data-archive="1"] .location__mark { opacity: 0.25; }
+
+/* The two halves of the library: what is awake, and everything the soundmap has
+   ever carried. */
+.locations__section {
+  margin: calc(var(--unit) * 3) 0 calc(var(--unit) * 1.5);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+.locations__section:first-child { margin-top: 0; }
