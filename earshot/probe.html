@@ -24,11 +24,19 @@
   .fail { color:var(--accent); }
   .env { margin-top:22px; font-family:"SF Mono",ui-monospace,Menlo,monospace;
          font-size:10.5px; color:var(--ink-45); word-break:break-all; }
+  /* Which device this is running on, said plainly and before anything else: the
+     first run of this page came back from a laptop, where everything passes and
+     nothing is learned. */
+  .device { font-size:13px; line-height:1.45; padding:12px 14px; margin:0 0 14px;
+            background:rgba(22,21,15,.06); }
+  .device b { display:block; font-size:11px; letter-spacing:.1em; text-transform:uppercase; }
+  .device[data-want="no"] { background:rgba(217,61,24,.10); color:var(--accent); }
 </style>
 </head>
 <body>
 
 <h1>Routing probe</h1>
+<div class="device" id="device"></div>
 <p>
   Not part of the piece. Each test plays a live open microphone and asks whether an
   AnalyserNode can actually see it — which is the thing that fails on iOS while the
@@ -49,6 +57,30 @@ const STREAMS = [
 const SILENCE = 'data:audio/wav;base64,UklGRiUAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQEAAACA';
 const out = document.getElementById('out');
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * Say which device this is, before anything else.
+ *
+ * Every iOS browser — Chrome and Firefox included — is WebKit underneath and
+ * reports AppleWebKit/605.x. Blink freezes its version at 537.36 forever, so that
+ * string is a reliable "this is not iOS", even when an iPad is asking for desktop
+ * sites and claiming to be a Mac.
+ */
+(function sayDevice() {
+  const el = document.getElementById('device');
+  const nav = navigator;
+  const ua = nav.userAgent;
+  const touch = (nav.maxTouchPoints ?? 0) > 1;
+  const blink = /AppleWebKit\/537\.36/.test(ua);
+  const iOS = !blink && (/iPad|iPhone|iPod/.test(ua) || (nav.platform === 'MacIntel' && touch));
+  const wanted = iOS;
+  el.dataset.want = wanted ? 'yes' : 'no';
+  el.innerHTML = wanted
+    ? '<b>iPhone or iPad</b>This is the device the question is about. Tap below.'
+    : `<b>Not an iOS device</b>This looks like ${blink ? 'a desktop Chrome-family browser' : 'a desktop browser'}`
+      + ', where all four tests pass and nothing is learned. Open this same page on '
+      + 'the iPhone instead.';
+})();
 
 function row(name) {
   const li = document.createElement('li');
