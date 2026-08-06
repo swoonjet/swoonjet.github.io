@@ -103,12 +103,18 @@ export class Locations {
     row.type = 'button';
     row.className = 'location';
     row.dataset.id = source.id;
+    // Archive places are shown and can be tried; they are simply not pretended to
+    // be awake, and the selection never reaches for them.
+    if (source.live === false) row.dataset.archive = '1';
     row.innerHTML = `
       <span class="location__mark" aria-hidden="true"></span>
       <span class="location__city">${escape(source.city)}</span>
       <span class="location__detail">${escape(source.detail || '')}</span>
       <span class="location__artist">${escape(source.artist || '—')}</span>
       <span class="location__distance"></span>`;
+    if (source.live === false) {
+      row.querySelector('.location__artist').textContent += ' · not live now';
+    }
     row.addEventListener('click', () => this.onToggle(source));
     return row;
   }

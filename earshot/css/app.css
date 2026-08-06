@@ -998,3 +998,76 @@ ul { list-style: none; margin: 0; padding: 0; }
   gap: var(--unit) calc(var(--gutter) * 0.75);
   margin-top: calc(var(--unit) * 3);
 }
+
+/* ------------------------------------------------------------------- dock */
+
+/* Always on screen, above every panel. Two controls only: the one you reach for
+   while listening, and the one that keeps what you heard. */
+.dock {
+  position: fixed;
+  right: var(--gutter);
+  bottom: calc(var(--unit) * 2.5);
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: calc(var(--unit) * 2);
+  padding: calc(var(--unit) * 1.25) calc(var(--unit) * 2);
+  background: var(--paper);
+  box-shadow: 0 2px 26px rgba(22, 21, 15, 0.16);
+}
+
+.dock__button {
+  appearance: none;
+  border: 0;
+  padding: 0;
+  background: none;
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-70);
+  cursor: pointer;
+  transition: color 250ms ease;
+}
+.dock__button:hover:not(:disabled) { color: var(--accent); }
+.dock__button:disabled { color: var(--ink-24); cursor: default; }
+
+/* Recording is a state, so it reads as one: the accent, and the only pulse in the
+   interface. Everything else here moves only because the world moved. */
+.dock__button--record[aria-pressed="true"] { color: var(--accent); }
+.dock__button--record[aria-pressed="true"]::before {
+  content: "";
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 7px;
+  background: var(--accent);
+  border-radius: 50%;
+  vertical-align: baseline;
+  animation: recording 1.8s cubic-bezier(0.37, 0, 0.63, 1) infinite;
+}
+@keyframes recording { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+
+.dock__meter {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--ink-45);
+  min-width: 12ch;
+}
+
+/* On a phone the dock spans the width, because a thumb reaches the bottom edge and
+   not much else. */
+@media (max-width: 1080px) {
+  .dock {
+    left: var(--gutter);
+    right: var(--gutter);
+    bottom: 0;
+    justify-content: space-between;
+    padding: calc(var(--unit) * 1.75) calc(var(--unit) * 2);
+  }
+}
+
+/* An archive place is offered, not hidden — and not dressed up as available. */
+.location[data-archive="1"] { opacity: 0.55; }
+.location[data-archive="1"] .location__mark { opacity: 0.25; }

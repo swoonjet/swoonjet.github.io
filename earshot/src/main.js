@@ -10,6 +10,7 @@
 // by default: the subject of this piece is elsewhere.
 
 import { CONFIG } from './core/config.js';
+import { formatClock } from './core/util.js';
 import { Engine } from './audio/engine.js';
 import { Synth } from './audio/synth.js';
 import { Conductor } from './orchestra/conductor.js';
@@ -22,9 +23,10 @@ import { Panel } from './ui/panel.js';
 import { Locations } from './ui/locations.js';
 import { ViewMenu } from './ui/viewmenu.js';
 import { VIEWS, DEFAULT_VIEW, viewById } from './ui/views.js';
-import { loadSources, spread, minSeparationKm } from './audio/sources.js';
+import { loadSources, spread, minSeparationKm, liveOnly } from './audio/sources.js';
 import { openStreams, isUnrouted } from './audio/remote.js';
 import { requestAccess, listInputDevices, openDevices } from './audio/inputs.js';
+import { Recorder, recordingName, download, formatSize } from './audio/recorder.js';
 
 const STEP_PAUSE = 320;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -48,6 +50,7 @@ const state = {
   mixer: null,
   contour: null,
   viewMenu: null,
+  recorder: null,
   view: DEFAULT_VIEW,
   running: false,
   startedMs: 0,
@@ -100,7 +103,9 @@ async function boot() {
     state.map = new WorldMap(document.getElementById('map'));
     state.map.setSources(sources);
     const seed = SEED ?? (CONFIG.sources.randomStart ? null : 'fixed');
-    const candidates = spread(sources, Math.min(sources.length, SOURCE_COUNT * 3), { seed });
+    // The library carries the whole archive; only what is awake can be chosen.
+    const awake = liveOnly(sources);
+    const candidates = spread(awake, Math.min(awake.length, SOURCE_COUNT * 3), { seed });
     const intended = candidates.slice(0, SOURCE_COUNT);
     panel.step('selection', 'done',
       `${intended.map((s) => s.city).join(' · ')} — ${Math.round(minSeparationKm(intended)).toLocaleString('en-US')} km apart`
@@ -128,6 +133,7 @@ async function boot() {
     streams.forEach((stream) => engine.addRemote(stream, stream.source));
     if (WANT_LOCAL_MIC) await addLocalMic(engine, panel);
     setupLibrary();
+    setupDock(engine);
     refreshChannels();
     panel.step('channels', 'done', `${engine.channels.length} live channel${engine.channels.length === 1 ? '' : 's'}`);
     await sleep(STEP_PAUSE);
@@ -205,6 +211,64 @@ function setView(id) {
   document.querySelector('.stage__axes').hidden = !view.axes;
   document.querySelector('.stage__caption').textContent = view.caption;
   state.viewMenu?.setActive(view.id);
+}
+
+/**
+ * The two controls that stay on screen: the mixer, and keeping what you heard.
+ *
+ * Recording taps the master, so a file holds exactly what the room held — the world,
+ * the layers the piece generated from it, and the reverb they share.
+ */
+function setupDock(engine) {
+  const button = document.getElementById('record');
+  const meter = document.getElementById('record-meter');
+  if (!button) return;
+
+  const show = (rec) => {
+    meter.hidden = !rec.recording;
+    meter.textContent = `${formatClock(rec.seconds * 1000)} · ${formatSize(rec.bytes)}`;
+  };
+
+  const recorder = new Recorder(engine.ctx, engine.master, {
+    onTick: (rec) => {
+      // Redrawn about twice a second, not on every 128-sample block.
+      if (rec.frames - (recorder._shownAt ?? 0) > engine.ctx.sampleRate / 2) {
+        recorder._shownAt = rec.frames;
+        show(rec);
+      }
+    },
+    onLimit: () => finish('that is twenty minutes — saved before the tab runs out of memory'),
+  });
+  state.recorder = recorder;
+
+  function finish(note) {
+    const result = recorder.stop();
+    button.setAttribute('aria-pressed', 'false');
+    button.textContent = 'record';
+    meter.hidden = true;
+    if (!result) { state.panel.warn('nothing was recorded'); return; }
+    const places = state.engine.channels.map((c) => c.meta?.city).filter(Boolean);
+    const name = recordingName(places, new Date(), result.seconds);
+    download(result.blob, name);
+    state.panel.warn(note ?? `saved ${name} — ${formatSize(result.blob.size)}`);
+  }
+
+  button.disabled = false;
+  button.addEventListener('click', async () => {
+    if (recorder.recording) { finish(); return; }
+    try {
+      button.disabled = true;
+      await recorder.start();
+      button.setAttribute('aria-pressed', 'true');
+      button.textContent = 'stop';
+      show(recorder);
+      state.panel.warn('recording what you hear — tap stop to keep it');
+    } catch (err) {
+      state.panel.warn(`recording is not available here (${err.message})`);
+    } finally {
+      button.disabled = false;
+    }
+  });
 }
 
 /** Build the browsable library and hand it the actions it can take. */
@@ -297,7 +361,8 @@ function removeLocation(channel) {
 async function randomSpread() {
   const { engine } = state;
   const want = Math.min(SOURCE_COUNT, CONFIG.sources.max);
-  const candidates = spread(state.library, Math.min(state.library.length, want * 3));
+  const awake = liveOnly(state.library);
+  const candidates = spread(awake, Math.min(awake.length, want * 3));
   const wanted = new Set(candidates.slice(0, want).map((s) => s.id));
 
   // Keep anything already playing that the new set also wants; drop the rest.

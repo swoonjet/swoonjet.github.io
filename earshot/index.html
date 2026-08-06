@@ -70,9 +70,6 @@
     <span class="statusbar__cell"><span class="label">Elapsed</span><span class="value" id="clock">00:00</span></span>
     <span class="statusbar__cell"><span class="label">Spread</span><span class="value" id="spread">—</span></span>
     <span class="statusbar__cell"><span class="label">Voices</span><span class="value" id="voices">00</span></span>
-    <span class="statusbar__cell">
-      <button class="linkbutton" id="mixer-open" type="button" disabled>mixer</button>
-    </span>
     <span class="statusbar__cell statusbar__cell--view">
       <button class="linkbutton" id="view-open" type="button"
               aria-haspopup="true" aria-expanded="false">view · bloom</button>
@@ -88,6 +85,17 @@
     <span class="statusbar__warning" id="warning" hidden></span>
   </footer>
 
+</div>
+
+<!-- Fixed to the viewport and above every panel. The mixer used to live in the
+     status bar, which on a phone is below the whole stacked layout and underneath
+     any open panel — so the one control you reach for while listening was the one
+     you had to go looking for. -->
+<div class="dock" id="dock">
+  <button class="dock__button" id="mixer-open" type="button" disabled>mixer</button>
+  <button class="dock__button dock__button--record" id="record" type="button" disabled
+          aria-pressed="false">record</button>
+  <span class="dock__meter" id="record-meter" hidden></span>
 </div>
 
 <div class="locations" id="locations" data-state="closed" hidden>
