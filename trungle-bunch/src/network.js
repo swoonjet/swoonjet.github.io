@@ -63,6 +63,10 @@ export class Network {
     this.touching = new Set(); // latched contacts, so an overlap strikes once
     this.rimRelease = [];
     this.sirenT = 0; // phase of the collective wail
+    // Swirl: signed curl of the cursor's path. Stirring one way or the other
+    // sets how each new note moves through the stereo field.
+    this.swirlRaw = 0;
+    this.frozen = false; // `f` holds the mycelium still; sound carries on
     // The drone is not a fixed backdrop — it is a readout of the stage. It rises
     // with the population and ducks under activity, like a sidechain.
     this.activity = 0;
@@ -131,6 +135,20 @@ export class Network {
 
   // ————— input-driven axes —————
 
+  /** Feed one unit of path curl, −1..1 per sample of movement. */
+  addSwirl(curl) {
+    this.swirlRaw = clamp(this.swirlRaw + curl * 0.55, -3.2, 3.2);
+  }
+
+  /** What a note fired right now should do in the stereo field. */
+  stereoNow() {
+    const a = Math.abs(this.swirlRaw);
+    return {
+      swirl: clamp((a - 0.25) / 1.6, 0, 1),
+      spin: this.swirlRaw >= 0 ? 1 : -1,
+    };
+  }
+
   setMouse(x, y, dx, dy, dt) {
     this.mouse.x = x;
     this.mouse.y = y;
@@ -169,6 +187,9 @@ export class Network {
     // Activity is a leaky count of everything the colony has just played.
     // Ducking is fast to fall and slow to lift, so a busy passage pushes the
     // drone out of the way and it creeps back in as things settle.
+    // swirl bleeds away quickly — it is a gesture, not a setting
+    this.swirlRaw *= Math.exp(-dt * 1.15);
+
     this.activity *= Math.exp(-dt * 0.9);
     const act = clamp(this.activity / 6, 0, 1);
     const duckTarget = 1 - act * 0.82;
@@ -209,8 +230,10 @@ export class Network {
     this.glide(env);
     this.selfTune(dt);
     this.physics(dt, env);
-    this.rewire(dt);
-    this.growConns(dt);
+    if (!this.frozen) {
+      this.rewire(dt);
+      this.growConns(dt);
+    }
     this.movePulses(dt);
     this.updateBed(dt);
     this.reap();
@@ -286,7 +309,7 @@ export class Network {
     for (const t of this.tris) {
       // walls sit clear of the body's own radius, and the bottom strip is
       // reserved so a settled colony never buries the readout
-      const m = 46 + t.radius();
+      const m = 46 + t.extent();
       const mBottom = m + 78;
       let ax = 0;
       let ay = 0;
@@ -305,9 +328,14 @@ export class Network {
         const dx = t.x - o.x;
         const dy = t.y - o.y;
         const d = Math.hypot(dx, dy) || 0.001;
-        const minD = (t.radius() + o.radius()) * 1.15 + 18;
+        const minD = (t.extent() + o.extent()) * 0.85 + 18;
         if (d < minD) {
-          const f = ((minD - d) / minD) * 220;
+          // mass scales with reach, so a huge body shoves and is barely shoved
+          const mine = t.extent();
+          const theirs = o.extent();
+          const give =
+            clamp((theirs * theirs) / (mine * mine + theirs * theirs), 0.08, 0.92) * 2;
+          const f = ((minD - d) / minD) * 220 * give;
           ax += (dx / d) * f;
           ay += (dy / d) * f;
           if (t.id < o.id) this.contact(t, o, dx / d, dy / d, d, minD);
@@ -501,7 +529,7 @@ export class Network {
     this.touching.add(key);
 
     const amp = clamp((closing - 34) / 520, 0.06, 1);
-    const size = a.radius() + b.radius();
+    const size = a.extent() + b.extent();
     const hz = clamp(5400 / Math.max(24, size), 38, 210);
     const u = (this.spirit + 1) / 2;
 
@@ -535,7 +563,7 @@ export class Network {
     this.touching.add(key);
     const amp = clamp((speed - 60) / 620, 0.05, 0.8);
     this.engine.drum({
-      hz: clamp(3400 / Math.max(24, t.radius() * 2), 30, 130),
+      hz: clamp(3400 / Math.max(24, t.extent() * 2), 30, 130),
       amp: amp * 0.7,
       decay: 0.2 * rand(1.2, 0.85),
       tone: 0.2,
@@ -659,6 +687,7 @@ export class Network {
         ...patch,
         // the body's geometry moves the character within its family
         shape: t.shape(),
+        stereo: this.stereoNow(),
         cutoff: (patch.cutoff ?? 5) * lerp(0.8, 1.25, u),
         temper: t.temper,
         pan,
@@ -695,6 +724,7 @@ export class Network {
           decay: op.decay * lerp(1.7, 1.0, u),
           ...op,
           shape: o.shape(),
+          stereo: this.stereoNow(),
           // a sympathetic body is not struck: no mallet, no dip
           wood: (op.wood ?? 0.35) * 0.2,
           donk: 1 + ((op.donk ?? 1.1) - 1) * 0.3,
@@ -760,7 +790,8 @@ export class Network {
       }
       if (near) other = channelIndex(near.edgeCents(near.activeEdge));
     }
-    const patch = patchFor(mine, other);
+    // a body pulled out to huge speaks with one of the large voices instead
+    const patch = patchFor(mine, other, t.isHuge());
     t.combo = patch.name;
     t.comboCh = [mine, other];
     return patch;

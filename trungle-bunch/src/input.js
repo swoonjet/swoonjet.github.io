@@ -25,6 +25,10 @@ export function attachInput(canvas, net, shell) {
     travel: 0,
   };
   let last = { x: 0, y: 0, t: performance.now() };
+  // previous movement vector, kept OUTSIDE `last` because that object is
+  // reassigned wholesale on every move
+  let pdx = null;
+  let pdy = null;
 
   const pos = (ev) => {
     const r = canvas.getBoundingClientRect();
@@ -126,6 +130,22 @@ export function attachInput(canvas, net, shell) {
     // a deliberate sweep across empty soil bends the axes harder than a drift
     const gain = grab.active && grab.mode === 'sweep' ? 2.3 : 1;
     net.setMouse(x, y, dx * gain, dy * gain, dt);
+
+    // SWIRL: the curl of the cursor's own path, from the cross product of two
+    // successive moves. This is deliberately orthogonal to the sweeps — those
+    // read net translation, this reads rotation — so stirring the air is a
+    // gesture the instrument had no use for until now. It sets the stereo
+    // behaviour of every note fired while it lasts.
+    const mag = Math.hypot(dx, dy);
+    if (mag > 0.5 && pdx !== null) {
+      const cross = pdx * dy - pdy * dx;
+      const norm = Math.hypot(pdx, pdy) * mag;
+      if (norm > 1) net.addSwirl(cross / norm);
+    }
+    if (mag > 0.5) {
+      pdx = dx;
+      pdy = dy;
+    }
 
     if (!grab.active) return;
     grab.travel += Math.hypot(dx, dy);

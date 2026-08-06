@@ -3,6 +3,8 @@ import { Network } from './network.js';
 import { Renderer } from './render.js';
 import { attachInput } from './input.js';
 import { clamp, rand } from './util.js';
+import { SCALE } from './tuning.js';
+import { VR_MIN, VR_MAX } from './triangle.js';
 
 const canvas = document.getElementById('stage');
 const veil = document.getElementById('veil');
@@ -77,6 +79,14 @@ function droneName() {
   return top.length ? top.map(([n, c]) => `${n}\u00d7${c}`).join('   ') : 'quiet';
 }
 
+// the swirl gesture, read back so it is discoverable that it does anything
+function stirName() {
+  const st = net.stereoNow();
+  if (st.swirl < 0.05) return 'still';
+  const bars = '\u2588'.repeat(1 + Math.round(st.swirl * 4));
+  return `${st.spin > 0 ? 'clockwise' : 'widdershins'} ${bars}`;
+}
+
 let hudClock = 0;
 function writeHud() {
   const spirit = net.spirit;
@@ -89,7 +99,8 @@ function writeHud() {
     `<span>drone</span>${net.bedVoices ?? 0} of 4   ` +
     `${Math.round((net.bedLevel ?? 0) * 294)}%   ` +
     `${net.bedDuck < 0.75 ? 'ducked' : 'open'}\n` +
-    `<span>voicing</span>${droneName()}`;
+    `<span>voicing</span>${droneName()}\n` +
+    `<span>stir</span>${stirName()}${net.frozen ? '     held' : ''}`;
 }
 
 let prev = performance.now();
@@ -115,7 +126,14 @@ document.addEventListener('visibilitychange', () => {
   else engine.resume();
 });
 
+/**
+ * The keyboard. Not controls for the instrument's voice — the cursor still owns
+ * all of that. These are stage directions: what is on it, how fast it lives,
+ * which way it leans, and how big everything is.
+ */
 window.addEventListener('keydown', (ev) => {
+  if (ev.metaKey || ev.ctrlKey || ev.altKey) return;
+
   // Space silences the colony without erasing it — a way back from a loud tangle.
   if (ev.code === 'Space') {
     ev.preventDefault();
@@ -123,10 +141,105 @@ window.addEventListener('keydown', (ev) => {
     for (const t of net.tris) t.nutrient = 0;
     return;
   }
+
   // Escape returns to the title, which doubles as the gesture reference.
   if (ev.code === 'Escape') {
     ev.preventDefault();
     if (titleUp) hideTitle(net.width / 2, net.height / 2);
     else showTitle();
+    return;
+  }
+
+  if (titleUp) return;
+
+  // 1–6 plant a body already voiced for one of the six colour pairs, so the
+  // colony's instrumentation can be composed rather than only stumbled into.
+  if (/^Digit[1-6]$/.test(ev.code)) {
+    ev.preventDefault();
+    const pair = Number(ev.code.slice(5)) - 1;
+    seedVoiced(pair);
+    return;
+  }
+
+  switch (ev.code) {
+    // step the two axes, for when a sweep is too coarse
+    case 'ArrowRight':
+      ev.preventDefault();
+      net.sweepX += 42;
+      break;
+    case 'ArrowLeft':
+      ev.preventDefault();
+      net.sweepX -= 42;
+      break;
+    case 'ArrowUp':
+      ev.preventDefault();
+      net.sweepY -= 34;
+      break;
+    case 'ArrowDown':
+      ev.preventDefault();
+      net.sweepY += 34;
+      break;
+
+    // grow and shrink every body at once — the fastest way into the large voices
+    case 'BracketRight':
+      ev.preventDefault();
+      scaleAll(1.22);
+      break;
+    case 'BracketLeft':
+      ev.preventDefault();
+      scaleAll(1 / 1.22);
+      break;
+
+    // hold the mycelium still: threads stop growing and rotting, sound continues
+    case 'KeyF':
+      ev.preventDefault();
+      net.frozen = !net.frozen;
+      break;
+
+    // scatter the colony without losing it
+    case 'KeyR':
+      ev.preventDefault();
+      for (const t of net.tris) {
+        t.vx += rand(420, -420);
+        t.vy += rand(300, -300);
+      }
+      break;
+    default:
+      break;
   }
 });
+
+/** Plant a body whose edges land in a chosen colour pair. */
+function seedVoiced(pair) {
+  const m = net.mouse.inside ? net.mouse : { x: net.width / 2, y: net.height / 2 };
+  const t = net.germinate(m.x + rand(90, -90), m.y + rand(90, -90));
+  if (!t) return;
+  // Channel comes from pitch class, so choosing degrees chooses the colour — and
+  // therefore the voice. Third of the octave per channel.
+  const want = [
+    [0, 0],
+    [1, 1],
+    [2, 2],
+    [0, 1],
+    [0, 2],
+    [1, 2],
+  ][pair];
+  const forChannel = (ch) => {
+    // scale degrees whose cents fall in this channel's third of the octave
+    const lo = (ch * 1200) / 3;
+    const hi = ((ch + 1) * 1200) / 3;
+    const opts = SCALE.map((c, i) => [c, i]).filter(([c]) => c >= lo && c < hi);
+    return (opts.length ? opts[(Math.random() * opts.length) | 0][1] : 0);
+  };
+  t.edges[0].degree = forChannel(want[0]);
+  t.edges[1].degree = forChannel(want[1]);
+  t.edges[2].degree = forChannel(want[Math.random() < 0.5 ? 0 : 1]);
+  for (const e of t.edges) e.octave = 0;
+}
+
+function scaleAll(k) {
+  for (const t of net.tris) {
+    for (let i = 0; i < 3; i++) t.vr[i] = clamp(t.vr[i] * k, VR_MIN, VR_MAX);
+    t.recomputeLocal();
+  }
+}

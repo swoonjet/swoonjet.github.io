@@ -12,7 +12,7 @@ let nextId = 1;
 // when theta, size or a corner changes — position may move freely without
 // invalidating it.
 export const VR_MIN = 0.42;
-export const VR_MAX = 1.8;
+export const VR_MAX = 4.6; // a corner can be hauled out to something huge
 export const VA_MAX = 0.7; // radians a corner may swing from its nominal third
 
 export function nominalAngle(i) {
@@ -103,7 +103,7 @@ export class Triangle {
     this.voiceBase = 0;
     this.voiceGravity = 0;
     this.voiceSiren0 = 0;
-    this.combo = 'flare';
+    this.combo = 'unstruck';
     this.comboCh = [0, 0];
     this.liveConns = 0;
     this.octaveSmooth = 0;
@@ -127,6 +127,20 @@ export class Triangle {
   radius() {
     const g = this.grow * (1 - this.dying);
     return this.baseR * g;
+  }
+
+  /**
+   * How far the body actually reaches. Corners now pull out to 4.6x, so radius()
+   * alone badly understates a deformed body — physics, walls and collisions all
+   * need the real extent or huge bodies pass straight through each other.
+   */
+  extent() {
+    return this.radius() * Math.max(this.vr[0], this.vr[1], this.vr[2]);
+  }
+
+  /** Past this, the body sounds like a different instrument entirely. */
+  isHuge() {
+    return this.shape().size > 0.55;
   }
 
   /** Rebuild the local vertex cache. Cheap, and only theta/size/corners dirty it. */

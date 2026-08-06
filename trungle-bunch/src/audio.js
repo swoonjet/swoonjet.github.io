@@ -326,9 +326,17 @@ export class Engine {
     return this.voices.length < this.maxVoices;
   }
 
-  /** Output chain shared by every voice family: pan → level → dry + reverb. */
-  chain(pan, depth, amp) {
+  /**
+   * Output chain shared by every voice family: pan → level → dry + reverb.
+   *
+   * `stereo` is per-SOUND, not a global effect: {swirl 0..1, spin -1..1} comes
+   * from how the cursor was actually moving when the note fired. Swirl adds an
+   * orbiting auto-pan and a ping-pong delay that bounces in the direction you
+   * stirred, so each note carries the gesture that made it.
+   */
+  chain(pan, depth, amp, stereo) {
     const ctx = this.ctx;
+    const now = ctx.currentTime;
     const pn = ctx.createStereoPanner();
     pn.pan.value = clamp(pan ?? 0, -1, 1);
     const busOut = ctx.createGain();
@@ -339,6 +347,56 @@ export class Engine {
     send.gain.value = 0.26 + Math.abs(depth ?? 0) * 0.5;
     busOut.connect(send);
     send.connect(this.wetIn);
+
+    const swirl = clamp(stereo?.swirl ?? 0, 0, 1);
+    const spin = clamp(stereo?.spin ?? 0, -1, 1);
+    if (swirl > 0.04) {
+      // orbit: the note's own pan sweeps, the way the cursor was turning
+      const lfo = ctx.createOscillator();
+      lfo.type = 'sine';
+      lfo.frequency.value = 0.35 + swirl * 3.4;
+      const depthG = ctx.createGain();
+      // sign of spin decides which way round it goes
+      depthG.gain.value = (spin >= 0 ? 1 : -1) * swirl * 0.55;
+      lfo.connect(depthG);
+      depthG.connect(pn.pan);
+      lfo.start(now);
+      lfo.stop(now + 8);
+
+      // ping-pong: two cross-fed delays hard-panned opposite. Delay times sit
+      // well above one render block, so the cross-feedback loop is legal.
+      const time = 0.13 + (1 - swirl) * 0.13;
+      const dA = ctx.createDelay(0.5);
+      const dB = ctx.createDelay(0.5);
+      dA.delayTime.value = time;
+      dB.delayTime.value = time * 1.35;
+      const fbA = ctx.createGain();
+      const fbB = ctx.createGain();
+      fbA.gain.value = 0.36 + swirl * 0.18;
+      fbB.gain.value = 0.36 + swirl * 0.18;
+      const pA = ctx.createStereoPanner();
+      const pB = ctx.createStereoPanner();
+      // stirring one way puts the first bounce left, the other way right
+      pA.pan.value = spin >= 0 ? -1 : 1;
+      pB.pan.value = spin >= 0 ? 1 : -1;
+      const wet = ctx.createGain();
+      wet.gain.value = swirl * 0.62;
+
+      pn.connect(dA);
+      dA.connect(pA);
+      pA.connect(wet);
+      dA.connect(fbA);
+      fbA.connect(dB);
+      dB.connect(pB);
+      pB.connect(wet);
+      dB.connect(fbB);
+      fbB.connect(dA);
+      wet.connect(busOut);
+      // let the tails die rather than ringing on under later notes
+      fbA.gain.setTargetAtTime(0, now + 2.2, 0.6);
+      fbB.gain.setTargetAtTime(0, now + 2.2, 0.6);
+    }
+
     return { pn, busOut };
   }
 

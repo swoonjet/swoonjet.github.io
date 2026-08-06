@@ -78,6 +78,24 @@ export function comboKey(a, b) {
   return a <= b ? `${a}-${b}` : `${b}-${a}`;
 }
 
-export function patchFor(chA, chB) {
-  return PATCHES[comboKey(chA, chB)] ?? PATCHES['0-0'];
+const KEYS = ['0-0', '1-1', '2-2', '0-1', '0-2', '1-2'];
+
+/**
+ * The five large voices, for bodies hauled out to huge. A big body does not just
+ * sound darker — it becomes a different instrument. Six colour pairs share five
+ * large voices, so one pair doubles up; that is deliberate rather than padding
+ * the library with a sixth voice nobody asked for.
+ */
+export const HUGE = [
+  { name: 'gong', family: 'gong', decay: 3.2, trim: 0.25 },
+  { name: 'slab', family: 'slab', decay: 1.5, trim: 0.74 },
+  { name: 'swell', family: 'swell', decay: 3.4, trim: 0.73 },
+  { name: 'choir', family: 'choir', decay: 2.6, trim: 2.4 },
+  { name: 'thunder', family: 'thunder', decay: 2.4, trim: 0.39 },
+];
+
+export function patchFor(chA, chB, huge) {
+  const key = comboKey(chA, chB);
+  if (huge) return HUGE[Math.max(0, KEYS.indexOf(key)) % HUGE.length];
+  return PATCHES[key] ?? PATCHES['0-0'];
 }

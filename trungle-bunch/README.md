@@ -32,6 +32,13 @@ There are no buttons or sliders. The cursor is a hand moving through a field.
 | wheel over an edge | nudge that edge into microtonal space (±95 ¢) |
 | wheel over soil | push the nearest body through depth (z) |
 | double-click a body | dissolve it |
+| stir the cursor in a circle | every note fired while you stir orbits the way you stirred |
+| pull a corner right out | huge bodies speak with the five large voices |
+| 1 – 6 | plant a body already voiced for that colour pair |
+| arrows | step time and gravity |
+| [ and ] | shrink or grow every body at once |
+| f | hold the mycelium still; the sound carries on |
+| r | scatter the colony |
 | space | let the colony fall quiet |
 | esc | back to the title screen, and back out again |
 
@@ -114,7 +121,22 @@ pins to its ceiling and the voice pool thrashes.
 **Major, throughout.** The scale's third is 5/4, so the colony is a just *major*
 scale and everything else is tuned against that.
 
-### A library of six families
+### Stereo per sound, from stirring the air
+
+Swirl the cursor and each note fired while the swirl lasts gets its own stereo
+treatment: an orbiting auto-pan plus a ping-pong delay whose first bounce lands
+on the side you were turning toward. It is deliberately **not** a setting — the
+gesture is the curl of the cursor's own path (the cross product of successive
+moves), which is orthogonal to the sweeps that bend time and gravity. Those read
+net translation; this reads rotation. A straight sweep measures 0 swirl; a circle
+saturates it.
+
+Measured: stir direction produces a **13 dB** L/R asymmetry on the first bounce
+(+5.8 dB clockwise, −7.2 dB widdershins) and roughly doubles stereo width. Note
+that mean |L−R| is direction-blind and reads both stirs the same — the asymmetry
+only shows up when you measure which channel leads.
+
+### A library of eleven families
 
 Not one instrument with variations — six different ways of making a sound, in
 `src/voices.js`. All struck, plucked or blown; nothing resonates or screams.
@@ -128,10 +150,26 @@ Not one instrument with variations — six different ways of making a sound, in
 | `drop` | water. The only voice that bends **upward**, which is what makes it read instantly as something else |
 | `air` | blown. Resonant noise at pitch over a quiet sine, soft attack — breath rather than a strike |
 
+A body hauled out to **huge** stops being a bigger version of itself and becomes
+a different instrument — five large voices, mapped from the same colour pairs:
+
+| family | what it is |
+|---|---|
+| `gong` | large struck metal whose brightness *blooms* after the strike rather than decaying from it |
+| `slab` | a huge plank or log drum. Very low, woody, mostly thump |
+| `swell` | bowed or rubbed. No attack at all — it arrives by growing |
+| `choir` | three formant bandpasses on a detuned pair; a vowel, moving oo → ah with shape |
+| `thunder` | a deep noise roll with a slow undulation, and a sub under it |
+
+Corners now pull out to 4.6× (was 1.8×), so physics uses a real `extent()` rather
+than the nominal radius, and mass scales with reach — a huge body shoves and is
+barely shoved.
+
 Levels are matched by a measured per-family `trim`. Untrimmed the library spanned
 **30 dB**; a feedback loop and one short sine are nowhere near each other
-naturally. It now sits inside 9.7 dB, which is instrument-to-instrument variation
-rather than a fault.
+naturally. Eleven families now sit inside 7.6 dB, which is
+instrument-to-instrument variation rather than a fault. Worst case — every body
+huge and stirred hard the whole time — peaks at 0.57 with zero clipping.
 
 ### Shape is a continuous timbre control
 

@@ -62,7 +62,7 @@ export function voiceBar(eng, p) {
   const ctx = eng.ctx;
   const t = ctx.currentTime + 0.002;
   const { hz, amp, shape } = p;
-  const chain = eng.chain(p.pan, p.depth, amp);
+  const chain = eng.chain(p.pan, p.depth, amp, p.stereo);
 
   const mix = ctx.createGain();
   const filt = ctx.createBiquadFilter();
@@ -123,7 +123,7 @@ export function voicePluck(eng, p) {
   const ctx = eng.ctx;
   const t = ctx.currentTime + 0.002;
   const { amp, shape } = p;
-  const chain = eng.chain(p.pan, p.depth, amp);
+  const chain = eng.chain(p.pan, p.depth, amp, p.stereo);
 
   // A feedback loop needs at least one render block of delay, so fold the pitch
   // down until the loop is long enough to be legal. A pluck an octave or two low
@@ -197,7 +197,7 @@ export function voiceSkin(eng, p) {
   const ctx = eng.ctx;
   const t = ctx.currentTime + 0.002;
   const { hz, amp, shape } = p;
-  const chain = eng.chain(p.pan, p.depth, amp);
+  const chain = eng.chain(p.pan, p.depth, amp, p.stereo);
   const dec = p.decay * lerp(0.5, 1.4, shape.size);
   const items = [];
 
@@ -244,7 +244,7 @@ export function voiceBowl(eng, p) {
   const ctx = eng.ctx;
   const t = ctx.currentTime + 0.002;
   const { hz, amp, shape } = p;
-  const chain = eng.chain(p.pan, p.depth, amp);
+  const chain = eng.chain(p.pan, p.depth, amp, p.stereo);
   const dec = p.decay * lerp(1.2, 3.2, shape.size);
   const atk = 0.03 + shape.size * 0.06;
   const items = [];
@@ -286,7 +286,7 @@ export function voiceDrop(eng, p) {
   const ctx = eng.ctx;
   const t = ctx.currentTime + 0.002;
   const { hz, amp, shape } = p;
-  const chain = eng.chain(p.pan, p.depth, amp);
+  const chain = eng.chain(p.pan, p.depth, amp, p.stereo);
   const dec = p.decay * lerp(0.5, 1.3, shape.size);
   const rise = 0.03 + shape.size * 0.05;
   const items = [];
@@ -329,7 +329,7 @@ export function voiceAir(eng, p) {
   const ctx = eng.ctx;
   const t = ctx.currentTime + 0.002;
   const { hz, amp, shape } = p;
-  const chain = eng.chain(p.pan, p.depth, amp);
+  const chain = eng.chain(p.pan, p.depth, amp, p.stereo);
   const dec = p.decay * lerp(0.8, 2.0, shape.size);
   const atk = 0.04 + shape.size * 0.09;
   const items = [];
@@ -369,6 +369,242 @@ export function voiceAir(eng, p) {
   return finish(eng, chain, items, dec + 0.06, amp, hz);
 }
 
+
+// ————————————————————————————————————————————————————————————
+// THE LARGE VOICES. A body hauled out to huge does not just get darker — it
+// becomes a different instrument. These five are what the big shapes sound like.
+// ————————————————————————————————————————————————————————————
+
+// gong — large struck metal. Many inharmonic partials, and the brightness BLOOMS
+// after the strike rather than decaying from it, which is what makes a big gong
+// sound like it is still gathering.
+export function voiceGong(eng, p) {
+  const ctx = eng.ctx;
+  const t = ctx.currentTime + 0.002;
+  const { hz, amp, shape } = p;
+  const chain = eng.chain(p.pan, p.depth, amp, p.stereo);
+  const dec = p.decay * lerp(1.4, 3.4, shape.size);
+  const items = [];
+  let life = 0;
+
+  const filt = ctx.createBiquadFilter();
+  filt.type = 'lowpass';
+  filt.Q.value = 0.8;
+  // the bloom: the filter opens over the first second, then closes slowly
+  filt.frequency.setValueAtTime(clamp(hz * 3, 120, 3000), t);
+  filt.frequency.linearRampToValueAtTime(clamp(hz * 14, 400, 12000), t + 0.9);
+  filt.frequency.exponentialRampToValueAtTime(clamp(hz * 2.5, 100, 4000), t + dec);
+  filt.connect(chain.pn);
+
+  const RATIOS = [1, 1.52, 2.41, 3.19, 4.63, 6.11, 8.02];
+  RATIOS.forEach((r, i) => {
+    const ratio = r * (1 + shape.skew * 0.12 * (i % 2 ? 1 : -1));
+    const o = ctx.createOscillator();
+    o.type = 'sine';
+    o.detune.value = (Math.random() * 2 - 1) * (4 + shape.skew * 22);
+    o.frequency.value = clamp(hz * ratio, 20, 16000);
+    const g = ctx.createGain();
+    const lvl = (i === 0 ? 0.5 : 0.3 / Math.sqrt(i)) * lerp(1, 1.5, shape.spike);
+    const li = dec / (1 + i * 0.32);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(lvl, t + 0.012 + i * 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + li);
+    o.connect(g);
+    g.connect(filt);
+    o.start(t);
+    o.stop(t + li + 0.05);
+    items.push({ detune: o.detune });
+    life = Math.max(life, li);
+  });
+
+  eng.thump(filt, t, 0.5, clamp(hz * 3, 200, 1400), 0.06);
+  return finish(eng, chain, items, life + 0.06, amp, hz);
+}
+
+// slab — a huge wooden plank or log drum. Very low, very woody, mostly thump.
+export function voiceSlab(eng, p) {
+  const ctx = eng.ctx;
+  const t = ctx.currentTime + 0.002;
+  const { hz, amp, shape } = p;
+  const chain = eng.chain(p.pan, p.depth, amp, p.stereo);
+  const dec = p.decay * lerp(0.7, 1.6, shape.size);
+  const items = [];
+
+  const lp = ctx.createBiquadFilter();
+  lp.type = 'lowpass';
+  lp.frequency.value = clamp(hz * lerp(3, 8, shape.spike), 120, 2200);
+  lp.Q.value = 1.4;
+  lp.connect(chain.pn);
+
+  // the plank: a low tone with a hard woody dip
+  [1, 2.7].forEach((r, i) => {
+    const o = ctx.createOscillator();
+    o.type = i ? 'sine' : 'triangle';
+    const f = clamp(hz * 0.5 * r, 20, 6000);
+    o.frequency.setValueAtTime(f * lerp(1.3, 1.9, shape.size), t);
+    o.frequency.exponentialRampToValueAtTime(f, t + 0.05);
+    const g = ctx.createGain();
+    const li = dec / (1 + i * 1.6);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(i ? 0.3 : 0.8, t + 0.006);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + li);
+    o.connect(g);
+    g.connect(lp);
+    o.start(t);
+    o.stop(t + li + 0.05);
+    items.push({ detune: o.detune });
+  });
+
+  eng.thump(lp, t, 0.9 + shape.skew * 0.4, clamp(hz * 2.4, 150, 1200), 0.075);
+  return finish(eng, chain, items, dec + 0.08, amp, hz);
+}
+
+// swell — bowed, or rubbed. No attack at all: it arrives by growing, which no
+// other voice in the library does.
+export function voiceSwell(eng, p) {
+  const ctx = eng.ctx;
+  const t = ctx.currentTime + 0.002;
+  const { hz, amp, shape } = p;
+  const chain = eng.chain(p.pan, p.depth, amp, p.stereo);
+  const dec = p.decay * lerp(1.6, 3.2, shape.size);
+  const rise = dec * lerp(0.3, 0.55, shape.size);
+  const items = [];
+
+  const lp = ctx.createBiquadFilter();
+  lp.type = 'lowpass';
+  lp.Q.value = 1.2;
+  lp.frequency.setValueAtTime(clamp(hz * 1.6, 90, 2000), t);
+  lp.frequency.linearRampToValueAtTime(clamp(hz * lerp(5, 13, shape.spike), 300, 9000), t + rise);
+  lp.frequency.exponentialRampToValueAtTime(clamp(hz * 2, 90, 3000), t + dec);
+  lp.connect(chain.pn);
+
+  [1, 1.001, 2, 3].forEach((r, i) => {
+    const o = ctx.createOscillator();
+    o.type = i < 2 ? 'sawtooth' : 'sine';
+    o.detune.value = (i === 1 ? 1 : -1) * (3 + shape.skew * 14);
+    o.frequency.value = clamp(hz * r, 20, 14000);
+    const g = ctx.createGain();
+    const lvl = i < 2 ? 0.3 : 0.14 / i;
+    g.gain.setValueAtTime(0.0001, t);
+    // the whole point: a long linear rise, no transient
+    g.gain.linearRampToValueAtTime(lvl, t + rise);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dec);
+    o.connect(g);
+    g.connect(lp);
+    o.start(t);
+    o.stop(t + dec + 0.05);
+    items.push({ detune: o.detune });
+  });
+
+  return finish(eng, chain, items, dec + 0.06, amp, hz);
+}
+
+// choir — formant filtering. Three bandpass peaks on a detuned pair reads as a
+// vowel, which is the one thing in the library that sounds like it is alive.
+export function voiceChoir(eng, p) {
+  const ctx = eng.ctx;
+  const t = ctx.currentTime + 0.002;
+  const { hz, amp, shape } = p;
+  const chain = eng.chain(p.pan, p.depth, amp, p.stereo);
+  const dec = p.decay * lerp(1.3, 2.6, shape.size);
+  const atk = 0.05 + shape.size * 0.12;
+  const items = [];
+
+  const src = ctx.createGain();
+  // vowel moves from "oo" toward "ah" as the shape spikes
+  const FORMANTS = [
+    lerp(320, 700, shape.spike),
+    lerp(800, 1220, shape.spike),
+    lerp(2600, 2810, shape.spike),
+  ];
+  FORMANTS.forEach((f, i) => {
+    const bp = ctx.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.frequency.value = f * lerp(1, 1.12, shape.skew);
+    bp.Q.value = lerp(9, 4, shape.skew);
+    const g = ctx.createGain();
+    g.gain.value = [1, 0.5, 0.2][i];
+    src.connect(bp);
+    bp.connect(g);
+    g.connect(chain.pn);
+  });
+
+  [0, 1].forEach((d) => {
+    const o = ctx.createOscillator();
+    o.type = 'sawtooth';
+    o.detune.value = (d ? 1 : -1) * (5 + shape.skew * 16);
+    o.frequency.value = clamp(hz, 20, 4000);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(0.4, t + atk);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dec);
+    o.connect(g);
+    g.connect(src);
+    o.start(t);
+    o.stop(t + dec + 0.05);
+    items.push({ detune: o.detune });
+  });
+
+  return finish(eng, chain, items, dec + 0.06, amp, hz);
+}
+
+// thunder — a deep noise roll. Barely pitched, all weight and undulation; what a
+// body big enough to be a landscape should sound like.
+export function voiceThunder(eng, p) {
+  const ctx = eng.ctx;
+  const t = ctx.currentTime + 0.002;
+  const { hz, amp, shape } = p;
+  const chain = eng.chain(p.pan, p.depth, amp, p.stereo);
+  const dec = p.decay * lerp(1.2, 2.8, shape.size);
+  const items = [];
+
+  const src = ctx.createBufferSource();
+  src.buffer = eng.breath;
+  src.loop = true;
+  const lp = ctx.createBiquadFilter();
+  lp.type = 'lowpass';
+  lp.frequency.setValueAtTime(clamp(hz * lerp(2, 5, shape.spike), 60, 900), t);
+  lp.frequency.exponentialRampToValueAtTime(clamp(hz * 0.8, 40, 400), t + dec);
+  lp.Q.value = 2.2;
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.linearRampToValueAtTime(0.9, t + 0.03);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dec);
+  src.connect(lp);
+  lp.connect(g);
+  g.connect(chain.pn);
+  src.start(t);
+  src.stop(t + dec + 0.06);
+  items.push({ freq: lp.frequency, base: lp.frequency.value });
+
+  // the undulation — a slow tremolo, so the roll breathes rather than fades flat
+  const lfo = ctx.createOscillator();
+  lfo.type = 'sine';
+  lfo.frequency.value = 1.4 + shape.skew * 4;
+  const ld = ctx.createGain();
+  ld.gain.value = 0.35;
+  lfo.connect(ld);
+  ld.connect(g.gain);
+  lfo.start(t);
+  lfo.stop(t + dec + 0.06);
+
+  // a sub under it all
+  const o = ctx.createOscillator();
+  o.type = 'sine';
+  o.frequency.value = clamp(hz * 0.5, 20, 200);
+  const og = ctx.createGain();
+  og.gain.setValueAtTime(0.0001, t);
+  og.gain.linearRampToValueAtTime(0.45, t + 0.04);
+  og.gain.exponentialRampToValueAtTime(0.0001, t + dec * 1.1);
+  o.connect(og);
+  og.connect(chain.pn);
+  o.start(t);
+  o.stop(t + dec * 1.1 + 0.05);
+  items.push({ detune: o.detune });
+
+  return finish(eng, chain, items, dec * 1.1 + 0.06, amp, hz);
+}
+
 export const FAMILIES = {
   bar: voiceBar,
   pluck: voicePluck,
@@ -376,4 +612,9 @@ export const FAMILIES = {
   bowl: voiceBowl,
   drop: voiceDrop,
   air: voiceAir,
+  gong: voiceGong,
+  slab: voiceSlab,
+  swell: voiceSwell,
+  choir: voiceChoir,
+  thunder: voiceThunder,
 };
