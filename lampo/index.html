@@ -194,6 +194,32 @@
   .collection-actions { display: flex; gap: 0.6rem; margin-left: auto; }
   label.btn { display: inline-flex; align-items: center; }
 
+  .poster-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.9rem;
+    background: var(--ground-raised);
+    border: 1px solid var(--line);
+    border-radius: 2px;
+    padding: 0.8rem 1rem;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 0.72rem;
+    color: var(--muted);
+  }
+  .poster-bar[hidden] { display: none; }
+  .poster-info { color: var(--ember); text-transform: uppercase; letter-spacing: 0.08em; }
+  .poster-field {
+    display: flex; align-items: center; gap: 0.4rem;
+    text-transform: uppercase; letter-spacing: 0.06em;
+  }
+  .poster-field input, .poster-field select {
+    background: var(--ground); color: var(--ink); border: 1px solid var(--line);
+    border-radius: 1px; padding: 0.25rem 0.4rem;
+    font-family: inherit; font-size: 0.72rem; width: 3.5rem;
+  }
+  .poster-field select { width: auto; }
+
   .grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
@@ -206,6 +232,18 @@
     border-radius: 2px;
     overflow: hidden;
   }
+  .study-card.selectable { cursor: pointer; }
+  .study-card.selected { outline: 2px solid var(--ember); outline-offset: 2px; }
+  .study-card-check {
+    position: absolute;
+    top: 0.5rem; left: 0.5rem;
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    border: 1.5px solid var(--muted);
+    background: rgba(18, 17, 16, 0.7);
+    z-index: 2;
+  }
+  .study-card.selected .study-card-check { background: var(--ember); border-color: var(--ember); }
   .study-card img { display: block; width: 100%; aspect-ratio: 1; object-fit: cover; background: var(--paper); }
   .study-card-meta { padding: 0.55rem 0.65rem 0.7rem; }
   .study-card-title {
@@ -287,7 +325,7 @@
         <div class="card">
           <canvas id="stage" width="900" height="900"></canvas>
         </div>
-        <div class="stage-hint">Drag to orbit &middot; Scroll to zoom</div>
+        <div class="stage-hint">Drag to rotate (any axis) &middot; Scroll to zoom</div>
       </div>
 
       <div class="controls">
@@ -322,11 +360,28 @@
       <div class="section-eyebrow">The Collection</div>
       <div class="collection-count" id="collection-count">1 study</div>
       <div class="collection-actions">
+        <button class="btn btn-small" id="btn-layout">Layout</button>
         <button class="btn btn-small" id="btn-export">Export</button>
         <label class="btn btn-small" for="file-import">Import</label>
         <input type="file" id="file-import" accept="application/json" hidden>
       </div>
     </div>
+
+    <div class="poster-bar" id="poster-bar" hidden>
+      <span class="poster-info" id="poster-info">0 selected</span>
+      <label class="poster-field">Columns
+        <input type="number" id="poster-cols" min="1" max="8" value="2">
+      </label>
+      <label class="poster-field">Cell size
+        <select id="poster-cellsize">
+          <option value="900">Web (900px)</option>
+          <option value="1800" selected>Print (1800px)</option>
+          <option value="2700">Poster (2700px)</option>
+        </select>
+      </label>
+      <button class="btn btn-small btn-primary" id="btn-generate-poster">Generate Poster</button>
+    </div>
+
     <div class="grid" id="collection-grid"></div>
     <p class="footnote">Saved in this browser only &mdash; export a backup before clearing your cache.</p>
   </section>
@@ -336,6 +391,13 @@
   <button class="lightbox-close" id="lightbox-close" aria-label="Close">&times;</button>
   <img id="lightbox-img" alt="">
   <div class="lightbox-caption" id="lightbox-caption"></div>
+</div>
+
+<div class="lightbox" id="poster-modal" hidden>
+  <button class="lightbox-close" id="poster-modal-close" aria-label="Close">&times;</button>
+  <img id="poster-modal-img" alt="Lampo poster">
+  <div class="lightbox-caption" id="poster-modal-caption"></div>
+  <button class="btn btn-primary" id="btn-download-poster">Download Poster</button>
 </div>
 <script>
 (function () {
@@ -390,6 +452,68 @@
     return profile;
   }
 
+  // ---------------- 3-axis rotation (arcball) ----------------
+  // A full 3x3 rotation matrix, not a fixed-axis azimuth/elevation pair --
+  // dragging rotates around whatever axis is perpendicular to the drag,
+  // mapped through a virtual trackball, so roll is reachable the same way
+  // yaw and pitch are: by dragging, not by a separate control.
+  function mulMat3(a, b) {
+    var r = new Array(9);
+    for (var i = 0; i < 3; i++) {
+      for (var j = 0; j < 3; j++) {
+        r[i * 3 + j] = a[i * 3] * b[j] + a[i * 3 + 1] * b[3 + j] + a[i * 3 + 2] * b[6 + j];
+      }
+    }
+    return r;
+  }
+
+  function applyMat3(m, v) {
+    return [
+      m[0] * v[0] + m[1] * v[1] + m[2] * v[2],
+      m[3] * v[0] + m[4] * v[1] + m[5] * v[2],
+      m[6] * v[0] + m[7] * v[1] + m[8] * v[2]
+    ];
+  }
+
+  function rotationFromAxisAngle(axis, angle) {
+    var x = axis[0], y = axis[1], z = axis[2];
+    var c = Math.cos(angle), s = Math.sin(angle), t = 1 - c;
+    return [
+      t * x * x + c, t * x * y - s * z, t * x * z + s * y,
+      t * x * y + s * z, t * y * y + c, t * y * z - s * x,
+      t * x * z - s * y, t * y * z + s * x, t * z * z + c
+    ];
+  }
+
+  function defaultCameraMatrix() {
+    var az = -40 * Math.PI / 180, el = 25 * Math.PI / 180;
+    return mulMat3(rotationFromAxisAngle([1, 0, 0], el), rotationFromAxisAngle([0, 0, 1], az));
+  }
+
+  // Reads either the current {matrix} shape or an older {az, el} shape saved
+  // by a study cast before this feature existed, so nothing in an existing
+  // collection breaks.
+  function cameraMatrixFromEntry(camera) {
+    if (camera && Array.isArray(camera.matrix)) return camera.matrix.slice();
+    if (camera && typeof camera.az === "number") {
+      return mulMat3(rotationFromAxisAngle([1, 0, 0], camera.el), rotationFromAxisAngle([0, 0, 1], camera.az));
+    }
+    return defaultCameraMatrix();
+  }
+
+  // Maps a canvas-local pixel to a point on a virtual unit sphere/hemisphere
+  // centred on the canvas -- the standard arcball trick. Drags outside the
+  // circle clamp to the sphere's equator so they still produce a rotation
+  // (a pure spin/roll) instead of doing nothing.
+  function mapToArcball(x, y, w, h) {
+    var r = Math.min(w, h) * 0.5;
+    var nx = (x - w / 2) / r, ny = -(y - h / 2) / r;
+    var lenSq = nx * nx + ny * ny;
+    if (lenSq <= 1) return [nx, ny, Math.sqrt(1 - lenSq)];
+    var len = Math.sqrt(lenSq);
+    return [nx / len, ny / len, 0];
+  }
+
   // ---------------- state ----------------
   var state = {
     controlPoints: [],
@@ -397,19 +521,21 @@
     spread: 5,
     passes: 720,
     lineWeight: 0.7,
-    camera: { az: -50 * Math.PI / 180, el: 22 * Math.PI / 180, zoom: 1 }
+    camera: { matrix: defaultCameraMatrix(), zoom: 1 }
   };
 
   var canvas = document.getElementById("stage");
   var ctx = canvas.getContext("2d");
 
-  function render() {
-    var w = canvas.width, h = canvas.height;
-    ctx.clearRect(0, 0, w, h);
-    ctx.fillStyle = "#f7f6f3";
-    ctx.fillRect(0, 0, w, h);
+  // Draws one scene (its own control points, passes, line weight, camera)
+  // into any 2D context at any size -- used for the live canvas and, at much
+  // higher resolutions, for each cell of a poster.
+  function renderScene(targetCtx, w, h, scene) {
+    targetCtx.clearRect(0, 0, w, h);
+    targetCtx.fillStyle = "#f7f6f3";
+    targetCtx.fillRect(0, 0, w, h);
 
-    var profile = computeProfile(state.controlPoints);
+    var profile = computeProfile(scene.controlPoints);
     var maxR = 0, minZ = Infinity, maxZ = -Infinity;
     for (var i = 0; i < profile.length; i++) {
       var p = profile[i];
@@ -419,37 +545,35 @@
       if (p[2] > maxZ) maxZ = p[2];
     }
     var halfExtent = Math.max(maxR, (maxZ - minZ) / 2, 0.5);
-    var scale = (Math.min(w, h) * 0.42 * state.camera.zoom) / halfExtent;
+    var scale = (Math.min(w, h) * 0.42 * scene.camera.zoom) / halfExtent;
     var zOffset = (minZ + maxZ) / 2;
     var cx = w / 2, cy = h / 2;
-    var az = state.camera.az, el = state.camera.el;
-    var cosAz = Math.cos(az), sinAz = Math.sin(az);
-    var cosEl = Math.cos(el), sinEl = Math.sin(el);
+    var M = scene.camera.matrix;
 
-    ctx.lineWidth = state.lineWeight;
-    ctx.strokeStyle = "rgba(28,26,24,0.4)";
-    ctx.lineJoin = "round";
-    ctx.lineCap = "round";
+    targetCtx.lineWidth = scene.lineWeight * (Math.min(w, h) / 900);
+    targetCtx.strokeStyle = "rgba(28,26,24,0.4)";
+    targetCtx.lineJoin = "round";
+    targetCtx.lineCap = "round";
 
-    var step = (360 / state.passes) * Math.PI / 180;
-    for (var pass = 0; pass < state.passes; pass++) {
+    var step = (360 / scene.passes) * Math.PI / 180;
+    for (var pass = 0; pass < scene.passes; pass++) {
       var theta = pass * step;
       var cosT = Math.cos(theta), sinT = Math.sin(theta);
-      ctx.beginPath();
+      targetCtx.beginPath();
       for (var j = 0; j < profile.length; j++) {
         var x0 = profile[j][0], y0 = profile[j][1], z0 = profile[j][2] - zOffset;
         var x = x0 * cosT + y0 * sinT;
         var y = -x0 * sinT + y0 * cosT;
-        var xa = x * cosAz - y * sinAz;
-        var ya = x * sinAz + y * cosAz;
-        var worldY = z0 * cosEl - ya * sinEl;
-        var sx = cx + xa * scale;
-        var sy = cy - worldY * scale;
-        if (j === 0) ctx.moveTo(sx, sy); else ctx.lineTo(sx, sy);
+        var rotated = applyMat3(M, [x, y, z0]);
+        var sx = cx + rotated[0] * scale;
+        var sy = cy - rotated[2] * scale;
+        if (j === 0) targetCtx.moveTo(sx, sy); else targetCtx.lineTo(sx, sy);
       }
-      ctx.stroke();
+      targetCtx.stroke();
     }
   }
+
+  function render() { renderScene(ctx, canvas.width, canvas.height, state); }
 
   // Rendering happens synchronously on every input, not via requestAnimationFrame:
   // rAF is throttled or paused entirely for backgrounded/occluded tabs in real
@@ -509,15 +633,50 @@
 
   document.getElementById("btn-new-form").addEventListener("click", newForm);
 
-  // ---------------- orbit / zoom ----------------
-  var dragging = false, lastX = 0, lastY = 0;
-  function pointerDown(x, y) { dragging = true; lastX = x; lastY = y; }
-  function pointerMove(x, y) {
+  // ---------------- rotate / zoom ----------------
+  // Arcball: each pointer position maps to a point on a virtual sphere, and
+  // the rotation between the last point and this one (axis = their cross
+  // product, angle = the angle between them) is composed onto the current
+  // orientation. Composing a fresh small rotation every move, rather than
+  // replaying the whole drag from its start, is what keeps roll reachable
+  // instead of just yaw/pitch -- a diagonal or curved drag rotates around
+  // whatever axis that motion actually implies.
+  var dragging = false, lastArcballVec = null;
+
+  function canvasPoint(clientX, clientY) {
+    var rect = canvas.getBoundingClientRect();
+    return [
+      (clientX - rect.left) * (canvas.width / rect.width),
+      (clientY - rect.top) * (canvas.height / rect.height)
+    ];
+  }
+
+  function pointerDown(clientX, clientY) {
+    dragging = true;
+    var p = canvasPoint(clientX, clientY);
+    lastArcballVec = mapToArcball(p[0], p[1], canvas.width, canvas.height);
+  }
+
+  function pointerMove(clientX, clientY) {
     if (!dragging) return;
-    var dx = x - lastX, dy = y - lastY;
-    lastX = x; lastY = y;
-    state.camera.az += dx * 0.006;
-    state.camera.el = Math.max(-1.4, Math.min(1.4, state.camera.el - dy * 0.006));
+    var p = canvasPoint(clientX, clientY);
+    var v1 = mapToArcball(p[0], p[1], canvas.width, canvas.height);
+    var v0 = lastArcballVec;
+    var dot = Math.max(-1, Math.min(1, v0[0] * v1[0] + v0[1] * v1[1] + v0[2] * v1[2]));
+    var angle = Math.acos(dot);
+    if (angle > 1e-6) {
+      var axis = [
+        v0[1] * v1[2] - v0[2] * v1[1],
+        v0[2] * v1[0] - v0[0] * v1[2],
+        v0[0] * v1[1] - v0[1] * v1[0]
+      ];
+      var axisLen = Math.hypot(axis[0], axis[1], axis[2]);
+      if (axisLen > 1e-9) {
+        axis = [axis[0] / axisLen, axis[1] / axisLen, axis[2] / axisLen];
+        state.camera.matrix = mulMat3(rotationFromAxisAngle(axis, angle), state.camera.matrix);
+      }
+    }
+    lastArcballVec = v1;
     scheduleRender();
   }
   function pointerUp() { dragging = false; }
@@ -566,6 +725,11 @@
   var nextStudyNumber = loadNextNumber();
   var castNote = document.getElementById("cast-note");
 
+  // ---------------- poster layout mode ----------------
+  var layoutMode = false;
+  var selectedIds = new Set();
+  var columnsTouched = false;
+
   function persist() {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(collection));
@@ -594,22 +758,35 @@
       img.alt = "Lampo Study " + toRoman(entry.studyNumber);
       card.appendChild(img);
 
-      var overlay = document.createElement("div");
-      overlay.className = "study-card-overlay";
-      var openBtn = document.createElement("button");
-      openBtn.className = "card-btn";
-      openBtn.textContent = "Open";
-      openBtn.addEventListener("click", function () { openEntry(entry); });
-      overlay.appendChild(openBtn);
-      if (!entry.legacy) {
-        var delBtn = document.createElement("button");
-        delBtn.className = "card-btn";
-        delBtn.textContent = "×";
-        delBtn.setAttribute("aria-label", "Remove Study " + toRoman(entry.studyNumber));
-        delBtn.addEventListener("click", function () { removeEntry(entry.id); });
-        overlay.appendChild(delBtn);
+      if (layoutMode) {
+        card.classList.add("selectable");
+        if (selectedIds.has(entry.id)) card.classList.add("selected");
+        var check = document.createElement("div");
+        check.className = "study-card-check";
+        card.appendChild(check);
+        card.addEventListener("click", function () {
+          if (selectedIds.has(entry.id)) selectedIds.delete(entry.id); else selectedIds.add(entry.id);
+          renderCollection();
+          updatePosterBar();
+        });
+      } else {
+        var overlay = document.createElement("div");
+        overlay.className = "study-card-overlay";
+        var openBtn = document.createElement("button");
+        openBtn.className = "card-btn";
+        openBtn.textContent = "Open";
+        openBtn.addEventListener("click", function () { openEntry(entry); });
+        overlay.appendChild(openBtn);
+        if (!entry.legacy) {
+          var delBtn = document.createElement("button");
+          delBtn.className = "card-btn";
+          delBtn.textContent = "×";
+          delBtn.setAttribute("aria-label", "Remove Study " + toRoman(entry.studyNumber));
+          delBtn.addEventListener("click", function () { removeEntry(entry.id); });
+          overlay.appendChild(delBtn);
+        }
+        card.appendChild(overlay);
       }
-      card.appendChild(overlay);
 
       var meta = document.createElement("div");
       meta.className = "study-card-meta";
@@ -637,7 +814,7 @@
     state.passes = entry.passes;
     state.lineWeight = entry.lineWeight;
     state.controlPoints = entry.controlPoints.map(function (p) { return p.slice(); });
-    if (entry.camera) state.camera = { az: entry.camera.az, el: entry.camera.el, zoom: entry.camera.zoom };
+    state.camera = { matrix: cameraMatrixFromEntry(entry.camera), zoom: (entry.camera && entry.camera.zoom) || 1 };
     elPoints.value = state.numPoints; valPoints.textContent = state.numPoints;
     elSpread.value = state.spread; valSpread.textContent = state.spread.toFixed(1);
     elPasses.value = state.passes; valPasses.textContent = state.passes;
@@ -667,7 +844,7 @@
       spread: state.spread,
       passes: state.passes,
       lineWeight: state.lineWeight,
-      camera: { az: state.camera.az, el: state.camera.el, zoom: state.camera.zoom },
+      camera: { matrix: state.camera.matrix.slice(), zoom: state.camera.zoom },
       createdAt: new Date().toISOString()
     };
     collection.push(entry);
@@ -745,6 +922,166 @@
     reader.readAsText(file);
   });
 
+  // ---------------- poster layout ----------------
+  var btnLayout = document.getElementById("btn-layout");
+  var posterBar = document.getElementById("poster-bar");
+  var posterInfo = document.getElementById("poster-info");
+  var posterCols = document.getElementById("poster-cols");
+  var posterCellSize = document.getElementById("poster-cellsize");
+
+  function updatePosterBar() {
+    var n = selectedIds.size;
+    posterInfo.textContent = n + (n === 1 ? " selected" : " selected");
+    if (!columnsTouched) {
+      posterCols.value = Math.max(1, Math.min(8, Math.ceil(Math.sqrt(n)) || 1));
+    }
+  }
+
+  btnLayout.addEventListener("click", function () {
+    layoutMode = !layoutMode;
+    btnLayout.textContent = layoutMode ? "Exit Layout" : "Layout";
+    posterBar.hidden = !layoutMode;
+    if (layoutMode) {
+      selectedIds.clear();
+      columnsTouched = false;
+    }
+    renderCollection();
+    updatePosterBar();
+  });
+
+  posterCols.addEventListener("input", function () { columnsTouched = true; });
+
+  var MAX_POSTER_DIMENSION = 8000; // guards browser canvas/memory limits
+
+  // Renders one entry into a fresh offscreen canvas at `size` pixels square.
+  // The legacy Study I entry has no stored control points -- it is drawn
+  // from its own original PNG instead of being re-rendered.
+  function renderEntryToCanvas(entry, size) {
+    var off = document.createElement("canvas");
+    off.width = size;
+    off.height = size;
+    var offCtx = off.getContext("2d");
+    if (entry.legacy) {
+      offCtx.fillStyle = "#f7f6f3";
+      offCtx.fillRect(0, 0, size, size);
+      return new Promise(function (resolve) {
+        var img = new Image();
+        img.onload = function () {
+          var s = Math.min(size / img.width, size / img.height);
+          var w = img.width * s, h = img.height * s;
+          offCtx.drawImage(img, (size - w) / 2, (size - h) / 2, w, h);
+          resolve(off);
+        };
+        img.src = entry.image;
+      });
+    }
+    renderScene(offCtx, size, size, {
+      controlPoints: entry.controlPoints,
+      passes: entry.passes,
+      lineWeight: entry.lineWeight,
+      camera: { matrix: cameraMatrixFromEntry(entry.camera), zoom: (entry.camera && entry.camera.zoom) || 1 }
+    });
+    return Promise.resolve(off);
+  }
+
+  var posterBlob = null;
+
+  async function buildPoster() {
+    var ids = Array.from(selectedIds);
+    var selected = collection
+      .filter(function (e) { return ids.indexOf(e.id) !== -1; })
+      .sort(function (a, b) { return a.studyNumber - b.studyNumber; });
+    if (!selected.length) {
+      castNote.className = "note error";
+      castNote.textContent = "Select at least one study first.";
+      return;
+    }
+
+    var cols = Math.max(1, Math.min(selected.length, parseInt(posterCols.value, 10) || 1));
+    var rows = Math.ceil(selected.length / cols);
+    var cellSize = parseInt(posterCellSize.value, 10) || 900;
+    var gap = Math.round(cellSize * 0.05);
+    var captionHeight = Math.round(cellSize * 0.09);
+    var totalW = cols * cellSize + (cols + 1) * gap;
+    var totalH = rows * (cellSize + captionHeight) + (rows + 1) * gap;
+
+    if (totalW > MAX_POSTER_DIMENSION || totalH > MAX_POSTER_DIMENSION) {
+      castNote.className = "note error";
+      castNote.textContent = "That's too large for a browser canvas (" + totalW + "×" + totalH +
+        "px) — use fewer columns or a smaller cell size.";
+      return;
+    }
+
+    castNote.className = "note";
+    castNote.textContent = "Rendering poster… this can take a few seconds.";
+
+    var big = document.createElement("canvas");
+    big.width = totalW;
+    big.height = totalH;
+    var bigCtx = big.getContext("2d");
+    bigCtx.fillStyle = "#f7f6f3";
+    bigCtx.fillRect(0, 0, totalW, totalH);
+    bigCtx.textAlign = "center";
+    bigCtx.fillStyle = "#1c1a18";
+    bigCtx.font = Math.round(cellSize * 0.026) + "px ui-monospace, 'SF Mono', Menlo, monospace";
+
+    for (var i = 0; i < selected.length; i++) {
+      var entry = selected[i];
+      var col = i % cols, row = Math.floor(i / cols);
+      var x = gap + col * (cellSize + gap);
+      var y = gap + row * (cellSize + captionHeight + gap);
+      var cellCanvas = await renderEntryToCanvas(entry, cellSize);
+      bigCtx.drawImage(cellCanvas, x, y, cellSize, cellSize);
+      bigCtx.fillText("STUDY " + toRoman(entry.studyNumber), x + cellSize / 2, y + cellSize + captionHeight * 0.62);
+    }
+
+    big.toBlob(function (blob) {
+      posterBlob = blob;
+      var url = URL.createObjectURL(blob);
+      showPosterModal(url, selected.length + " studies · " + cols + "×" + rows + " · " + totalW + "×" + totalH + "px");
+      castNote.textContent = "";
+    }, "image/png");
+  }
+
+  document.getElementById("btn-generate-poster").addEventListener("click", function () {
+    // Deferred via setTimeout, not requestAnimationFrame: rAF can be paused
+    // indefinitely for a backgrounded tab (the bug that broke every control
+    // earlier), and this only needs the status note to paint before the
+    // heavier synchronous composite work below it runs.
+    setTimeout(buildPoster, 10);
+  });
+
+  var posterModal = document.getElementById("poster-modal");
+  var posterModalImg = document.getElementById("poster-modal-img");
+  var posterModalCaption = document.getElementById("poster-modal-caption");
+
+  function showPosterModal(url, caption) {
+    posterModalImg.src = url;
+    posterModalCaption.textContent = caption;
+    posterModal.hidden = false;
+  }
+  function closePosterModal() { posterModal.hidden = true; }
+  document.getElementById("poster-modal-close").addEventListener("click", closePosterModal);
+  posterModal.addEventListener("click", function (e) { if (e.target === posterModal) closePosterModal(); });
+
+  document.getElementById("btn-download-poster").addEventListener("click", async function () {
+    if (!posterBlob) return;
+    if (window.claude && window.claude.downloads) {
+      try {
+        await window.claude.downloads.save({ filename: "lampo-poster.png", data: posterBlob });
+      } catch (err) { /* the save prompt itself reports rejection to the viewer */ }
+      return;
+    }
+    var url = URL.createObjectURL(posterBlob);
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = "lampo-poster.png";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  });
+
   // ---------------- lightbox ----------------
   var lightbox = document.getElementById("lightbox");
   var lightboxImg = document.getElementById("lightbox-img");
@@ -757,7 +1094,11 @@
   }
   document.getElementById("lightbox-close").addEventListener("click", function () { lightbox.hidden = true; });
   lightbox.addEventListener("click", function (e) { if (e.target === lightbox) lightbox.hidden = true; });
-  window.addEventListener("keydown", function (e) { if (e.key === "Escape") lightbox.hidden = true; });
+  window.addEventListener("keydown", function (e) {
+    if (e.key !== "Escape") return;
+    lightbox.hidden = true;
+    closePosterModal();
+  });
 
   // ---------------- init ----------------
   newForm();
