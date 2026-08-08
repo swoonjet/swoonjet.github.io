@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jems — Delaunay mosaic tool</title>
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+        --bg: #0a0a0a;
+        --panel: #141414;
+        --border: #2a2a2a;
+        --text: #f5f5f5;
+        --muted: #888;
+        --accent: #ff1f71;
+    }
+
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 3rem 1.5rem;
+        -webkit-font-smoothing: antialiased;
+    }
+
+    h1 {
+        font-size: 1.6rem;
+        font-weight: 800;
+        letter-spacing: -0.5px;
+        margin-bottom: 0.4rem;
+    }
+
+    .subtitle {
+        color: var(--muted);
+        font-size: 0.9rem;
+        margin-bottom: 1.75rem;
+        text-align: center;
+        max-width: 520px;
+        line-height: 1.5;
+    }
+
+    .controls {
+        display: flex;
+        gap: 0.6rem;
+        flex-wrap: wrap;
+        justify-content: center;
+        align-items: center;
+        margin-bottom: 1.5rem;
+    }
+
+    .count-control {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 100px;
+        padding: 0.5rem 1.1rem;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+
+    .count-control input[type="range"] {
+        accent-color: var(--accent);
+        width: 120px;
+    }
+
+    .count-control .count-value {
+        min-width: 1.4em;
+        text-align: right;
+        color: var(--accent);
+    }
+
+    .toggle {
+        display: flex;
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 100px;
+        padding: 3px;
+    }
+
+    .toggle button {
+        border: none;
+        background: transparent;
+        color: var(--muted);
+        border-radius: 100px;
+    }
+
+    .toggle button.active {
+        background: var(--accent);
+        color: white;
+    }
+
+    button {
+        font-family: inherit;
+        font-size: 0.85rem;
+        font-weight: 600;
+        padding: 0.65rem 1.3rem;
+        border-radius: 100px;
+        border: 1px solid var(--border);
+        background: var(--panel);
+        color: var(--text);
+        cursor: pointer;
+        transition: transform 0.15s, border-color 0.15s;
+    }
+
+    button:hover { transform: translateY(-1px); border-color: #444; }
+
+    button.primary {
+        background: var(--accent);
+        border-color: var(--accent);
+    }
+    button.primary:hover { box-shadow: 0 6px 20px rgba(255,31,113,0.35); }
+
+    .canvas-wrap {
+        width: 100%;
+        max-width: 1100px;
+        border-radius: 8px;
+        overflow: hidden;
+        border: 1px solid var(--border);
+        background: #fff;
+        transition: background 0.2s;
+    }
+
+    .canvas-wrap.dark-bg { background: #0a0a0a; }
+
+    #stage {
+        display: block;
+        width: 100%;
+        height: auto;
+    }
+
+    .note {
+        color: #555;
+        font-size: 0.75rem;
+        text-align: center;
+        max-width: 480px;
+        margin-top: 1rem;
+    }
+</style>
+</head>
+<body>
+
+    <h1>Jems</h1>
+    <p class="subtitle">Random points, Delaunay-triangulated into a mosaic of muted tonal color. Pick how many independent pieces tile the canvas, choose a light or dark ground, and regenerate for a new random result.</p>
+
+    <div class="controls">
+        <div class="count-control">
+            <span>Panels</span>
+            <input type="range" id="panelCount" min="1" max="20" step="1" value="1">
+            <span class="count-value" id="panelCountValue">1</span>
+        </div>
+        <div class="toggle" id="bgToggle">
+            <button id="bgLight" class="active">Light</button>
+            <button id="bgDark">Dark</button>
+        </div>
+        <button id="btnRegenerate" class="primary">Regenerate</button>
+        <button id="btnDownloadSvg">Download SVG</button>
+        <button id="btnDownloadPng">Download PNG</button>
+    </div>
+
+    <div class="canvas-wrap" id="canvasWrap">
+        <svg id="stage" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900"></svg>
+    </div>
+
+    <p class="note" id="statNote"></p>
+
+    <script>
+        // ============================================================
+        // Ported from trishader.py (one 1600x900 mosaic) and trishader8.py
+        // (a 2x4 grid of independent smaller mosaics), generalized here into
+        // a single "how many panels" control rather than two fixed modes.
+        // Each panel is: random points from a Gaussian clipped to a box ->
+        // Delaunay triangulation -> each triangle filled with a muted
+        // "tonal" color (one shared random gray-ish base plus small
+        // independent R/G/B jitter, at 50% opacity) -- same generative core
+        // and constants as the source scripts (50 points/panel), with a
+        // light/dark ground added as a new option.
+        //
+        // n=1 reproduces trishader.py's own exact parameters (its point
+        // cloud was tuned for the full 1600x900 canvas, not derived from
+        // the per-panel recipe below). n>=2 generalizes trishader8.py's
+        // per-panel recipe -- same relative proportions (center, spread,
+        // clip margin, all as fractions of that panel's own width/height)
+        // scaled to whatever panel size the chosen count's grid produces.
+        //
+        // Delaunay triangulation is a from-scratch, browser-side port (see
+        // the extensive correctness notes in the geometry functions below)
+        // since there's no scipy/Qhull to call into here.
+        // ============================================================
+        (function () {
+            "use strict";
+
+            var CANVAS_W = 1600, CANVAS_H = 900;
+
+            // ---------------- Delaunay core (brute-force definitional) ----------------
+            // An incremental Bowyer-Watson attempt was tried first and
+            // abandoned after extensive testing turned up real (if rare) mesh
+            // corruption from this generator's clip-induced collinear and
+            // exactly-coincident points (a sample overshooting both the x and
+            // y clip bounds lands on the same corner as any other overshoot).
+            // Brute force -- emit a triangle iff no other point lies strictly
+            // inside its circumcircle, the literal Delaunay definition -- is
+            // simpler to get exactly right and, at ~50 points per panel,
+            // plenty fast even with many panels on screen at once.
+            function inCircleDet(a, b, c, d) {
+                var ax_ = a[0] - d[0], ay_ = a[1] - d[1];
+                var bx_ = b[0] - d[0], by_ = b[1] - d[1];
+                var cx_ = c[0] - d[0], cy_ = c[1] - d[1];
+                var na = ax_ * ax_ + ay_ * ay_;
+                var nb = bx_ * bx_ + by_ * by_;
+                var nc = cx_ * cx_ + cy_ * cy_;
+                return na * (bx_ * cy_ - cx_ * by_) - nb * (ax_ * cy_ - cx_ * ay_) + nc * (ax_ * by_ - bx_ * ay_);
+            }
+
+            function delaunay(rawPoints) {
+                // Dedupe first -- see comment above on coincident corner points.
+                var seen = {};
+                var points = [];
+                for (var r = 0; r < rawPoints.length; r++) {
+                    var key = rawPoints[r][0] + ',' + rawPoints[r][1];
+                    if (seen[key]) continue;
+                    seen[key] = true;
+                    points.push(rawPoints[r]);
+                }
+
+                var n = points.length;
+                var triangles = [];
+                if (n < 3) return { points: points, triangles: triangles };
+
+                var maxCoord = 0;
+                for (var i = 0; i < n; i++) maxCoord = Math.max(maxCoord, Math.abs(points[i][0]), Math.abs(points[i][1]));
+                var scale2 = Math.max(maxCoord * maxCoord, 1);
+                var orientEps = scale2 * 1e-12;
+                var detEps = scale2 * scale2 * 1e-12;
+
+                for (i = 0; i < n; i++) {
+                    for (var j = i + 1; j < n; j++) {
+                        for (var k = j + 1; k < n; k++) {
+                            var a = points[i], b = points[j], c = points[k];
+                            var orient = (b[0] - a[0]) * (c[1] - a[1]) - (c[0] - a[0]) * (b[1] - a[1]);
+                            if (Math.abs(orient) < orientEps) continue;
+
+                            var bw = b, cw = c;
+                            if (orient < 0) { bw = c; cw = b; }
+
+                            var isDelaunay = true;
+                            for (var p = 0; p < n; p++) {
+                                if (p === i || p === j || p === k) continue;
+                                if (inCircleDet(a, bw, cw, points[p]) > detEps) { isDelaunay = false; break; }
+                            }
+                            if (isDelaunay) triangles.push([i, j, k]);
+                        }
+                    }
+                }
+
+                return { points: points, triangles: triangles };
+            }
+
+            // ---------------- generative core (ported from the python) ----------------
+            function randNormal() {
+                var u = 0, v = 0;
+                while (u === 0) u = Math.random();
+                while (v === 0) v = Math.random();
+                return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+            }
+
+            function generateClippedGaussianPoints(n, locX, locY, scaleX, scaleY, minX, minY, maxX, maxY) {
+                var pts = [];
+                for (var i = 0; i < n; i++) {
+                    var x = Math.min(maxX, Math.max(minX, locX + randNormal() * scaleX));
+                    var y = Math.min(maxY, Math.max(minY, locY + randNormal() * scaleY));
+                    pts.push([x, y]);
+                }
+                return pts;
+            }
+
+            function generateTonalColor() {
+                var base = Math.random();
+                var r = clamp01(base + rand(-0.1, 0.1));
+                var g = clamp01(base + rand(-0.1, 0.1));
+                var b = clamp01(base + rand(-0.1, 0.1));
+                return 'rgb(' + Math.round(r * 255) + ',' + Math.round(g * 255) + ',' + Math.round(b * 255) + ')';
+            }
+            function rand(min, max) { return min + Math.random() * (max - min); }
+            function clamp01(v) { return Math.max(0, Math.min(1, v)); }
+
+            // Builds SVG <polygon> markup for one triangulated panel, mapping
+            // logical (matplotlib-style, y-up) coordinates into an origin/size
+            // box in the shared SVG's y-down pixel space.
+            function renderPanel(points, logicalW, logicalH, originX, originY, boxW, boxH) {
+                var result = delaunay(points);
+                var sx = boxW / logicalW, sy = boxH / logicalH;
+                var out = '';
+                for (var t = 0; t < result.triangles.length; t++) {
+                    var tri = result.triangles[t];
+                    var color = generateTonalColor();
+                    var pts = tri.map(function (idx) {
+                        var p = result.points[idx];
+                        var x = originX + p[0] * sx;
+                        var y = originY + (logicalH - p[1]) * sy; // flip y: matplotlib is y-up, SVG is y-down
+                        return x.toFixed(2) + ',' + y.toFixed(2);
+                    }).join(' ');
+                    out += '<polygon points="' + pts + '" fill="' + color + '" fill-opacity="0.5" />';
+                }
+                return { svg: out, triangleCount: result.triangles.length };
+            }
+
+            // Grid layout for N panels: search every column count and keep
+            // whichever leaves zero wasted cells with the panel aspect ratio
+            // closest to reasonable (falls back to the least-wasteful option
+            // if no exact-fit factorization exists -- doesn't occur for any
+            // N in this tool's 1-20 range, every one has a true divisor
+            // pair, but kept general rather than assuming that holds).
+            function computeGrid(n) {
+                var bestCols = 1, bestRows = n, bestWaste = Infinity, bestAspectDiff = Infinity;
+                for (var cols = 1; cols <= n; cols++) {
+                    var rows = Math.ceil(n / cols);
+                    var waste = cols * rows - n;
+                    var panelAspect = (CANVAS_W / cols) / (CANVAS_H / rows);
+                    var aspectDiff = Math.abs(Math.log(panelAspect));
+                    if (waste < bestWaste || (waste === bestWaste && aspectDiff < bestAspectDiff)) {
+                        bestWaste = waste; bestAspectDiff = aspectDiff; bestCols = cols; bestRows = rows;
+                    }
+                }
+                return { cols: bestCols, rows: bestRows };
+            }
+
+            // ---------------- app state ----------------
+            var svg = document.getElementById('stage');
+            var statNote = document.getElementById('statNote');
+            var canvasWrap = document.getElementById('canvasWrap');
+            var panelCount = 1;
+            var background = 'light'; // 'light' | 'dark'
+
+            function render() {
+                var bgColor = background === 'dark' ? '#0a0a0a' : '#ffffff';
+                var svgBody = '<rect x="0" y="0" width="' + CANVAS_W + '" height="' + CANVAS_H + '" fill="' + bgColor + '" />';
+                var totalTriangles = 0;
+
+                if (panelCount === 1) {
+                    // Exact trishader.py parameters -- tuned for the full
+                    // 1600x900 canvas natively, not derived from the
+                    // per-panel recipe below.
+                    var points = generateClippedGaussianPoints(50, 800, 450, 200, 200, 100, 50, 1500, 850);
+                    var single = renderPanel(points, CANVAS_W, CANVAS_H, 0, 0, CANVAS_W, CANVAS_H);
+                    svgBody += single.svg;
+                    totalTriangles = single.triangleCount;
+                } else {
+                    var grid = computeGrid(panelCount);
+                    var wspace = 0.05, hspace = 0.05;
+                    var panelW = CANVAS_W / (grid.cols + (grid.cols - 1) * wspace);
+                    var gapX = panelW * wspace;
+                    var panelH = CANVAS_H / (grid.rows + (grid.rows - 1) * hspace);
+                    var gapY = panelH * hspace;
+
+                    // trishader8.py's per-panel recipe (loc/scale/clip), as
+                    // fractions of its own 400x450 panel -- reapplied here as
+                    // fractions of whatever panel size this count's grid
+                    // produces, so the character of the mosaic (how tight the
+                    // point cloud is relative to its own panel) stays
+                    // consistent regardless of how many panels are on screen.
+                    var locXf = 0.5, locYf = 0.5;
+                    var scaleXf = 100 / 400, scaleYf = 100 / 450;
+                    var minXf = 50 / 400, maxXf = 350 / 400;
+                    var minYf = 25 / 450, maxYf = 425 / 450;
+
+                    var placed = 0;
+                    for (var row = 0; row < grid.rows && placed < panelCount; row++) {
+                        for (var col = 0; col < grid.cols && placed < panelCount; col++) {
+                            var pts = generateClippedGaussianPoints(
+                                50,
+                                panelW * locXf, panelH * locYf,
+                                panelW * scaleXf, panelH * scaleYf,
+                                panelW * minXf, panelH * minYf,
+                                panelW * maxXf, panelH * maxYf
+                            );
+                            var originX = col * (panelW + gapX);
+                            var originY = row * (panelH + gapY);
+                            var panel = renderPanel(pts, panelW, panelH, originX, originY, panelW, panelH);
+                            svgBody += panel.svg;
+                            totalTriangles += panel.triangleCount;
+                            placed++;
+                        }
+                    }
+                }
+
+                svg.innerHTML = svgBody;
+                canvasWrap.classList.toggle('dark-bg', background === 'dark');
+                statNote.textContent = panelCount + (panelCount === 1 ? ' panel, ' : ' panels, ') + totalTriangles + ' triangles total';
+            }
+
+            // ---------------- controls ----------------
+            var countSlider = document.getElementById('panelCount');
+            var countValue = document.getElementById('panelCountValue');
+            countSlider.addEventListener('input', function () {
+                panelCount = parseInt(countSlider.value, 10);
+                countValue.textContent = panelCount;
+                render();
+            });
+
+            var btnLight = document.getElementById('bgLight');
+            var btnDark = document.getElementById('bgDark');
+            btnLight.addEventListener('click', function () {
+                background = 'light';
+                btnLight.classList.add('active');
+                btnDark.classList.remove('active');
+                render();
+            });
+            btnDark.addEventListener('click', function () {
+                background = 'dark';
+                btnDark.classList.add('active');
+                btnLight.classList.remove('active');
+                render();
+            });
+
+            document.getElementById('btnRegenerate').addEventListener('click', render);
+
+            document.getElementById('btnDownloadSvg').addEventListener('click', function () {
+                var serializer = new XMLSerializer();
+                var xml = '<?xml version="1.0" standalone="no"?>\n' + serializer.serializeToString(svg);
+                var blob = new Blob([xml], { type: 'image/svg+xml' });
+                var a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = 'jems-' + panelCount + '.svg';
+                a.click();
+            });
+
+            document.getElementById('btnDownloadPng').addEventListener('click', function () {
+                var serializer = new XMLSerializer();
+                var xml = serializer.serializeToString(svg);
+                var svgBlob = new Blob([xml], { type: 'image/svg+xml' });
+                var url = URL.createObjectURL(svgBlob);
+                var img = new Image();
+                img.onload = function () {
+                    var scale = 2; // export at 2x for a crisp raster
+                    var canvas = document.createElement('canvas');
+                    canvas.width = CANVAS_W * scale;
+                    canvas.height = CANVAS_H * scale;
+                    var ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    URL.revokeObjectURL(url);
+                    canvas.toBlob(function (blob) {
+                        var a = document.createElement('a');
+                        a.href = URL.createObjectURL(blob);
+                        a.download = 'jems-' + panelCount + '.png';
+                        a.click();
+                    }, 'image/png');
+                };
+                img.src = url;
+            });
+
+            render();
+        })();
+    </script>
+
+</body>
+</html>
