@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Single Cell Battle — sketch</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  :root {
+    --bg: #0a0a0a;
+    --panel: #141414;
+    --panel2: #1a1a1a;
+    --border: #262626;
+    --text: #f5f5f5;
+    --muted: #8a8a8a;
+    --accent: #ff1f71;
+    --p1: #ff1f71;
+    --p2: #06b6d4;
+    --good: #4ade80;
+    --bad: #f87171;
+  }
+  html, body { background:var(--bg); color:var(--text); }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+    padding: 20px 16px 60px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .wrap { width: 100%; max-width: 900px; }
+  header { text-align:center; margin-bottom: 24px; }
+  header .tag {
+    display:inline-block; font-size: 11px; letter-spacing: .06em; color: var(--muted);
+    border: 1px solid var(--border); border-radius: 999px; padding: 4px 12px; margin-bottom: 14px;
+  }
+  h1 { font-size: clamp(28px, 6vw, 40px); font-weight: 800; letter-spacing: -0.01em; }
+  h1 span { color: var(--accent); }
+  header p { color: var(--muted); font-size: 14px; margin-top: 8px; max-width: 480px; margin-inline: auto; line-height:1.5; }
+  header a { color: var(--muted); text-decoration: underline; }
+
+  .arena {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 14px;
+    align-items: start;
+  }
+  @media (max-width: 720px) {
+    .arena { grid-template-columns: 1fr; }
+    .vs { order: 2; width: 100%; }
+    .card.p2 { order: 3; }
+  }
+
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 18px;
+    min-width: 0;
+  }
+  .card.p1 { border-top: 3px solid var(--p1); }
+  .card.p2 { border-top: 3px solid var(--p2); }
+
+  .cell-name { font-size: 20px; font-weight: 700; word-break: break-word; }
+  .card.p1 .cell-name { color: var(--p1); }
+  .card.p2 .cell-name { color: var(--p2); }
+  .cell-sub { font-size: 13px; color: var(--muted); margin-top: 2px; margin-bottom: 14px; }
+
+  .bar-row { display:flex; align-items:center; gap:8px; margin-bottom: 8px; font-size: 11px; color: var(--muted); }
+  .bar-row > span:first-child { width: 22px; flex-shrink:0; font-weight:700; }
+  .bar { flex:1; height: 10px; background:#000; border-radius:999px; overflow:hidden; border:1px solid var(--border); }
+  .bar-fill { height:100%; border-radius:999px; transition: width .25s ease; }
+  .bar-fill.hp { background: linear-gradient(90deg, var(--good), #86efac); }
+  .bar-fill.en { background: linear-gradient(90deg, #60a5fa, #93c5fd); }
+  .bar-num { flex-shrink:0; width:64px; text-align:right; font-variant-numeric: tabular-nums; }
+
+  .stat-grid { display:grid; grid-template-columns: repeat(5, 1fr); gap:6px; margin: 14px 0; }
+  .stat-grid div { background: var(--panel2); border-radius:10px; padding:6px 2px; text-align:center; }
+  .stat-grid b { display:block; font-size:15px; }
+  .stat-grid small { font-size:10px; color:var(--muted); letter-spacing:.03em; }
+
+  .traits { border-top: 1px solid var(--border); padding-top: 10px; }
+  .trait-row { display:flex; justify-content:space-between; gap:10px; padding:5px 0; font-size:12.5px; }
+  .trait-label { color: var(--muted); flex-shrink:0; }
+  .trait-value { text-align:right; }
+
+  .vs {
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px;
+    padding: 6px 4px; align-self: center;
+  }
+  .vs-mark { font-size: 13px; font-weight:800; color: var(--muted); letter-spacing:.08em; }
+
+  button {
+    font-family: inherit; font-size: 15px; font-weight: 700; cursor:pointer;
+    border-radius: 12px; border: none; padding: 13px 18px; min-height: 48px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .btn-battle { background: var(--accent); color:#fff; width: 100%; }
+  .btn-battle:disabled { opacity:.4; cursor:default; }
+  .btn-ghost { background: transparent; color: var(--text); border: 1px solid var(--border); width:100%; }
+  .btn-ghost:active, .btn-battle:active { transform: scale(.98); }
+
+  .log-panel {
+    margin-top: 22px; background: #000; border: 1px solid var(--border); border-radius: 14px;
+    padding: 14px; max-height: 42vh; overflow-y: auto; -webkit-overflow-scrolling: touch;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12.5px; line-height: 1.6; display:none;
+  }
+  .log-panel.show { display:block; }
+  .log-line { white-space: pre-wrap; word-break: break-word; color: var(--text); opacity:.92; }
+  .log-line.turn { color: var(--muted); margin-top:8px; font-weight:700; }
+  .log-line.effect { color: var(--p2); }
+  .log-line.victory, .log-line.draw { color: var(--accent); font-weight:800; margin-top:10px; }
+  .log-line.header { color: var(--muted); }
+
+  .banner {
+    display:none; text-align:center; margin-top:16px; padding: 14px; border-radius:14px;
+    background: var(--panel); border:1px solid var(--border); font-weight:800; font-size:16px;
+  }
+  .banner.show { display:block; }
+
+  .actions { display:flex; gap:10px; margin-top:16px; flex-wrap:wrap; }
+  .actions > * { flex:1; min-width: 140px; }
+
+  .skip-hint { text-align:center; font-size:11px; color:var(--muted); margin-top:8px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="tag">sketch / test page</div>
+    <h1>Single Cell <span>Battle</span></h1>
+    <p>A turn-based microorganism battler, ported line-for-line from a Python simulation
+      (12 randomized trait categories, full combat resolution) into a client-side JS sketch.
+      <a href="../../">jontoews.com</a></p>
+  </header>
+
+  <div class="arena">
+    <div class="card p1" id="card1"></div>
+    <div class="vs">
+      <div class="vs-mark">VS</div>
+      <button class="btn-battle" id="battleBtn">Battle</button>
+      <button class="btn-ghost" id="newBtn">New Cells</button>
+    </div>
+    <div class="card p2" id="card2"></div>
+  </div>
+
+  <div class="banner" id="banner"></div>
+  <div class="log-panel" id="log"></div>
+  <div class="skip-hint" id="skipHint">tap the log to skip ahead</div>
+</div>
+
+<script>
+'use strict';
+
+/* ============ RNG helpers (mirror Python's random module usage) ============ */
+function randInt(a, b) { return Math.floor(Math.random() * (b - a + 1)) + a; }
+function choice(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+/* ============ Trait pools — ported verbatim from organism.py ============ */
+const SIZES = [
+  {name:'microscopic', health_mod:0.65, speed_mod:1.35, hit_chance_mod:0.8, desc:'tiny and fast, hard to hit but fragile'},
+  {name:'tiny', health_mod:0.8, speed_mod:1.2, hit_chance_mod:0.9, desc:'small and quick'},
+  {name:'small', health_mod:1.0, speed_mod:1.1, hit_chance_mod:1.0, desc:'balanced size'},
+  {name:'medium', health_mod:1.15, speed_mod:1.0, hit_chance_mod:1.0, desc:'standard cellular size'},
+  {name:'large', health_mod:1.3, speed_mod:0.85, hit_chance_mod:1.05, desc:'bulky and tough'},
+  {name:'massive', health_mod:1.5, speed_mod:0.7, hit_chance_mod:1.1, desc:'huge and powerful but slow'},
+];
+const MOVEMENT_TYPES = [
+  {name:'flagella', speed:7, evasion:15, desc:'whip-like tail for fast directional movement'},
+  {name:'cilia', speed:5, evasion:20, desc:'hair-like structures for precise maneuvering'},
+  {name:'pseudopodia', speed:3, evasion:14, desc:'shape-shifting extensions for slow but flexible movement'},
+  {name:'jet propulsion', speed:10, evasion:6, desc:'expels fluid for burst speed'},
+  {name:'phase drift', speed:5, evasion:22, desc:'shifts between dimensions for unpredictable movement'},
+  {name:'magnetic glide', speed:7, evasion:18, desc:'rides magnetic field lines'},
+  {name:'amoeboid', speed:4, evasion:16, desc:'flows like liquid, adaptable movement'},
+  {name:'rolling', speed:8, evasion:10, desc:'spherical rolling motion, fast but predictable'},
+  {name:'tentacle crawl', speed:5, evasion:18, desc:'multiple appendages for versatile movement'},
+];
+const ARMOR_TYPES = [
+  {name:'soft membrane', defense:4, regen:5, desc:'flexible but vulnerable, heals quickly'},
+  {name:'chitinous shell', defense:16, regen:0, desc:'hard insect-like coating'},
+  {name:'crystalline matrix', defense:22, regen:0, desc:'rigid crystal structure, tough'},
+  {name:'silica plating', defense:18, regen:1, desc:'glass-like protective layer'},
+  {name:'regenerative gel', defense:6, regen:5, desc:'soft but rapidly healing'},
+  {name:'void-touched skin', defense:12, regen:2, desc:'partially phases out damage'},
+  {name:'reflective scales', defense:14, regen:1, desc:'bounces energy attacks'},
+  {name:'biofilm layer', defense:10, regen:3, desc:'sticky protective coating'},
+  {name:'calcium carbonate', defense:18, regen:1, desc:'shell-like mineral armor'},
+  {name:'elastic membrane', defense:8, regen:3, desc:'absorbs impact, stretchy'},
+];
+const ENERGY_SOURCES = [
+  {name:'photosynthesis', energy_regen:5, passive:'light_heal', passive_desc:'heals 3 HP per turn in light'},
+  {name:'chemosynthesis', energy_regen:4, passive:'toxin_immune', passive_desc:'immune to poison damage'},
+  {name:'radiation absorption', energy_regen:5, passive:'radiation_boost', passive_desc:'+5 damage vs energy attacks'},
+  {name:'thermal conversion', energy_regen:4, passive:'heat_shield', passive_desc:'15% damage reduction'},
+  {name:'plasma feeding', energy_regen:6, passive:'attack_drain', passive_desc:'restores 2 energy when hit'},
+  {name:'void siphon', energy_regen:5, passive:'void_touch', passive_desc:'10% chance to ignore defense'},
+  {name:'osmotrophy', energy_regen:4, passive:'nutrient_absorb', passive_desc:'heals 2 HP when dealing damage'},
+  {name:'predation', energy_regen:3, passive:'feast', passive_desc:'+20% damage vs low HP enemies'},
+  {name:'symbiosis', energy_regen:6, passive:'shared_life', passive_desc:'starts with +15 HP'},
+];
+const ATTACK_TYPES = [
+  {name:'toxin spray', damage:11, accuracy:82, energy_cost:8, effect:'poison', category:'chemical', desc:'releases harmful chemicals'},
+  {name:'absorption tendril', damage:10, accuracy:85, energy_cost:7, effect:'drain', category:'physical', desc:'latches on and drains life'},
+  {name:'harmonic pulse', damage:13, accuracy:82, energy_cost:10, effect:'stun', category:'energy', desc:'sonic wave disrupts enemy'},
+  {name:'spike volley', damage:15, accuracy:78, energy_cost:9, effect:null, category:'physical', desc:'launches hardened projectiles'},
+  {name:'acid burst', damage:14, accuracy:68, energy_cost:11, effect:'corrode', category:'chemical', desc:'explosive corrosive attack'},
+  {name:'quantum lash', damage:15, accuracy:75, energy_cost:11, effect:'phase', category:'energy', desc:'strikes from multiple dimensions'},
+  {name:'plasma bolt', damage:22, accuracy:60, energy_cost:14, effect:'burn', category:'energy', desc:'concentrated energy blast'},
+  {name:'void touch', damage:20, accuracy:62, energy_cost:15, effect:'disintegrate', category:'energy', desc:'erases matter on contact'},
+  {name:'enzyme injection', damage:9, accuracy:88, energy_cost:6, effect:'dissolve', category:'chemical', desc:'injects digestive enzymes'},
+  {name:'membrane pierce', damage:14, accuracy:70, energy_cost:10, effect:'bleed', category:'physical', desc:'punctures cellular wall'},
+  {name:'static shock', damage:13, accuracy:80, energy_cost:8, effect:'paralyze', category:'energy', desc:'electrical discharge'},
+  {name:'crushing grip', damage:14, accuracy:80, energy_cost:9, effect:'slow', category:'physical', desc:'constricts and crushes'},
+];
+const SENSING_TYPES = [
+  {name:'chemoreceptors', accuracy:10, evasion:8, desc:'detects chemical signatures'},
+  {name:'photoreceptors', accuracy:15, evasion:10, desc:'light-sensitive vision'},
+  {name:'magnetoreception', accuracy:12, evasion:12, desc:'feels magnetic fields'},
+  {name:'echolocation', accuracy:18, evasion:8, desc:'sonic mapping'},
+  {name:'quantum entanglement', accuracy:20, evasion:15, desc:'perceives across dimensions'},
+  {name:'probability sense', accuracy:15, evasion:18, desc:'predicts likely futures'},
+  {name:'thermoreception', accuracy:12, evasion:10, desc:'senses heat signatures'},
+  {name:'pressure sense', accuracy:14, evasion:14, desc:'detects movement through pressure'},
+  {name:'bioelectric field', accuracy:16, evasion:12, desc:'senses electrical fields'},
+];
+const SPECIAL_ABILITIES = [
+  {name:'bioluminescence', effect:'blind', chance:20, desc:'flash blinds opponent'},
+  {name:'rapid fission', effect:'clone', chance:18, desc:'splits into temporary copy'},
+  {name:'spore cloud', effect:'confuse', chance:20, desc:'releases disorienting spores'},
+  {name:'membrane hardening', effect:'shield', chance:22, desc:'temporarily boosts defense'},
+  {name:'phase shift', effect:'dodge', chance:20, desc:'blinks out of existence briefly'},
+  {name:'energy conduit', effect:'boost', chance:25, desc:'channels extra power to attack'},
+  {name:'dimensional anchor', effect:'lock', chance:18, desc:'prevents enemy escape'},
+  {name:'void echo', effect:'mirror', chance:12, desc:'reflects damage back'},
+  {name:'probability warp', effect:'crit', chance:20, desc:'manipulates chance for critical hit'},
+  {name:'temporal stutter', effect:'extra_turn', chance:10, desc:'acts twice in one moment'},
+  {name:'regeneration burst', effect:'heal', chance:22, desc:'rapidly heals 15% max HP'},
+  {name:'adrenaline surge', effect:'speed_boost', chance:25, desc:'+3 speed for 2 turns'},
+  {name:'venom glands', effect:'poison_boost', chance:18, desc:'next attack always poisons'},
+];
+const TOXICITY_LEVELS = [
+  {name:'harmless', contact_damage:0, desc:'no passive damage'},
+  {name:'mild irritant', contact_damage:2, desc:'slight burning on contact'},
+  {name:'toxic', contact_damage:3, desc:'damages on touch'},
+  {name:'highly toxic', contact_damage:5, desc:'severe contact damage'},
+  {name:'lethal', contact_damage:6, desc:'deadly to touch'},
+];
+const REPRODUCTION_TYPES = [
+  {name:'binary fission', threshold:0.25, effect:'split', bonus:0.3, desc:'splits into weaker copy at low health (30% stats)'},
+  {name:'sporulation', threshold:0.2, effect:'spore_burst', bonus:15, desc:'releases damaging spores when near death'},
+  {name:'budding', threshold:0.3, effect:'regenerate', bonus:0.2, desc:'regenerates 20% max HP once when low'},
+  {name:'fragmentation', threshold:0.20, effect:'fragment', bonus:5, desc:'breaks into fragments dealing damage when low'},
+  {name:'endospore', threshold:0.1, effect:'dormant', bonus:5, desc:'enters dormant state, immune for 5 turns but cannot attack'},
+  {name:'none', threshold:0, effect:null, bonus:0, desc:'no reproductive defense mechanism'},
+];
+const ENVIRONMENT_ADAPTATIONS = [
+  {name:'extremophile', resistance:'all', reduction:0.1, desc:'10% resistance to all damage types'},
+  {name:'thermophile', resistance:'energy', reduction:0.25, desc:'25% resistance to plasma/energy attacks'},
+  {name:'acidophile', resistance:'acid', reduction:0.5, desc:'50% resistance to acid/corrosion'},
+  {name:'halophile', resistance:'drain', reduction:0.5, desc:'50% resistance to life drain effects'},
+  {name:'psychrophile', resistance:'stun', reduction:0.5, desc:'50% resistance to stun effects'},
+  {name:'radiophile', resistance:'disintegrate', reduction:0.5, desc:'50% resistance to void/disintegration'},
+  {name:'barophile', resistance:'physical', reduction:0.15, desc:'15% resistance to physical damage'},
+  {name:'generalist', resistance:'all', reduction:0.05, desc:'5% resistance to all damage - jack of all trades'},
+];
+const DEFENSIVE_MECHANISMS = [
+  {name:'ink cloud', trigger:'hit', chance:18, effect:'blind', desc:'releases blinding ink when hit (18% chance)'},
+  {name:'spike reflex', trigger:'hit', chance:25, effect:'counter', value:6, desc:'reflexively extends spikes dealing 6 damage when hit'},
+  {name:'mucus coat', trigger:'always', chance:100, effect:'slippery', value:8, desc:'+8 evasion from slippery coating'},
+  {name:'decoy organelle', trigger:'hit', chance:18, effect:'redirect', desc:'18% chance attacks hit decoy instead'},
+  {name:'electric discharge', trigger:'hit', chance:22, effect:'shock', value:10, desc:'shocks attacker for 10 damage on contact (22% chance)'},
+  {name:'camouflage', trigger:'start', chance:100, effect:'stealth', value:2, desc:'invisible for first 2 turns (+50 evasion)'},
+  {name:'autotomy', trigger:'low_health', chance:100, effect:'escape', value:0.30, desc:'sheds damaged parts at 30% HP, heals 15 HP (once)'},
+  {name:'none', trigger:null, chance:0, effect:null, desc:'no special defensive mechanism'},
+];
+const SECONDARY_ATTACKS = [
+  {name:'engulf', damage:8, accuracy:95, energy_cost:5, effect:'slow', desc:'wraps around enemy, slowing them'},
+  {name:'ram', damage:15, accuracy:75, energy_cost:8, effect:'knockback', desc:'charges into enemy, may stagger'},
+  {name:'siphon', damage:6, accuracy:90, energy_cost:3, effect:'energy_steal', desc:'steals 5 energy from target'},
+  {name:'constrict', damage:5, accuracy:82, energy_cost:7, effect:'dot', value:3, desc:'squeezes for 3 damage over 2 turns'},
+  {name:'spore shot', damage:10, accuracy:80, energy_cost:7, effect:'weaken', desc:'weakens enemy defense by 3'},
+  {name:'leech', damage:7, accuracy:88, energy_cost:6, effect:'heal', desc:'heals for 50% of damage dealt'},
+  {name:'disable', damage:3, accuracy:70, energy_cost:12, effect:'disable_special', desc:'disables enemy special ability for 3 turns'},
+  {name:'none', damage:0, accuracy:0, energy_cost:0, effect:null, desc:'no secondary attack'},
+];
+
+const NAME_PREFIXES = ['Zyx','Vor','Keth','Nul','Phas','Qor','Xen','Vex','Cryo','Flux','Erg','Myx','Blas','Cyl','Dex','Fel','Gyr','Hax','Ion','Jex'];
+const NAME_SUFFIXES = ['oid','ella','ium','ax','on','is','us','ara','ix','or','yx','um','ia','ex','os','an','il','eth','oth','ux'];
+const NAME_MIDDLE = ['o','a','i','u','e','or','ar','ir','er','ur'];
+function generateName() {
+  if (Math.random() > 0.5) return choice(NAME_PREFIXES) + choice(NAME_MIDDLE) + choice(NAME_SUFFIXES);
+  return choice(NAME_PREFIXES) + choice(NAME_SUFFIXES);
+}
+
+/* ============ Organism — ported from organism.py (fresh cell, no evolution history) ============ */
+class Organism {
+  constructor() {
+    this.name = generateName();
+    this.size = choice(SIZES);
+    this.movementType = choice(MOVEMENT_TYPES);
+    this.armorType = choice(ARMOR_TYPES);
+    this.energySource = choice(ENERGY_SOURCES);
+    this.attackType = choice(ATTACK_TYPES);
+    this.sensingType = choice(SENSING_TYPES);
+    this.specialAbility = choice(SPECIAL_ABILITIES);
+    this.toxicity = choice(TOXICITY_LEVELS);
+    this.reproduction = choice(REPRODUCTION_TYPES);
+    this.environment = choice(ENVIRONMENT_ADAPTATIONS);
+    this.defenseMechanism = choice(DEFENSIVE_MECHANISMS);
+    this.secondaryAttack = choice(SECONDARY_ATTACKS);
+    this.damageBonus = 0;
+    this.baseHealth = 100;
+    this.baseEnergy = 50;
+    this.baseSpeed = 5;
+    this._calculateStats();
+    this.statusEffects = [];
+    this.isStunned = false;
+    this.shieldActive = false;
+    this.reproductionTriggered = false;
+    this.stealthTurns = 0;
+    this.specialDisabledTurns = 0;
+    this.cloneActive = false;
+  }
+
+  _calculateStats() {
+    let baseHp = Math.trunc(this.baseHealth * this.size.health_mod);
+    const baseEnergyVal = this.baseEnergy + this.energySource.energy_regen * 5;
+    const baseSpeed = Math.trunc((this.baseSpeed + this.movementType.speed) * this.size.speed_mod);
+    const baseDefense = this.armorType.defense;
+    const baseAccuracy = 70 + this.sensingType.accuracy;
+    let baseEvasion = this.movementType.evasion + this.sensingType.evasion;
+    const baseRegen = this.armorType.regen;
+
+    if (this.energySource.passive === 'shared_life') baseHp += 15;
+    if (this.defenseMechanism.effect === 'slippery') baseEvasion += this.defenseMechanism.value || 0;
+
+    this.maxHealth = baseHp;
+    this.health = this.maxHealth;
+    this.maxEnergy = baseEnergyVal;
+    this.energy = this.maxEnergy;
+    this.speed = baseSpeed;
+    this.defense = baseDefense;
+    this.accuracy = baseAccuracy;
+    this.evasion = baseEvasion;
+    this.regen = baseRegen;
+  }
+
+  resetForBattle() {
+    this.health = this.maxHealth;
+    this.energy = this.maxEnergy;
+    this.statusEffects = [];
+    this.isStunned = false;
+    this.shieldActive = false;
+    this.reproductionTriggered = false;
+    this.cloneActive = false;
+    this.specialDisabledTurns = 0;
+    this.stealthTurns = this.defenseMechanism.effect === 'stealth' ? (this.defenseMechanism.value || 2) : 0;
+  }
+
+  isAlive() { return this.health > 0; }
+  getEffectiveEvasion() { return this.evasion + (this.stealthTurns > 0 ? 50 : 0); }
+  canUseSpecial() { return this.specialDisabledTurns <= 0; }
+}
+
+/* ============ BattleLog — captures a UI-friendly snapshot on every line ============ */
+class BattleLog {
+  constructor(org1, org2) {
+    this.entries = [];
+    this.turn = 0;
+    this.org1 = org1;
+    this.org2 = org2;
+  }
+  log(message, type) {
+    this.entries.push({
+      turn: this.turn, message, type: type || 'info',
+      hp1: this.org1.health, maxHp1: this.org1.maxHealth,
+      hp2: this.org2.health, maxHp2: this.org2.maxHealth,
+      en1: this.org1.energy, maxEn1: this.org1.maxEnergy,
+      en2: this.org2.energy, maxEn2: this.org2.maxEnergy,
+    });
+  }
+  newTurn() {
+    this.turn += 1;
+    this.log(`Turn ${this.turn}`, 'turn');
+  }
+}
+
+/* ============ Battle — ported from battle.py ============ */
+class Battle {
+  constructor(org1, org2, maxTurns) {
+    this.org1 = org1;
+    this.org2 = org2;
+    this.maxTurns = maxTurns || 50;
+    this.org1.resetForBattle();
+    this.org2.resetForBattle();
+    this.log = new BattleLog(org1, org2);
+    this.winner = null;
+    this.loser = null;
+  }
+
+  getTurnOrder() {
+    if (this.org1.speed > this.org2.speed) return [this.org1, this.org2];
+    if (this.org2.speed > this.org1.speed) return [this.org2, this.org1];
+    return Math.random() > 0.5 ? [this.org1, this.org2] : [this.org2, this.org1];
+  }
+
+  applyResistance(defender, damage, attackCategory, effectType) {
+    const env = defender.environment;
+    const resistance = env.resistance;
+    const reduction = env.reduction || 0;
+    if (!resistance) return damage;
+    let shouldReduce = false;
+    if (resistance === 'all') shouldReduce = true;
+    else if (resistance === 'physical' && attackCategory === 'physical') shouldReduce = true;
+    else if (resistance === 'energy' && attackCategory === 'energy') shouldReduce = true;
+    else if (resistance === 'acid' && (effectType === 'corrode' || effectType === 'dissolve')) shouldReduce = true;
+    else if (resistance === 'drain' && effectType === 'drain') shouldReduce = true;
+    else if (resistance === 'stun' && (effectType === 'stun' || effectType === 'paralyze')) shouldReduce = true;
+    else if (resistance === 'disintegrate' && effectType === 'disintegrate') shouldReduce = true;
+    if (shouldReduce) return Math.max(1, Math.trunc(damage * (1 - reduction)));
+    return damage;
+  }
+
+  calculateDamage(attacker, defender, isCritical, attack) {
+    attack = attack || attacker.attackType;
+    let baseDamage = attack.damage || 0;
+    if (attack === attacker.attackType) baseDamage += attacker.damageBonus;
+    if (isCritical) baseDamage = Math.trunc(baseDamage * 1.75);
+    if (attacker.energySource.passive === 'feast' && defender.health < defender.maxHealth * 0.3) {
+      baseDamage = Math.trunc(baseDamage * 1.2);
+    }
+    const defenseReduction = Math.floor(defender.defense / 4);
+    let damage = Math.max(1, baseDamage - defenseReduction);
+    if (defender.shieldActive) damage = Math.floor(damage / 2);
+    damage = this.applyResistance(defender, damage, attack.category || 'physical', attack.effect || null);
+    if (defender.energySource.passive === 'heat_shield') damage = Math.trunc(damage * 0.85);
+    return damage;
+  }
+
+  checkCritical(attacker) {
+    const critChance = Battle.BASE_CRIT_CHANCE;
+    if (attacker.specialAbility.effect === 'crit' && attacker.canUseSpecial()) {
+      if (randInt(1, 100) <= attacker.specialAbility.chance) return true;
+    }
+    return randInt(1, 100) <= critChance;
+  }
+
+  checkSpecialAbility(organism, opponent) {
+    if (!organism.canUseSpecial()) return null;
+    const ability = organism.specialAbility;
+    const roll = randInt(1, 100);
+    if (roll <= ability.chance) return this.applySpecialAbility(organism, opponent, ability);
+    return null;
+  }
+
+  applySpecialAbility(organism, opponent, ability) {
+    const effect = ability.effect;
+    if (effect === 'blind') { opponent.statusEffects.push({type:'blind', duration:2}); return `${organism.name}'s ${ability.name} blinds ${opponent.name}! (-20 accuracy for 2 turns)`; }
+    if (effect === 'clone') { organism.cloneActive = true; const bonus = Math.floor(organism.attackType.damage / 2); return `${organism.name} uses ${ability.name}! Clone deals ${bonus} bonus damage!`; }
+    if (effect === 'confuse') { opponent.statusEffects.push({type:'confuse', duration:2}); return `${organism.name}'s ${ability.name} confuses ${opponent.name}! (May attack self)`; }
+    if (effect === 'shield') { organism.shieldActive = true; organism.statusEffects.push({type:'shield', duration:2}); return `${organism.name} activates ${ability.name}! Defense boosted!`; }
+    if (effect === 'dodge') { return `${organism.name} uses ${ability.name} and phases out! Attack automatically misses!`; }
+    if (effect === 'boost') { organism.statusEffects.push({type:'boost', duration:1}); return `${organism.name}'s ${ability.name} channels extra power! +50% damage next attack!`; }
+    if (effect === 'lock') { opponent.statusEffects.push({type:'lock', duration:3}); return `${organism.name}'s ${ability.name} anchors ${opponent.name}! Cannot evade!`; }
+    if (effect === 'mirror') { organism.statusEffects.push({type:'mirror', duration:1}); return `${organism.name}'s ${ability.name} creates a damage reflection!`; }
+    if (effect === 'crit') return 'CRITICAL_HIT';
+    if (effect === 'extra_turn') return 'EXTRA_TURN';
+    if (effect === 'heal') { const heal = Math.trunc(organism.maxHealth * 0.15); organism.health = Math.min(organism.maxHealth, organism.health + heal); return `${organism.name}'s ${ability.name} heals ${heal} HP!`; }
+    if (effect === 'speed_boost') { organism.statusEffects.push({type:'speed_boost', duration:2}); return `${organism.name}'s ${ability.name} increases speed!`; }
+    if (effect === 'poison_boost') { organism.statusEffects.push({type:'poison_boost', duration:1}); return `${organism.name}'s ${ability.name} coats next attack in venom!`; }
+    return null;
+  }
+
+  checkDefensiveMechanism(defender, attacker, damage) {
+    const messages = [];
+    const mechanism = defender.defenseMechanism;
+    if (!mechanism.trigger || !mechanism.effect) return [damage, messages];
+    const trigger = mechanism.trigger;
+    const effect = mechanism.effect;
+    const chance = mechanism.chance || 0;
+    const value = mechanism.value || 0;
+    if (trigger === 'hit') {
+      if (randInt(1, 100) > chance) return [damage, messages];
+      if (effect === 'blind') { attacker.statusEffects.push({type:'blind', duration:2}); messages.push(`${defender.name}'s ink cloud blinds ${attacker.name}!`); }
+      else if (effect === 'counter') { attacker.health -= value; messages.push(`${defender.name}'s spike reflex deals ${value} counter damage!`); }
+      else if (effect === 'redirect') { messages.push(`${defender.name}'s decoy takes the hit!`); return [0, messages]; }
+      else if (effect === 'shock') { attacker.health -= value; messages.push(`${defender.name}'s electric discharge shocks for ${value} damage!`); }
+    }
+    return [damage, messages];
+  }
+
+  checkReproductionAbility(organism, opponent) {
+    const messages = [];
+    const repro = organism.reproduction;
+    if (repro.effect == null || organism.reproductionTriggered) return messages;
+
+    const threshold = repro.threshold || 0;
+    const hpPercent = organism.health / organism.maxHealth;
+    if (hpPercent <= threshold) {
+      organism.reproductionTriggered = true;
+      const effect = repro.effect;
+      const bonus = repro.bonus || 0;
+      if (effect === 'split') { const dmg = Math.trunc(organism.attackType.damage * bonus); opponent.health -= dmg; messages.push(`${organism.name} undergoes binary fission! Clone attacks for ${dmg} damage!`); }
+      else if (effect === 'spore_burst') { opponent.health -= bonus; messages.push(`${organism.name} releases spore burst dealing ${bonus} damage!`); }
+      else if (effect === 'regenerate') { const heal = Math.trunc(organism.maxHealth * bonus); organism.health = Math.min(organism.maxHealth, organism.health + heal); messages.push(`${organism.name}'s budding regenerates ${heal} HP!`); }
+      else if (effect === 'fragment') { const frag = bonus * 3; opponent.health -= frag; messages.push(`${organism.name} fragments dealing ${frag} total damage!`); }
+      else if (effect === 'dormant') { organism.statusEffects.push({type:'dormant', duration:bonus}); messages.push(`${organism.name} enters dormant endospore state! Immune for ${bonus} turns.`); }
+    }
+
+    const defense = organism.defenseMechanism;
+    if (defense.effect === 'escape' && !organism.reproductionTriggered) {
+      const dThreshold = defense.value != null ? defense.value : 0.25;
+      if (hpPercent <= dThreshold) {
+        organism.reproductionTriggered = true;
+        const heal = 15;
+        organism.health = Math.min(organism.maxHealth, organism.health + heal);
+        messages.push(`${organism.name} uses autotomy! Sheds damaged parts and heals ${heal} HP!`);
+      }
+    }
+    return messages;
+  }
+
+  getStatusModifiers(organism) {
+    const mods = {accuracy:0, damage:1.0, canEvade:true, canAct:true};
+    for (const effect of organism.statusEffects) {
+      if (effect.type === 'blind') mods.accuracy -= 20;
+      else if (effect.type === 'boost') mods.damage *= 1.5;
+      else if (effect.type === 'lock') mods.canEvade = false;
+      else if (effect.type === 'slow') mods.accuracy -= 10;
+      else if (effect.type === 'dormant') { mods.canAct = false; mods.canEvade = false; }
+    }
+    return mods;
+  }
+
+  processEndOfTurn(organism, opponent) {
+    const effects = [];
+    const isDormant = organism.statusEffects.some(e => e.type === 'dormant');
+
+    if (!isDormant && organism.regen > 0 && organism.health < organism.maxHealth) {
+      const healed = Math.min(organism.regen, organism.maxHealth - organism.health);
+      organism.health += healed;
+      effects.push(`${organism.name} regenerates ${healed} HP`);
+    }
+    if (organism.energySource.passive === 'light_heal') {
+      organism.health = Math.min(organism.maxHealth, organism.health + 3);
+      effects.push(`${organism.name}'s photosynthesis heals 3 HP`);
+    }
+    if (!isDormant && organism.energy < organism.maxEnergy) {
+      organism.energy = Math.min(organism.maxEnergy, organism.energy + organism.energySource.energy_regen);
+    }
+    if (!isDormant && organism.toxicity.contact_damage > 0) {
+      const tox = organism.toxicity.contact_damage;
+      if (opponent.energySource.passive !== 'toxin_immune') {
+        opponent.health -= tox;
+        effects.push(`${opponent.name} takes ${tox} toxicity damage from ${organism.name}`);
+      }
+    }
+    for (const effect of organism.statusEffects) {
+      if (effect.type === 'poison') {
+        if (organism.energySource.passive !== 'toxin_immune') { organism.health -= Battle.POISON_DAMAGE; effects.push(`${organism.name} takes ${Battle.POISON_DAMAGE} poison damage`); }
+      } else if (effect.type === 'burn') { organism.health -= Battle.BURN_DAMAGE; effects.push(`${organism.name} takes ${Battle.BURN_DAMAGE} burn damage`); }
+      else if (effect.type === 'bleed') { organism.health -= Battle.BLEED_DAMAGE; effects.push(`${organism.name} takes ${Battle.BLEED_DAMAGE} bleed damage`); }
+      else if (effect.type === 'dissolve') { organism.health -= Battle.DISSOLVE_DAMAGE; effects.push(`${organism.name} takes ${Battle.DISSOLVE_DAMAGE} dissolve damage`); }
+      else if (effect.type === 'corrode') { organism.defense = Math.max(0, organism.defense - 2); effects.push(`${organism.name}'s armor corrodes! Defense -2`); }
+      else if (effect.type === 'dot') { organism.health -= 4; effects.push(`${organism.name} takes 4 constriction damage`); }
+    }
+    const newEffects = [];
+    for (const effect of organism.statusEffects) {
+      effect.duration -= 1;
+      if (effect.duration <= 0) {
+        if (effect.type === 'shield') organism.shieldActive = false;
+        effects.push(`${organism.name}'s ${effect.type} effect wore off`);
+      } else newEffects.push(effect);
+    }
+    organism.statusEffects = newEffects;
+
+    if (organism.stealthTurns > 0) {
+      organism.stealthTurns -= 1;
+      if (organism.stealthTurns === 0) effects.push(`${organism.name}'s camouflage fades!`);
+    }
+    if (organism.specialDisabledTurns > 0) organism.specialDisabledTurns -= 1;
+
+    effects.push(...this.checkReproductionAbility(organism, opponent));
+    return effects;
+  }
+
+  executeAttack(attacker, defender, useSecondary) {
+    const results = [];
+    const attackerMods = this.getStatusModifiers(attacker);
+    if (!attackerMods.canAct) { results.push(`${attacker.name} is dormant and cannot act!`); return results; }
+    if (attacker.isStunned) { attacker.isStunned = false; results.push(`${attacker.name} is stunned and cannot act!`); return results; }
+
+    const isConfused = attacker.statusEffects.some(e => e.type === 'confuse');
+    if (isConfused && Math.random() < 0.3) {
+      const selfDamage = Math.floor(attacker.attackType.damage / 2);
+      attacker.health -= selfDamage;
+      results.push(`${attacker.name} is confused and hits itself for ${selfDamage} damage!`);
+      return results;
+    }
+
+    const attack = useSecondary ? attacker.secondaryAttack : attacker.attackType;
+    if (useSecondary && (attack.damage || 0) === 0) { results.push(`${attacker.name} has no secondary attack!`); return results; }
+
+    const energyCost = attack.energy_cost || 0;
+    if (attacker.energy < energyCost) { results.push(`${attacker.name} doesn't have enough energy! (${attacker.energy}/${energyCost})`); return results; }
+    attacker.energy -= energyCost;
+
+    const specialResult = this.checkSpecialAbility(attacker, defender);
+    let isCritical = this.checkCritical(attacker);
+    let extraTurn = false;
+    let autoMiss = false;
+
+    if (specialResult) {
+      if (specialResult === 'CRITICAL_HIT') { isCritical = true; results.push(`${attacker.name}'s probability warp triggers a CRITICAL HIT!`); }
+      else if (specialResult === 'EXTRA_TURN') { extraTurn = true; results.push(`${attacker.name}'s temporal stutter grants an EXTRA ACTION!`); }
+      else { results.push(specialResult); if (specialResult.includes('phases out')) autoMiss = true; }
+    }
+    if (defender.canUseSpecial()) {
+      const defenderSpecial = this.checkSpecialAbility(defender, attacker);
+      if (defenderSpecial && defenderSpecial.includes('phases out')) { results.push(defenderSpecial); autoMiss = true; }
+    }
+
+    const defenderMods = this.getStatusModifiers(defender);
+    let hit = false;
+    if (autoMiss) hit = false;
+    else if (defender.statusEffects.some(e => e.type === 'dormant')) { hit = false; results.push(`${defender.name} is dormant and immune to attacks!`); }
+    else if (!defenderMods.canEvade) { hit = true; results.push(`${defender.name} cannot evade!`); }
+    else {
+      const modifiedAccuracy = attacker.accuracy + attackerMods.accuracy;
+      const effectiveEvasion = defender.getEffectiveEvasion();
+      const hitChance = (modifiedAccuracy * attacker.size.hit_chance_mod) - effectiveEvasion;
+      hit = randInt(1, 100) <= hitChance;
+      if (defender.stealthTurns > 0 && !hit) results.push(`${defender.name}'s camouflage causes the attack to miss!`);
+    }
+
+    if (hit) {
+      let damage = this.calculateDamage(attacker, defender, isCritical, attack);
+
+      if (attacker.cloneActive) { damage += Math.floor(attacker.attackType.damage / 2); attacker.cloneActive = false; }
+      if (attacker.statusEffects.some(e => e.type === 'boost')) damage = Math.trunc(damage * 1.5);
+      const hasPoisonBoost = attacker.statusEffects.some(e => e.type === 'poison_boost');
+      const hasMirror = defender.statusEffects.some(e => e.type === 'mirror');
+      if (hasMirror) { const reflected = Math.floor(damage / 2); attacker.health -= reflected; results.push(`${defender.name}'s void echo reflects ${reflected} damage back!`); }
+
+      const [dmgAfterDefense, defenseMsgs] = this.checkDefensiveMechanism(defender, attacker, damage);
+      damage = dmgAfterDefense;
+      results.push(...defenseMsgs);
+
+      if (damage > 0) {
+        if (attacker.energySource.passive === 'nutrient_absorb') { attacker.health = Math.min(attacker.maxHealth, attacker.health + 2); results.push(`${attacker.name} absorbs 2 HP!`); }
+        if (defender.energySource.passive === 'attack_drain') defender.energy = Math.min(defender.maxEnergy, defender.energy + 2);
+
+        defender.health -= damage;
+        let hitMsg = `${attacker.name} hits ${defender.name} with ${attack.name} for ${damage} damage!`;
+        if (isCritical) hitMsg += ' CRITICAL!';
+        if (defender.shieldActive) hitMsg += ' (shielded)';
+        results.push(hitMsg);
+
+        const attackEffect = attack.effect || null;
+        if (attackEffect === 'poison' || hasPoisonBoost) {
+          if (defender.energySource.passive !== 'toxin_immune') { defender.statusEffects.push({type:'poison', duration:3}); results.push(`${defender.name} is poisoned!`); }
+          else results.push(`${defender.name} is immune to poison!`);
+        }
+        if (attackEffect === 'drain') {
+          if (defender.environment.resistance !== 'drain') { const drained = Math.floor(damage / 2); attacker.health = Math.min(attacker.maxHealth, attacker.health + drained); results.push(`${attacker.name} drains ${drained} HP!`); }
+        } else if (attackEffect === 'corrode') { defender.statusEffects.push({type:'corrode', duration:3}); results.push(`${defender.name}'s armor is corroding!`); }
+        else if (attackEffect === 'stun') { if (defender.environment.resistance !== 'stun' && Math.random() < 0.35) { defender.isStunned = true; results.push(`${defender.name} is stunned!`); } }
+        else if (attackEffect === 'paralyze') { if (defender.environment.resistance !== 'stun' && Math.random() < 0.25) { defender.isStunned = true; results.push(`${defender.name} is paralyzed!`); } }
+        else if (attackEffect === 'phase') { const bonusPhase = Math.floor(defender.defense / 4); defender.health -= bonusPhase; results.push(`Quantum damage bypasses ${bonusPhase} armor!`); }
+        else if (attackEffect === 'disintegrate') { if (defender.environment.resistance !== 'disintegrate' && Math.random() < 0.1) { const extraDmg = Math.floor(defender.health / 5); defender.health -= extraDmg; results.push(`VOID DISINTEGRATION! ${extraDmg} extra damage!`); } }
+        else if (attackEffect === 'burn') { defender.statusEffects.push({type:'burn', duration:2}); results.push(`${defender.name} is burning!`); }
+        else if (attackEffect === 'bleed') { defender.statusEffects.push({type:'bleed', duration:3}); results.push(`${defender.name} is bleeding!`); }
+        else if (attackEffect === 'dissolve') { defender.statusEffects.push({type:'dissolve', duration:2}); results.push(`${defender.name} is being dissolved!`); }
+        else if (attackEffect === 'slow') { defender.statusEffects.push({type:'slow', duration:2}); results.push(`${defender.name} is slowed!`); }
+        else if (attackEffect === 'energy_steal') { const stolen = Math.min(5, defender.energy); defender.energy -= stolen; attacker.energy = Math.min(attacker.maxEnergy, attacker.energy + stolen); results.push(`${attacker.name} steals ${stolen} energy!`); }
+        else if (attackEffect === 'dot') { defender.statusEffects.push({type:'dot', duration:2}); results.push(`${defender.name} is being constricted!`); }
+        else if (attackEffect === 'weaken') { defender.defense = Math.max(0, defender.defense - 3); results.push(`${defender.name}'s defense reduced by 3!`); }
+        else if (attackEffect === 'heal') { const heal = Math.floor(damage / 2); attacker.health = Math.min(attacker.maxHealth, attacker.health + heal); results.push(`${attacker.name} leeches ${heal} HP!`); }
+        else if (attackEffect === 'disable_special') { defender.specialDisabledTurns = 3; results.push(`${defender.name}'s special ability is disabled for 3 turns!`); }
+        else if (attackEffect === 'knockback') { if (Math.random() < 0.3) { defender.isStunned = true; results.push(`${defender.name} is staggered!`); } }
+      }
+    } else {
+      results.push(`${attacker.name}'s ${attack.name} misses ${defender.name}!`);
+    }
+
+    if (extraTurn && attacker.isAlive() && defender.isAlive()) {
+      results.push(`${attacker.name} takes another action!`);
+      results.push(...this.executeAttack(attacker, defender));
+    }
+    return results;
+  }
+
+  simulate() {
+    this.log.log(`${this.org1.name} vs ${this.org2.name}`, 'header');
+    let [first, second] = this.getTurnOrder();
+    this.log.log(`${first.name} moves first (Speed: ${first.speed} vs ${second.speed})`, 'header');
+
+    while (this.log.turn < this.maxTurns) {
+      this.log.newTurn();
+
+      if (first.isAlive()) {
+        this.log.log(`${first.name}'s turn${this._getStatusString(first)}`, 'turnstart');
+        const results = this.executeAttack(first, second, this._shouldUseSecondary(first, second));
+        for (const r of results) this.log.log(r, 'action');
+      }
+      if (!first.isAlive() && !second.isAlive()) break;
+      if (!second.isAlive()) { this.winner = first; this.loser = second; break; }
+
+      if (second.isAlive()) {
+        this.log.log(`${second.name}'s turn${this._getStatusString(second)}`, 'turnstart');
+        const results = this.executeAttack(second, first, this._shouldUseSecondary(second, first));
+        for (const r of results) this.log.log(r, 'action');
+      }
+      if (!first.isAlive() && !second.isAlive()) break;
+      if (!first.isAlive()) { this.winner = second; this.loser = first; break; }
+
+      const firstEffects = this.processEndOfTurn(first, second);
+      const secondEffects = this.processEndOfTurn(second, first);
+      for (const e of firstEffects) this.log.log(e, 'effect');
+      for (const e of secondEffects) this.log.log(e, 'effect');
+
+      if (!first.isAlive() && !second.isAlive()) break;
+      if (!first.isAlive()) { this.winner = second; this.loser = first; break; }
+      if (!second.isAlive()) { this.winner = first; this.loser = second; break; }
+    }
+
+    if (this.winner) this.log.log(`${this.winner.name} wins! (${this.winner.health}/${this.winner.maxHealth} HP remaining)`, 'victory');
+    else this.log.log(`Draw — battle ended after ${this.maxTurns} turns`, 'draw');
+
+    return {winner: this.winner, loser: this.loser, turns: this.log.turn, entries: this.log.entries};
+  }
+
+  _getStatusString(organism) {
+    const effects = organism.statusEffects.map(e => `${e.type}(${e.duration})`);
+    if (organism.stealthTurns > 0) effects.push(`stealth(${organism.stealthTurns})`);
+    if (organism.specialDisabledTurns > 0) effects.push(`disabled(${organism.specialDisabledTurns})`);
+    return effects.length ? ` [${effects.join(', ')}]` : '';
+  }
+
+  _shouldUseSecondary(attacker, defender) {
+    const secondary = attacker.secondaryAttack;
+    if ((secondary.damage || 0) === 0) return false;
+    if (attacker.energy < attacker.attackType.energy_cost && attacker.energy >= secondary.energy_cost) return true;
+    if (secondary.effect === 'energy_steal' && attacker.energy < 20) return Math.random() < 0.4;
+    if (secondary.effect === 'heal' && attacker.health < attacker.maxHealth * 0.5) return Math.random() < 0.3;
+    if (secondary.effect === 'disable_special' && defender.specialDisabledTurns === 0) {
+      if (['extra_turn','crit','mirror'].includes(defender.specialAbility.effect)) return Math.random() < 0.4;
+    }
+    return Math.random() < 0.15;
+  }
+}
+Battle.BASE_CRIT_CHANCE = 5;
+Battle.POISON_DAMAGE = 4;
+Battle.BURN_DAMAGE = 5;
+Battle.BLEED_DAMAGE = 3;
+Battle.DISSOLVE_DAMAGE = 3;
+
+/* ============ UI ============ */
+let org1, org2;
+let animTimer = null;
+let pendingEntries = [];
+
+function traitRow(label, trait, extra) {
+  return `<div class="trait-row"><span class="trait-label">${label}</span><span class="trait-value">${trait.name}${extra || ''}</span></div>`;
+}
+
+function renderCard(el, org) {
+  el.innerHTML = `
+    <div class="cell-name">${org.name}</div>
+    <div class="cell-sub">${org.size.name} · ${org.movementType.name}</div>
+    <div class="bar-row"><span>HP</span><div class="bar"><div class="bar-fill hp" data-hpfill style="width:100%"></div></div><span class="bar-num" data-hpnum>${org.health}/${org.maxHealth}</span></div>
+    <div class="bar-row"><span>EN</span><div class="bar"><div class="bar-fill en" data-enfill style="width:100%"></div></div><span class="bar-num" data-ennum>${org.energy}/${org.maxEnergy}</span></div>
+    <div class="stat-grid">
+      <div><b>${org.speed}</b><small>SPD</small></div>
+      <div><b>${org.defense}</b><small>DEF</small></div>
+      <div><b>${org.accuracy}</b><small>ACC</small></div>
+      <div><b>${org.evasion}</b><small>EVA</small></div>
+      <div><b>${org.regen}</b><small>RGN</small></div>
+    </div>
+    <div class="traits">
+      ${traitRow('Attack', org.attackType, ` (${org.attackType.damage} dmg)`)}
+      ${traitRow('Secondary', org.secondaryAttack)}
+      ${traitRow('Armor', org.armorType)}
+      ${traitRow('Energy', org.energySource)}
+      ${traitRow('Sensing', org.sensingType)}
+      ${traitRow('Special', org.specialAbility)}
+      ${traitRow('Toxicity', org.toxicity)}
+      ${traitRow('Reproduction', org.reproduction)}
+      ${traitRow('Adaptation', org.environment)}
+      ${traitRow('Defense Mech.', org.defenseMechanism)}
+    </div>
+  `;
+}
+
+function newCells() {
+  clearAnimation();
+  org1 = new Organism();
+  org2 = new Organism();
+  renderCard(document.getElementById('card1'), org1);
+  renderCard(document.getElementById('card2'), org2);
+  document.getElementById('log').classList.remove('show');
+  document.getElementById('log').innerHTML = '';
+  document.getElementById('banner').classList.remove('show');
+  document.getElementById('skipHint').style.display = 'none';
+  document.getElementById('battleBtn').disabled = false;
+  document.getElementById('battleBtn').textContent = 'Battle';
+}
+
+function clearAnimation() {
+  if (animTimer) { clearTimeout(animTimer); animTimer = null; }
+  pendingEntries = [];
+}
+
+function updateBars(entry) {
+  const c1 = document.getElementById('card1'), c2 = document.getElementById('card2');
+  const hp1 = Math.max(0, entry.hp1), hp2 = Math.max(0, entry.hp2);
+  c1.querySelector('[data-hpfill]').style.width = Math.max(0, (hp1 / entry.maxHp1) * 100) + '%';
+  c1.querySelector('[data-hpnum]').textContent = `${hp1}/${entry.maxHp1}`;
+  c1.querySelector('[data-enfill]').style.width = Math.max(0, (entry.en1 / entry.maxEn1) * 100) + '%';
+  c1.querySelector('[data-ennum]').textContent = `${entry.en1}/${entry.maxEn1}`;
+  c2.querySelector('[data-hpfill]').style.width = Math.max(0, (hp2 / entry.maxHp2) * 100) + '%';
+  c2.querySelector('[data-hpnum]').textContent = `${hp2}/${entry.maxHp2}`;
+  c2.querySelector('[data-enfill]').style.width = Math.max(0, (entry.en2 / entry.maxEn2) * 100) + '%';
+  c2.querySelector('[data-ennum]').textContent = `${entry.en2}/${entry.maxEn2}`;
+}
+
+function appendLine(entry) {
+  const log = document.getElementById('log');
+  const line = document.createElement('div');
+  line.className = 'log-line ' + entry.type;
+  line.textContent = entry.message;
+  log.appendChild(line);
+  log.scrollTop = log.scrollHeight;
+}
+
+function delayForType(type) {
+  if (type === 'turn') return 260;
+  if (type === 'header') return 200;
+  if (type === 'victory' || type === 'draw') return 0;
+  return 85;
+}
+
+function playNext(onDone) {
+  if (!pendingEntries.length) { onDone(); return; }
+  const entry = pendingEntries.shift();
+  appendLine(entry);
+  updateBars(entry);
+  animTimer = setTimeout(() => playNext(onDone), delayForType(entry.type));
+}
+
+function flushRemaining() {
+  if (animTimer) { clearTimeout(animTimer); animTimer = null; }
+  while (pendingEntries.length) {
+    const entry = pendingEntries.shift();
+    appendLine(entry);
+    updateBars(entry);
+  }
+  finishBattle();
+}
+
+let currentResult = null;
+
+function finishBattle() {
+  const banner = document.getElementById('banner');
+  if (currentResult.winner) {
+    const isP1 = currentResult.winner === org1;
+    banner.style.color = isP1 ? 'var(--p1)' : 'var(--p2)';
+    banner.textContent = `${currentResult.winner.name} wins in ${currentResult.turns} turns`;
+  } else {
+    banner.style.color = 'var(--accent)';
+    banner.textContent = `Draw after ${currentResult.turns} turns`;
+  }
+  banner.classList.add('show');
+  document.getElementById('skipHint').style.display = 'none';
+  document.getElementById('battleBtn').disabled = false;
+  document.getElementById('battleBtn').textContent = 'Rematch';
+}
+
+function runBattle() {
+  document.getElementById('battleBtn').disabled = true;
+  document.getElementById('banner').classList.remove('show');
+  const log = document.getElementById('log');
+  log.innerHTML = '';
+  log.classList.add('show');
+  document.getElementById('skipHint').style.display = 'block';
+
+  const battle = new Battle(org1, org2, 50);
+  currentResult = battle.simulate();
+  pendingEntries = currentResult.entries.slice();
+
+  playNext(finishBattle);
+}
+
+document.getElementById('newBtn').addEventListener('click', newCells);
+document.getElementById('battleBtn').addEventListener('click', runBattle);
+document.getElementById('log').addEventListener('click', () => { if (pendingEntries.length) flushRemaining(); });
+
+newCells();
+</script>
+</body>
+</html>
