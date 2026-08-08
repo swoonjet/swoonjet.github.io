@@ -929,11 +929,34 @@
   var posterCols = document.getElementById("poster-cols");
   var posterCellSize = document.getElementById("poster-cellsize");
 
+  // 8000px was an unverified guess and it was wrong: this browser renders a
+  // real 16384x16384 canvas correctly and only fails at 20000 -- measured
+  // directly, not assumed. 12000 leaves a safety margin under that measured
+  // ceiling for browsers with a lower limit than this one.
+  var MAX_POSTER_DIMENSION = 12000;
+
+  function maxColsForCellSize(cellSize) {
+    var gap = Math.round(cellSize * 0.05);
+    return Math.max(1, Math.floor((MAX_POSTER_DIMENSION - gap) / (cellSize + gap)));
+  }
+
+  // Runs whenever the selection OR the cell-size choice changes -- the bug
+  // this fixes is that a columns count suggested for one cell size silently
+  // stopped fitting after switching to a bigger one, and the generate button
+  // would just fail past a MAX_POSTER_DIMENSION guard with an easy-to-miss
+  // note. The columns field's own `max` now tracks the real ceiling for
+  // whatever cell size is currently selected, so the UI can't ask for a
+  // combination that is guaranteed to fail.
   function updatePosterBar() {
     var n = selectedIds.size;
     posterInfo.textContent = n + (n === 1 ? " selected" : " selected");
+    var cellSize = parseInt(posterCellSize.value, 10) || 900;
+    var maxCols = maxColsForCellSize(cellSize);
+    posterCols.max = String(maxCols);
     if (!columnsTouched) {
-      posterCols.value = Math.max(1, Math.min(8, Math.ceil(Math.sqrt(n)) || 1));
+      posterCols.value = Math.max(1, Math.min(maxCols, Math.ceil(Math.sqrt(n)) || 1));
+    } else if (parseInt(posterCols.value, 10) > maxCols) {
+      posterCols.value = maxCols;
     }
   }
 
@@ -950,8 +973,7 @@
   });
 
   posterCols.addEventListener("input", function () { columnsTouched = true; });
-
-  var MAX_POSTER_DIMENSION = 8000; // guards browser canvas/memory limits
+  posterCellSize.addEventListener("change", updatePosterBar);
 
   // Renders one entry into a fresh offscreen canvas at `size` pixels square.
   // The legacy Study I entry has no stored control points -- it is drawn
@@ -964,7 +986,7 @@
     if (entry.legacy) {
       offCtx.fillStyle = "#f7f6f3";
       offCtx.fillRect(0, 0, size, size);
-      return new Promise(function (resolve) {
+      return new Promise(function (resolve, reject) {
         var img = new Image();
         img.onload = function () {
           var s = Math.min(size / img.width, size / img.height);
@@ -972,6 +994,7 @@
           offCtx.drawImage(img, (size - w) / 2, (size - h) / 2, w, h);
           resolve(off);
         };
+        img.onerror = function () { reject(new Error("Study I's image failed to decode")); };
         img.src = entry.image;
       });
     }
@@ -1015,32 +1038,44 @@
     castNote.className = "note";
     castNote.textContent = "Rendering poster… this can take a few seconds.";
 
-    var big = document.createElement("canvas");
-    big.width = totalW;
-    big.height = totalH;
-    var bigCtx = big.getContext("2d");
-    bigCtx.fillStyle = "#f7f6f3";
-    bigCtx.fillRect(0, 0, totalW, totalH);
-    bigCtx.textAlign = "center";
-    bigCtx.fillStyle = "#1c1a18";
-    bigCtx.font = Math.round(cellSize * 0.026) + "px ui-monospace, 'SF Mono', Menlo, monospace";
+    // Wrapped in try/catch deliberately: an unhandled rejection in an async
+    // function called via setTimeout (below) fails silently -- the note
+    // would be stuck reading "Rendering poster…" forever with nothing in
+    // the console to explain why. Every failure path here must reach this
+    // catch and say something.
+    try {
+      var big = document.createElement("canvas");
+      big.width = totalW;
+      big.height = totalH;
+      var bigCtx = big.getContext("2d");
+      bigCtx.fillStyle = "#f7f6f3";
+      bigCtx.fillRect(0, 0, totalW, totalH);
+      bigCtx.textAlign = "center";
+      bigCtx.fillStyle = "#1c1a18";
+      bigCtx.font = Math.round(cellSize * 0.026) + "px ui-monospace, 'SF Mono', Menlo, monospace";
 
-    for (var i = 0; i < selected.length; i++) {
-      var entry = selected[i];
-      var col = i % cols, row = Math.floor(i / cols);
-      var x = gap + col * (cellSize + gap);
-      var y = gap + row * (cellSize + captionHeight + gap);
-      var cellCanvas = await renderEntryToCanvas(entry, cellSize);
-      bigCtx.drawImage(cellCanvas, x, y, cellSize, cellSize);
-      bigCtx.fillText("STUDY " + toRoman(entry.studyNumber), x + cellSize / 2, y + cellSize + captionHeight * 0.62);
-    }
+      for (var i = 0; i < selected.length; i++) {
+        var entry = selected[i];
+        var col = i % cols, row = Math.floor(i / cols);
+        var x = gap + col * (cellSize + gap);
+        var y = gap + row * (cellSize + captionHeight + gap);
+        var cellCanvas = await renderEntryToCanvas(entry, cellSize);
+        bigCtx.drawImage(cellCanvas, x, y, cellSize, cellSize);
+        bigCtx.fillText("STUDY " + toRoman(entry.studyNumber), x + cellSize / 2, y + cellSize + captionHeight * 0.62);
+      }
 
-    big.toBlob(function (blob) {
+      var blob = await new Promise(function (resolve) { big.toBlob(resolve, "image/png"); });
+      if (!blob) throw new Error("the browser couldn't encode a canvas this large");
+
       posterBlob = blob;
       var url = URL.createObjectURL(blob);
       showPosterModal(url, selected.length + " studies · " + cols + "×" + rows + " · " + totalW + "×" + totalH + "px");
       castNote.textContent = "";
-    }, "image/png");
+    } catch (err) {
+      castNote.className = "note error";
+      castNote.textContent = "Poster generation failed (" + (err && err.message || "unknown error") +
+        ") — try fewer columns or a smaller cell size.";
+    }
   }
 
   document.getElementById("btn-generate-poster").addEventListener("click", function () {
