@@ -40,11 +40,7 @@
   @media (min-width: 1000px) {
     .wrap { max-width: 1180px; }
   }
-  header { text-align:center; margin-bottom: 24px; }
-  header .tag {
-    display:inline-block; font-size: 11px; letter-spacing: .06em; color: var(--muted);
-    border: 1px solid var(--border); border-radius: 999px; padding: 4px 12px; margin-bottom: 14px;
-  }
+  header { text-align:left; margin-bottom: 20px; }
   h1 {
     font-family: 'Press Start 2P', 'Inter', monospace; font-size: clamp(30px, 9vw, 58px);
     font-weight: 400; letter-spacing: 0; line-height: 1.5;
@@ -52,8 +48,6 @@
   }
   h1 span { color: var(--accent); }
   h1.glitching { text-shadow: 2px 0 var(--p2), -2px 0 var(--p1); }
-  header p { color: var(--muted); font-size: 14px; margin-top: 14px; max-width: 480px; margin-inline: auto; line-height:1.5; }
-  header a { color: var(--muted); text-decoration: underline; }
 
   .arena {
     display: grid;
@@ -77,7 +71,7 @@
   }
 
   .win-overlay {
-    position:absolute; inset:0; background:rgba(0,0,0,.88); border-radius:16px;
+    position:absolute; inset:0; background:rgba(0,0,0,.88); 
     display:none; flex-direction:column; align-items:center; justify-content:center; gap:10px;
     z-index:200; pointer-events:none; cursor:pointer;
     padding:20px; text-align:center;
@@ -90,10 +84,17 @@
   .win-line.win { font-size: clamp(18px, 5.5vw, 34px); }
   .win-line.lose { font-size: clamp(12px, 3.5vw, 20px); color: var(--danger); opacity:.85; }
 
+  .projectile, .burst-char {
+    position:absolute; top:46%; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-weight:700; transform: translate(-50%,-50%); z-index:150; pointer-events:none;
+  }
+  .projectile { font-size: 22px; }
+  .burst-char { font-size: 16px; }
+
   .card {
     background: var(--panel);
     border: 1px solid var(--border);
-    border-radius: 16px;
+    
     padding: 18px;
     min-width: 0;
     transition: border-color .15s ease;
@@ -145,14 +146,14 @@
 
   .bar-row { display:flex; align-items:center; gap:8px; margin-bottom: 8px; font-size: 11px; color: var(--muted); }
   .bar-row > span:first-child { width: 22px; flex-shrink:0; font-weight:700; }
-  .bar { flex:1; height: 10px; background:#000; border-radius:999px; overflow:hidden; border:1px solid var(--border); }
-  .bar-fill { height:100%; border-radius:999px; transition: width .25s ease; }
+  .bar { flex:1; height: 10px; background:#000;  overflow:hidden; border:1px solid var(--border); }
+  .bar-fill { height:100%;  transition: width .25s ease; }
   .bar-fill.hp { background: linear-gradient(90deg, var(--good), #86efac); }
   .bar-fill.en { background: linear-gradient(90deg, #60a5fa, #93c5fd); }
   .bar-num { flex-shrink:0; width:64px; text-align:right; font-variant-numeric: tabular-nums; }
 
   .stat-grid { display:grid; grid-template-columns: repeat(5, 1fr); gap:6px; margin: 14px 0; }
-  .stat-grid div { background: var(--panel2); border-radius:10px; padding:6px 2px; text-align:center; }
+  .stat-grid div { background: var(--panel2);  padding:6px 2px; text-align:center; }
   .stat-grid b { display:block; font-size:15px; }
   .stat-grid small { font-size:10px; color:var(--muted); letter-spacing:.03em; }
 
@@ -166,7 +167,7 @@
     content: attr(data-tooltip);
     position: absolute; left: 50%; bottom: 100%; transform: translateX(-50%) translateY(-6px);
     width: max-content; max-width: 200px;
-    background: #000; border: 1px solid var(--border); border-radius: 8px;
+    background: #000; border: 1px solid var(--border); 
     padding: 8px 10px; font-size: 11px; font-weight: 400; color: var(--text); line-height: 1.4;
     text-align: left; white-space: normal;
     opacity: 0; visibility: hidden; transition: opacity .15s ease;
@@ -188,7 +189,7 @@
 
   button {
     font-family: inherit; font-size: 15px; font-weight: 700; cursor:pointer;
-    border-radius: 12px; border: none; padding: 13px 18px; min-height: 48px;
+    border: none; padding: 13px 18px; min-height: 48px;
     -webkit-tap-highlight-color: transparent;
   }
   .btn-battle { background: var(--accent); color:#fff; width: 100%; }
@@ -197,7 +198,7 @@
   .btn-ghost:active, .btn-battle:active { transform: scale(.98); }
 
   .log-panel {
-    margin-top: 22px; background: #000; border: 1px solid var(--border); border-radius: 14px;
+    margin-top: 22px; background: #000; border: 1px solid var(--border); 
     padding: 14px; max-height: 42vh; overflow-y: auto; -webkit-overflow-scrolling: touch;
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     font-size: 12.5px; line-height: 1.6; display:none;
@@ -210,7 +211,7 @@
   .log-line.header { color: var(--muted); }
 
   .banner {
-    display:none; text-align:center; margin-top:16px; padding: 14px; border-radius:14px;
+    display:none; text-align:center; margin-top:16px; padding: 14px; 
     background: var(--panel); border:1px solid var(--border); font-weight:800; font-size:16px;
   }
   .banner.show { display:block; }
@@ -220,10 +221,10 @@
 
   .skip-hint { text-align:center; font-size:11px; color:var(--muted); margin-top:8px; }
 
-  .tabs { display:flex; gap:8px; justify-content:center; margin-bottom:22px; flex-wrap:wrap; }
+  .tabs { display:flex; gap:8px; justify-content:flex-start; margin-bottom:22px; flex-wrap:wrap; }
   .tab-btn {
     background: transparent; border: 1px solid var(--border); color: var(--muted);
-    font-size: 13px; font-weight:700; padding: 10px 16px; border-radius: 999px; min-height:auto;
+    font-size: 13px; font-weight:700; padding: 10px 16px; min-height:auto;
   }
   .tab-btn.active { color: var(--text); border-color: var(--text); }
   .tab-section { display:none; }
@@ -236,7 +237,7 @@
 
   .roster-list { display:flex; flex-direction:column; gap:10px; }
   .roster-row {
-    background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+    background: var(--panel); border: 1px solid var(--border); 
     padding: 12px 14px; display:flex; align-items:center; gap:12px; flex-wrap:wrap;
   }
   .roster-rank { font-size:12px; color:var(--muted); width:22px; flex-shrink:0; font-weight:700; }
@@ -254,7 +255,7 @@
 
   .pick-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap:10px; margin-bottom:18px; }
   .pick-card {
-    background: var(--panel); border: 2px solid var(--border); border-radius: 12px;
+    background: var(--panel); border: 2px solid var(--border); 
     padding: 12px; cursor:pointer; text-align:left;
   }
   .pick-card.selected { border-color: var(--accent); background: var(--panel2); }
@@ -267,7 +268,7 @@
   .team-counter b { color: var(--text); }
 
   .match-banner {
-    text-align:center; padding: 14px; margin-bottom: 16px; border-radius:14px;
+    text-align:center; padding: 14px; margin-bottom: 16px; 
     background: var(--panel); border:1px solid var(--border); font-weight:700; font-size:14px;
   }
 
@@ -276,14 +277,14 @@
     justify-content:center; z-index:1000; padding:16px;
   }
   .modal-box {
-    background: var(--panel); border: 1px solid var(--border); border-radius:16px;
+    background: var(--panel); border: 1px solid var(--border); 
     padding: 22px; max-width: 420px; width:100%; text-align:center;
   }
   .modal-title { font-size:17px; font-weight:800; margin-bottom:6px; }
   .modal-sub { color: var(--muted); font-size:13px; margin-bottom:16px; }
   .upgrade-grid { display:grid; grid-template-columns: 1fr 1fr; gap:8px; }
   .upgrade-btn {
-    background: var(--panel2); border:1px solid var(--border); border-radius:10px;
+    background: var(--panel2); border:1px solid var(--border); 
     padding: 12px 8px; font-size:13px; text-align:left; min-height:auto;
   }
   .upgrade-btn:active { border-color: var(--accent); }
@@ -294,11 +295,7 @@
 <body>
 <div class="wrap">
   <header>
-    <div class="tag">sketch / test page</div>
     <h1>Single Cell <span>Battle</span></h1>
-    <p>A turn-based microorganism battler, ported line-for-line from a Python simulation
-      (12 randomized trait categories, full combat resolution, retro ASCII sprites) into a client-side JS sketch.
-      <a href="../../">jontoews.com</a></p>
   </header>
 
   <nav class="tabs">
@@ -892,6 +889,11 @@ const ATTACK_EFFECTS = {
   'crushing grip': ['(',')','(',')','('],
 };
 
+const MIRROR_CHARS = {'<':'>', '>':'<', '/':'\\', '\\':'/', '(':')', ')':'(', '[':']', ']':'[', '{':'}', '}':'{'};
+function mirrorLine(line) {
+  return line.split('').reverse().map(ch => MIRROR_CHARS[ch] || ch).join('');
+}
+
 function padCenter(s, width) {
   if (s.length >= width) return s.slice(0, width);
   const leftPad = Math.floor((width - s.length) / 2);
@@ -899,7 +901,7 @@ function padCenter(s, width) {
   return ' '.repeat(leftPad) + s + ' '.repeat(rightPad);
 }
 
-function generateOrganismSprite(organism, frame) {
+function generateOrganismSprite(organism, frame, mirrored) {
   frame = frame || 0;
   const armor = organism.armorType.name;
   const energy = organism.energySource.name;
@@ -942,6 +944,10 @@ function generateOrganismSprite(organism, frame) {
   });
 
   if (moveDeco.bottom) sprite.push(padCenter(moveDeco.bottom, SPRITE_WIDTH_FINAL));
+
+  if (mirrored) {
+    for (let i = 0; i < sprite.length; i++) sprite[i] = mirrorLine(sprite[i]);
+  }
 
   const tox = organism.toxicity.name;
   let toxLine = '';
@@ -1384,7 +1390,7 @@ function startIdleAnim(side, speed, cardEl, org) {
     const spriteEl = c && c.querySelector('.sprite');
     if (!o || !spriteEl) return;
     spriteFrames[side] = (spriteFrames[side] + 1) % 5;
-    spriteEl.textContent = generateOrganismSprite(o, spriteFrames[side]).join('\n');
+    spriteEl.textContent = generateOrganismSprite(o, spriteFrames[side], side === 2).join('\n');
   }, speed);
 }
 function stopIdleAnim(side) {
@@ -1406,7 +1412,8 @@ function statTile(value, label) {
   return `<div data-tooltip="${escapeHtml(STAT_DESCRIPTIONS[label] || '')}"><b>${value}</b><small>${label}</small></div>`;
 }
 
-function renderCard(el, org) {
+function renderCard(el, org, side) {
+  side = side || 1;
   el.innerHTML = `
     <div class="cell-name">${org.name}</div>
     <div class="cell-sub">${org.size.name} · ${org.movementType.name}</div>
@@ -1433,15 +1440,15 @@ function renderCard(el, org) {
       ${traitRow('Defense Mech.', org.defenseMechanism)}
     </div>
   `;
-  el.querySelector('.sprite').textContent = generateOrganismSprite(org, 0).join('\n');
+  el.querySelector('.sprite').textContent = generateOrganismSprite(org, 0, side === 2).join('\n');
 }
 
 function newCells() {
   clearAnimation();
   org1 = new Organism();
   org2 = new Organism();
-  renderCard(document.getElementById('card1'), org1);
-  renderCard(document.getElementById('card2'), org2);
+  renderCard(document.getElementById('card1'), org1, 1);
+  renderCard(document.getElementById('card2'), org2, 2);
   document.getElementById('log').classList.remove('show');
   document.getElementById('log').innerHTML = '';
   document.getElementById('banner').classList.remove('show');
@@ -1500,10 +1507,47 @@ function flashCard(card, cls) {
   setTimeout(() => card.classList.remove(cls), 380);
 }
 
+function shootProjectile(container, chars, fromSide, colorVar) {
+  if (!container) return;
+  const el = document.createElement('div');
+  el.className = 'projectile';
+  el.style.color = `var(${colorVar})`;
+  container.appendChild(el);
+  const steps = 9;
+  const startPct = fromSide === 1 ? 4 : 96;
+  const endPct = fromSide === 1 ? 96 : 4;
+  let i = 0;
+  (function step() {
+    el.style.left = (startPct + (endPct - startPct) * (i / (steps - 1))) + '%';
+    el.textContent = chars[i % chars.length];
+    i++;
+    if (i < steps) setTimeout(step, 34);
+    else setTimeout(() => el.remove(), 60);
+  })();
+}
+
+function spawnBurst(container, atPct, colorVar) {
+  if (!container) return;
+  const chars = ['*', 'x', '+', '.'];
+  const offsets = [-14, -5, 5, 14];
+  chars.forEach((ch, i) => {
+    const el = document.createElement('div');
+    el.className = 'burst-char';
+    el.style.color = `var(${colorVar})`;
+    el.style.left = `calc(${atPct}% + ${offsets[i]}px)`;
+    el.style.top = `${44 + (i % 2 === 0 ? -6 : 6)}%`;
+    container.appendChild(el);
+    el.textContent = ch;
+    setTimeout(() => { el.style.top = `${44 + (i % 2 === 0 ? -14 : 14)}%`; }, 20);
+    setTimeout(() => el.remove(), 220);
+  });
+}
+
 function triggerVfx(vfx, card1, card2, stage) {
   stage = stage || document.getElementById('stage');
   card1 = card1 || document.getElementById('card1');
   card2 = card2 || document.getElementById('card2');
+  const arenaWrap = card1.closest('.arena-wrap');
 
   if (vfx.kind === 'attack') {
     const chars = ATTACK_EFFECTS[vfx.attackName] || ['*', 'o', '*', 'o'];
@@ -1512,6 +1556,10 @@ function triggerVfx(vfx, card1, card2, stage) {
     const defenderCard = vfx.defenderSide === 1 ? card1 : card2;
     flashSprite(attackerCard.querySelector('.sprite'), vfx.attackerSide === 1 ? 'lunge-p1' : 'lunge-p2');
     if (vfx.hit) flashSprite(defenderCard.querySelector('.sprite'), 'flinch');
+    shootProjectile(arenaWrap, chars, vfx.attackerSide, vfx.attackerSide === 1 ? '--p1' : '--p2');
+    if (vfx.hit) {
+      setTimeout(() => spawnBurst(arenaWrap, vfx.defenderSide === 1 ? 8 : 92, '--danger'), 34 * 8);
+    }
     let frame = 0;
     const frames = 3;
     (function step() {
@@ -1531,6 +1579,7 @@ function triggerVfx(vfx, card1, card2, stage) {
     stage.textContent = `★ ${vfx.abilityName.toUpperCase()} ★`;
     stage.style.color = 'var(--special)';
     flashCard(card, 'special-flash');
+    spawnBurst(arenaWrap, vfx.side === 1 ? 8 : 92, '--special');
   }
 }
 
@@ -1805,8 +1854,8 @@ function runTeamMatch(playerTeam, enemyTeam, index, tally) {
   const pOrg = playerTeam[index];
   const eOrg = enemyTeam[index];
   const ctx = buildMatchArena(index, playerTeam.length);
-  renderCard(ctx.card1, pOrg);
-  renderCard(ctx.card2, eOrg);
+  renderCard(ctx.card1, pOrg, 1);
+  renderCard(ctx.card2, eOrg, 2);
   startIdleAnim(1, 220, ctx.card1, pOrg);
   startIdleAnim(2, 220, ctx.card2, eOrg);
 
