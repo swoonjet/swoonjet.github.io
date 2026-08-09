@@ -37,16 +37,21 @@
     align-items: center;
   }
   .wrap { width: 100%; max-width: 900px; }
+  @media (min-width: 1000px) {
+    .wrap { max-width: 1180px; }
+  }
   header { text-align:center; margin-bottom: 24px; }
   header .tag {
     display:inline-block; font-size: 11px; letter-spacing: .06em; color: var(--muted);
     border: 1px solid var(--border); border-radius: 999px; padding: 4px 12px; margin-bottom: 14px;
   }
   h1 {
-    font-family: 'Press Start 2P', 'Inter', monospace; font-size: clamp(16px, 4.4vw, 26px);
-    font-weight: 400; letter-spacing: 0; line-height: 1.6;
+    font-family: 'Press Start 2P', 'Inter', monospace; font-size: clamp(30px, 9vw, 58px);
+    font-weight: 400; letter-spacing: 0; line-height: 1.5;
+    display: inline-block; will-change: transform;
   }
   h1 span { color: var(--accent); }
+  h1.glitching { text-shadow: 2px 0 var(--p2), -2px 0 var(--p1); }
   header p { color: var(--muted); font-size: 14px; margin-top: 14px; max-width: 480px; margin-inline: auto; line-height:1.5; }
   header a { color: var(--muted); text-decoration: underline; }
 
@@ -61,6 +66,29 @@
     .vs { order: 2; width: 100%; }
     .card.p2 { order: 3; }
   }
+
+  .battle-layout { display:flex; flex-direction:column; gap:16px; }
+  .arena-wrap { position: relative; }
+  .side-log { display:flex; flex-direction:column; }
+  @media (min-width: 1000px) {
+    .battle-layout { display:grid; grid-template-columns: 1fr 360px; gap:20px; align-items:start; }
+    .side-log .banner { margin-top:0; margin-bottom:12px; }
+    .side-log .log-panel { flex:1; min-height:0; max-height:74vh; margin-top:0; }
+  }
+
+  .win-overlay {
+    position:absolute; inset:0; background:rgba(0,0,0,.88); border-radius:16px;
+    display:none; flex-direction:column; align-items:center; justify-content:center; gap:10px;
+    z-index:200; pointer-events:none; cursor:pointer;
+    padding:20px; text-align:center;
+  }
+  .win-overlay.show { display:flex; pointer-events:auto; }
+  .win-line {
+    font-family: 'Press Start 2P', 'Inter', monospace; line-height:1.4;
+    text-shadow: 3px 3px 0 rgba(0,0,0,.6); word-break: break-word;
+  }
+  .win-line.win { font-size: clamp(18px, 5.5vw, 34px); }
+  .win-line.lose { font-size: clamp(12px, 3.5vw, 20px); color: var(--danger); opacity:.85; }
 
   .card {
     background: var(--panel);
@@ -132,6 +160,21 @@
   .trait-row { display:flex; justify-content:space-between; gap:10px; padding:5px 0; font-size:12.5px; }
   .trait-label { color: var(--muted); flex-shrink:0; }
   .trait-value { text-align:right; }
+
+  [data-tooltip] { position: relative; cursor: default; }
+  [data-tooltip]::after {
+    content: attr(data-tooltip);
+    position: absolute; left: 50%; bottom: 100%; transform: translateX(-50%) translateY(-6px);
+    width: max-content; max-width: 200px;
+    background: #000; border: 1px solid var(--border); border-radius: 8px;
+    padding: 8px 10px; font-size: 11px; font-weight: 400; color: var(--text); line-height: 1.4;
+    text-align: left; white-space: normal;
+    opacity: 0; visibility: hidden; transition: opacity .15s ease;
+    pointer-events: none; z-index: 30;
+  }
+  .stat-grid [data-tooltip]::after { text-align: center; }
+  [data-tooltip]:hover::after { opacity: 1; visibility: visible; }
+  @media (hover: none) { [data-tooltip]::after { display: none; } }
 
   .vs {
     display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px;
@@ -265,19 +308,29 @@
   </nav>
 
   <section id="tab-quick" class="tab-section active">
-    <div class="arena">
-      <div class="card p1" id="card1"></div>
-      <div class="vs">
-        <div class="stage" id="stage">VS</div>
-        <button class="btn-battle" id="battleBtn">Battle</button>
-        <button class="btn-ghost" id="newBtn">New Cells</button>
+    <div class="battle-layout">
+      <div class="arena-wrap">
+        <div class="arena">
+          <div class="card p1" id="card1"></div>
+          <div class="vs">
+            <div class="stage" id="stage">VS</div>
+            <button class="btn-battle" id="battleBtn">Battle</button>
+            <button class="btn-ghost" id="newBtn">New Cells</button>
+          </div>
+          <div class="card p2" id="card2"></div>
+        </div>
+        <div class="win-overlay" id="winOverlay">
+          <div class="win-line win" id="winLine1"></div>
+          <div class="win-line lose" id="winLine2"></div>
+        </div>
       </div>
-      <div class="card p2" id="card2"></div>
-    </div>
 
-    <div class="banner" id="banner"></div>
-    <div class="log-panel" id="log"></div>
-    <div class="skip-hint" id="skipHint">tap the log to skip ahead</div>
+      <div class="side-log">
+        <div class="banner" id="banner"></div>
+        <div class="log-panel" id="log"></div>
+        <div class="skip-hint" id="skipHint">tap the log to skip ahead</div>
+      </div>
+    </div>
   </section>
 
   <section id="tab-cells" class="tab-section">
@@ -905,8 +958,13 @@ function generateOrganismSprite(organism, frame) {
 }
 
 function escapeHtml(s) {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
+
+const STAT_DESCRIPTIONS = {
+  SPD: 'Turn order & initiative', DEF: 'Reduce incoming damage', ACC: 'Chance to hit enemies',
+  EVA: 'Chance to dodge attacks', RGN: 'HP recovered each turn',
+};
 
 /* ============ BattleLog — captures a UI-friendly snapshot on every line ============ */
 class BattleLog {
@@ -1341,7 +1399,11 @@ function flashSprite(el, cls) {
 }
 
 function traitRow(label, trait, extra) {
-  return `<div class="trait-row"><span class="trait-label">${label}</span><span class="trait-value">${trait.name}${extra || ''}</span></div>`;
+  return `<div class="trait-row" data-tooltip="${escapeHtml(trait.desc || '')}"><span class="trait-label">${label}</span><span class="trait-value">${trait.name}${extra || ''}</span></div>`;
+}
+
+function statTile(value, label) {
+  return `<div data-tooltip="${escapeHtml(STAT_DESCRIPTIONS[label] || '')}"><b>${value}</b><small>${label}</small></div>`;
 }
 
 function renderCard(el, org) {
@@ -1352,11 +1414,11 @@ function renderCard(el, org) {
     <div class="bar-row"><span>HP</span><div class="bar"><div class="bar-fill hp" data-hpfill style="width:100%"></div></div><span class="bar-num" data-hpnum>${org.health}/${org.maxHealth}</span></div>
     <div class="bar-row"><span>EN</span><div class="bar"><div class="bar-fill en" data-enfill style="width:100%"></div></div><span class="bar-num" data-ennum>${org.energy}/${org.maxEnergy}</span></div>
     <div class="stat-grid">
-      <div><b>${org.speed}</b><small>SPD</small></div>
-      <div><b>${org.defense}</b><small>DEF</small></div>
-      <div><b>${org.accuracy}</b><small>ACC</small></div>
-      <div><b>${org.evasion}</b><small>EVA</small></div>
-      <div><b>${org.regen}</b><small>RGN</small></div>
+      ${statTile(org.speed, 'SPD')}
+      ${statTile(org.defense, 'DEF')}
+      ${statTile(org.accuracy, 'ACC')}
+      ${statTile(org.evasion, 'EVA')}
+      ${statTile(org.regen, 'RGN')}
     </div>
     <div class="traits">
       ${traitRow('Attack', org.attackType, ` (${org.attackType.damage} dmg)`)}
@@ -1509,6 +1571,26 @@ function handleLogSkip() {
 
 let currentResult = null;
 
+function showWinOverlay(overlayEl, line1El, line2El, winner, loser, isDraw, winnerSide) {
+  if (!overlayEl || !line1El || !line2El) return;
+  if (isDraw) {
+    line1El.textContent = 'DRAW';
+    line1El.style.color = 'var(--muted)';
+    line2El.textContent = '';
+  } else {
+    line1El.textContent = `${winner.name} WINS`;
+    line1El.style.color = winnerSide === 1 ? 'var(--p1)' : 'var(--p2)';
+    line2El.textContent = `${loser.name} LOSES`;
+  }
+  overlayEl.classList.remove('show');
+  void overlayEl.offsetWidth;
+  overlayEl.classList.add('show');
+  const dismiss = () => overlayEl.classList.remove('show');
+  overlayEl.onclick = dismiss;
+  clearTimeout(overlayEl._dismissTimer);
+  overlayEl._dismissTimer = setTimeout(dismiss, 2600);
+}
+
 function finishBattle() {
   startIdleAnim(1, 550);
   startIdleAnim(2, 550);
@@ -1516,13 +1598,18 @@ function finishBattle() {
   stage.textContent = 'VS';
   stage.style.color = '';
   const banner = document.getElementById('banner');
+  const winOverlay = document.getElementById('winOverlay');
+  const winLine1 = document.getElementById('winLine1');
+  const winLine2 = document.getElementById('winLine2');
   if (currentResult.winner) {
     const isP1 = currentResult.winner === org1;
     banner.style.color = isP1 ? 'var(--p1)' : 'var(--p2)';
     banner.textContent = `${currentResult.winner.name} wins in ${currentResult.turns} turns`;
+    showWinOverlay(winOverlay, winLine1, winLine2, currentResult.winner, currentResult.loser, false, isP1 ? 1 : 2);
   } else {
     banner.style.color = 'var(--accent)';
     banner.textContent = `Draw after ${currentResult.turns} turns`;
+    showWinOverlay(winOverlay, winLine1, winLine2, null, null, true);
   }
   banner.classList.add('show');
   document.getElementById('skipHint').style.display = 'none';
@@ -1675,13 +1762,23 @@ function buildMatchArena(matchIndex, total) {
   const stage = document.getElementById('teamStage');
   stage.innerHTML = `
     <div class="match-banner">Match ${matchIndex + 1} of ${total}</div>
-    <div class="arena">
-      <div class="card p1" id="tCard1"></div>
-      <div class="vs"><div class="stage" id="tStage">VS</div></div>
-      <div class="card p2" id="tCard2"></div>
+    <div class="battle-layout">
+      <div class="arena-wrap">
+        <div class="arena">
+          <div class="card p1" id="tCard1"></div>
+          <div class="vs"><div class="stage" id="tStage">VS</div></div>
+          <div class="card p2" id="tCard2"></div>
+        </div>
+        <div class="win-overlay" id="tWinOverlay">
+          <div class="win-line win" id="tWinLine1"></div>
+          <div class="win-line lose" id="tWinLine2"></div>
+        </div>
+      </div>
+      <div class="side-log">
+        <div class="log-panel show" id="tLog"></div>
+        <div class="skip-hint">tap the log to skip ahead</div>
+      </div>
     </div>
-    <div class="log-panel show" id="tLog"></div>
-    <div class="skip-hint">tap the log to skip ahead</div>
   `;
   document.getElementById('tLog').addEventListener('click', handleLogSkip);
   return {
@@ -1689,6 +1786,9 @@ function buildMatchArena(matchIndex, total) {
     card2: document.getElementById('tCard2'),
     stage: document.getElementById('tStage'),
     log: document.getElementById('tLog'),
+    winOverlay: document.getElementById('tWinOverlay'),
+    winLine1: document.getElementById('tWinLine1'),
+    winLine2: document.getElementById('tWinLine2'),
   };
 }
 
@@ -1721,6 +1821,9 @@ function runTeamMatch(playerTeam, enemyTeam, index, tally) {
     if (playerWon) tally.playerWins++;
     else if (!isDraw) tally.enemyWins++;
     saveRoster();
+
+    const winnerSide = isDraw ? null : (result.winner === pOrg ? 1 : 2);
+    showWinOverlay(ctx.winOverlay, ctx.winLine1, ctx.winLine2, result.winner, result.loser, isDraw, winnerSide);
 
     const resultBanner = document.createElement('div');
     resultBanner.className = 'match-banner';
@@ -1801,6 +1904,27 @@ function finishTeamBattle(tally) {
   again.addEventListener('click', renderTeamPicker);
   stage.appendChild(again);
 }
+
+/* ============ Big twitchy title ============ */
+(function twitchTitle() {
+  const h1 = document.querySelector('header h1');
+  if (!h1) return;
+  function tick() {
+    if (Math.random() < 0.55) {
+      const dx = (Math.random() * 8 - 4).toFixed(1);
+      const dy = (Math.random() * 5 - 2.5).toFixed(1);
+      const skew = (Math.random() * 4 - 2).toFixed(1);
+      h1.style.transform = `translate(${dx}px, ${dy}px) skewX(${skew}deg)`;
+      h1.classList.add('glitching');
+      setTimeout(() => {
+        h1.style.transform = 'translate(0,0)';
+        h1.classList.remove('glitching');
+      }, 70 + Math.random() * 90);
+    }
+    setTimeout(tick, 500 + Math.random() * 1500);
+  }
+  tick();
+})();
 
 newCells();
 </script>
