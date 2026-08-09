@@ -113,13 +113,10 @@
     0%, 100% { opacity: 1; }
     50% { opacity: .5; }
   }
-  @keyframes specialGlow {
-    0%, 100% { box-shadow: 0 0 0 0 var(--special); }
-    50% { box-shadow: 0 0 0 6px var(--special); }
-  }
   .card.hit-flash { animation: hitShake .32s ease; border-color: var(--danger) !important; }
   .card.miss-flash { animation: missFlicker .32s ease; }
-  .card.special-flash { animation: specialGlow .42s ease; border-color: var(--special) !important; }
+  .card.special-flash { border-color: var(--special) !important; }
+  .shed-pixel { position:absolute; z-index:160; pointer-events:none; }
 
   .cell-name { font-size: 20px; font-weight: 700; word-break: break-word; }
   .card.p1 .cell-name { color: var(--p1); }
@@ -1543,6 +1540,48 @@ function spawnBurst(container, atPct, colorVar) {
   });
 }
 
+function shedPixels(card) {
+  const wrap = card.closest('.arena-wrap');
+  if (!wrap) return;
+  const cardRect = card.getBoundingClientRect();
+  const wrapRect = wrap.getBoundingClientRect();
+  const left = cardRect.left - wrapRect.left;
+  const top = cardRect.top - wrapRect.top;
+  const count = 16 + Math.floor(Math.random() * 6);
+  for (let i = 0; i < count; i++) {
+    const edge = Math.floor(Math.random() * 4);
+    let x, y;
+    if (edge === 0) { x = left + Math.random() * cardRect.width; y = top; }
+    else if (edge === 1) { x = left + cardRect.width; y = top + Math.random() * cardRect.height; }
+    else if (edge === 2) { x = left + Math.random() * cardRect.width; y = top + cardRect.height; }
+    else { x = left; y = top + Math.random() * cardRect.height; }
+
+    const px = document.createElement('div');
+    px.className = 'shed-pixel';
+    const size = 2 + Math.floor(Math.random() * 3);
+    px.style.width = size + 'px';
+    px.style.height = size + 'px';
+    px.style.left = x + 'px';
+    px.style.top = y + 'px';
+    px.style.background = Math.random() < 0.7 ? 'var(--special)' : '#fff';
+    wrap.appendChild(px);
+
+    const angle = Math.random() * Math.PI * 2;
+    const dist = 8 + Math.random() * 30;
+    const dx = Math.cos(angle) * dist, dy = Math.sin(angle) * dist;
+    const steps = 4 + Math.floor(Math.random() * 4);
+    let s = 0;
+    setTimeout(function tick() {
+      const t = s / (steps - 1);
+      px.style.transform = `translate(${(dx * t).toFixed(1)}px, ${(dy * t).toFixed(1)}px)`;
+      px.style.opacity = String(Math.max(0, 1 - t * 1.1));
+      s++;
+      if (s < steps) setTimeout(tick, 26 + Math.random() * 16);
+      else px.remove();
+    }, Math.random() * 90);
+  }
+}
+
 function triggerVfx(vfx, card1, card2, stage) {
   stage = stage || document.getElementById('stage');
   card1 = card1 || document.getElementById('card1');
@@ -1579,7 +1618,7 @@ function triggerVfx(vfx, card1, card2, stage) {
     stage.textContent = `★ ${vfx.abilityName.toUpperCase()} ★`;
     stage.style.color = 'var(--special)';
     flashCard(card, 'special-flash');
-    spawnBurst(arenaWrap, vfx.side === 1 ? 8 : 92, '--special');
+    shedPixels(card);
   }
 }
 
