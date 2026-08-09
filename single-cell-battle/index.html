@@ -301,7 +301,7 @@
   .modal-sub { color: var(--muted); font-size:13px; margin-bottom:16px; }
   .upgrade-grid { display:grid; grid-template-columns: 1fr 1fr; gap:8px; }
   .upgrade-btn {
-    background: var(--panel2); border:1px solid var(--border); 
+    background: var(--panel2); color: var(--text); border:1px solid var(--border);
     padding: 12px 8px; font-size:13px; text-align:left; min-height:auto;
   }
   .upgrade-btn:active { border-color: var(--accent); }
@@ -389,7 +389,7 @@ var Audio8Bit = (function () {
   var storedSfxVol = parseFloat(localStorage.getItem('scb_sfx_volume'));
   // theme song defaults quiet — it's meant to sit under everything, not
   // compete with combat SFX; SFX stays more present since it's punctual
-  var musicVolume = isFinite(storedMusicVol) ? storedMusicVol : 0;
+  var musicVolume = isFinite(storedMusicVol) ? storedMusicVol : 0.05;
   var sfxVolume = isFinite(storedSfxVol) ? storedSfxVol : 0.4;
 
   function ensureCtx() {
