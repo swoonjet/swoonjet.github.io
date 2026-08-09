@@ -123,9 +123,10 @@
             flex-direction: column;
             gap: 16px;
             min-height: 280px;
-            transition: background 0.25s ease;
+            transition: background 0.25s ease, transform 0.25s ease, box-shadow 0.25s ease;
             position: relative;
             overflow: hidden;
+            cursor: pointer;
         }
 
         .card::after {
@@ -138,10 +139,16 @@
             pointer-events: none;
         }
 
-        .card:hover { background: var(--raised); }
+        .card:hover {
+            background: var(--raised);
+            transform: translateY(-4px);
+            box-shadow: 0 16px 32px -16px rgba(0,0,0,0.6), inset 0 0 0 1px rgba(255,31,113,0.3);
+            z-index: 1;
+        }
         .card:hover::after { opacity: 1; }
         .card:hover .arrow { transform: translateX(6px); color: var(--accent); }
         .card:hover .num { color: var(--accent); }
+        .card:hover .title { color: var(--accent); }
 
         .card-head {
             display: flex;
@@ -229,15 +236,15 @@
         <header class="hero">
             <h1 class="accent">Experiments.</h1>
             <p class="lede">
-                A field of small, strange things — <strong>agents that wander</strong>,
-                <strong>data that sings</strong>, languages built from nothing,
-                and other corners I keep returning to. Most are running live; some
-                are still finding their shape.
+                Small, strange things I keep building on the side —
+                <strong>agents</strong>, <strong>sonifications</strong>,
+                generative engines, language games. Most are live.
+                A few are still finding their shape.
             </p>
         </header>
 
         <div class="meta-row">
-            <span>21 projects</span>
+            <span>22 projects</span>
             <span>↓ explore</span>
         </div>
 
@@ -250,151 +257,151 @@
                 <div class="foot"><span class="url">/heliosphere/</span><span class="arrow">→</span></div>
             </a>
 
+            <a class="card" href="/linger/">
+                <div class="card-head"><span class="num">02</span><span class="tag">Reading</span></div>
+                <div class="title">Linger</div>
+                <div class="desc">Short fiction and poetry at the speed of reflection. No scrolling, no skimming — just the prose.</div>
+                <div class="foot"><span class="url">/linger/</span><span class="arrow">→</span></div>
+            </a>
+
+            <a class="card" href="/grainfield/">
+                <div class="card-head"><span class="num">03</span><span class="tag">Synthesis</span></div>
+                <div class="title">Grainfield</div>
+                <div class="desc">A browser-based granular synthesis explorer. Pull a sound apart on a node canvas and listen to its grains.</div>
+                <div class="foot"><span class="url">/grainfield/</span><span class="arrow">→</span></div>
+            </a>
+
+            <a class="card" href="/chord-loom/">
+                <div class="card-head"><span class="num">04</span><span class="tag">Instrument · Web Audio</span></div>
+                <div class="title">Chord Loom</div>
+                <div class="desc">Build a chord and load it onto one of twelve breathing pads, each with its own envelope, tape-loop memory, and reverb.</div>
+                <div class="foot"><span class="url">/chord-loom/</span><span class="arrow">→</span></div>
+            </a>
+
+            <a class="card" href="/cadastre/">
+                <div class="card-head"><span class="num">05</span><span class="tag">Generative · Cartography</span></div>
+                <div class="title">Cadastre</div>
+                <div class="desc">Generate a whole city from a seed — terrain, streets, parcels, parks, every place named. Pan, zoom, export it poster-size.</div>
+                <div class="foot"><span class="url">/cadastre/</span><span class="arrow">→</span></div>
+            </a>
+
+            <a class="card" href="/earshot/">
+                <div class="card-head"><span class="num">06</span><span class="tag">Live audio · Composition</span></div>
+                <div class="title">Earshot</div>
+                <div class="desc">Four live field mics, thousands of kilometres apart, streaming right now. Nothing is pre-recorded — every layer comes from whatever happens to coincide.</div>
+                <div class="foot"><span class="url">/earshot/</span><span class="arrow">→</span></div>
+            </a>
+
+            <a class="card" href="/Weather-Reports-Field-Guide/">
+                <div class="card-head"><span class="num">07</span><span class="tag">Anthology · Fiction</span></div>
+                <div class="title">Weather Reports</div>
+                <div class="desc">Forty-six writers, one premise: an unexplained weather phenomenon over World C6H-ɛ. Read it as anthology, archive, or apply for a researcher post.</div>
+                <div class="foot"><span class="url">/Weather-Reports-Field-Guide/</span><span class="arrow">→</span></div>
+            </a>
+
+            <a class="card" href="/single-cell-battle/">
+                <div class="card-head"><span class="num">08</span><span class="tag">Game · Roguelike</span></div>
+                <div class="title">Single Cell Battle</div>
+                <div class="desc">A turn-based microorganism battler ported from a Python sim. Roll a roster, fight the computer's, win and evolve — lose three times and die.</div>
+                <div class="foot"><span class="url">/single-cell-battle/</span><span class="arrow">→</span></div>
+            </a>
+
+            <a class="card" href="/moira/">
+                <div class="card-head"><span class="num">09</span><span class="tag">Generative</span></div>
+                <div class="title">Moira</div>
+                <div class="desc">A base curve swept through hundreds of rotations until it interferes with itself. Nine variations on an old moiré sketch, with inks that actually mix.</div>
+                <div class="foot"><span class="url">/moira/</span><span class="arrow">→</span></div>
+            </a>
+
+            <a class="card" href="/jems/">
+                <div class="card-head"><span class="num">10</span><span class="tag">Generative</span></div>
+                <div class="title">Jems</div>
+                <div class="desc">Random points, Delaunay-triangulated into a mosaic of tonal glass. Regenerate for a new arrangement, export as SVG or PNG.</div>
+                <div class="foot"><span class="url">/jems/</span><span class="arrow">→</span></div>
+            </a>
+
+            <a class="card" href="/lampo/">
+                <div class="card-head"><span class="num">11</span><span class="tag">Generative</span></div>
+                <div class="title">Lampo</div>
+                <div class="desc">Twelve random points in four dimensions, resolved into a Bezier surface of revolution. Tune it, orbit it, keep the good ones.</div>
+                <div class="foot"><span class="url">/lampo/</span><span class="arrow">→</span></div>
+            </a>
+
             <a class="card" href="/walks/">
-                <div class="card-head"><span class="num">02</span><span class="tag">Agent · Webcams</span></div>
+                <div class="card-head"><span class="num">12</span><span class="tag">Agent · Webcams</span></div>
                 <div class="title">Lateral Walks</div>
                 <div class="desc">A trained lateral thinker looks through live webcams and follows the chain of ideas wherever it goes.</div>
                 <div class="foot"><span class="url">/walks/</span><span class="arrow">→</span></div>
             </a>
 
             <a class="card" href="/streetwander/">
-                <div class="card-head"><span class="num">03</span><span class="tag">Agent · Streetview</span></div>
+                <div class="card-head"><span class="num">13</span><span class="tag">Agent · Streetview</span></div>
                 <div class="title">Streetwander</div>
-                <div class="desc">An agent takes creative walks through real neighborhoods. Notices briefly, thinks a lot. Each walk produces a main artifact and a few companions.</div>
+                <div class="desc">An agent takes creative walks through real neighborhoods — notices briefly, thinks a lot. Each walk leaves a main artifact and a few companions.</div>
                 <div class="foot"><span class="url">/streetwander/</span><span class="arrow">→</span></div>
             </a>
 
             <a class="card" href="https://curiothymia.jontoews.com">
-                <div class="card-head"><span class="num">04</span><span class="tag">Agent · Mind</span></div>
+                <div class="card-head"><span class="num">14</span><span class="tag">Agent · Mind</span></div>
                 <div class="title">Curiothymia</div>
                 <div class="desc">A mind that wanders. Threads of thought, branching by association. Let your attention follow.</div>
                 <div class="foot"><span class="url">curiothymia.jontoews.com</span><span class="arrow">→</span></div>
             </a>
 
             <a class="card" href="/dual-emergence/">
-                <div class="card-head"><span class="num">05</span><span class="tag">Agent · Worlds</span></div>
+                <div class="card-head"><span class="num">15</span><span class="tag">Agent · Worlds</span></div>
                 <div class="title">Dual-Emergence</div>
-                <div class="desc">Two opposed agents negotiate at each evolutionary stage of a planet — formation, chemistry, replicators, complex life, cognition, civilization, deep future. 8 worlds; some plateau, some endure.</div>
+                <div class="desc">Two opposed agents negotiate every stage of a planet's life, formation to deep future. Eight worlds; some plateau, some endure.</div>
                 <div class="foot"><span class="url">/dual-emergence/</span><span class="arrow">→</span></div>
             </a>
 
             <a class="card" href="/musical-morphospace/">
-                <div class="card-head"><span class="num">06</span><span class="tag">Agent · Music</span></div>
+                <div class="card-head"><span class="num">16</span><span class="tag">Agent · Music</span></div>
                 <div class="title">Musical Morphospace</div>
-                <div class="desc">A curiosity-driven agent exploring the space of possible musical grammars. Documenting the musics humanity didn't happen to invent.</div>
+                <div class="desc">A curiosity-driven agent exploring the space of possible musical grammars — the musics humanity didn't happen to invent.</div>
                 <div class="foot"><span class="url">/musical-morphospace/</span><span class="arrow">→</span></div>
             </a>
 
             <a class="card" href="/akros/">
-                <div class="card-head"><span class="num">07</span><span class="tag">Language · Agent</span></div>
+                <div class="card-head"><span class="num">17</span><span class="tag">Language · Agent</span></div>
                 <div class="title">Akros</div>
                 <div class="desc">A complete constructed language built from scratch by autonomous AI agents. 735 words, 99 grammar patterns, a 7-god pantheon.</div>
                 <div class="foot"><span class="url">/akros/</span><span class="arrow">→</span></div>
             </a>
 
-            <a class="card" href="/linger/">
-                <div class="card-head"><span class="num">08</span><span class="tag">Reading</span></div>
-                <div class="title">Linger</div>
-                <div class="desc">Short fiction and poetry at the speed of reflection. No scrolling. No skimming. Just you and the prose.</div>
-                <div class="foot"><span class="url">/linger/</span><span class="arrow">→</span></div>
-            </a>
-
-            <a class="card" href="/grainfield/">
-                <div class="card-head"><span class="num">09</span><span class="tag">Synthesis</span></div>
-                <div class="title">Grainfield</div>
-                <div class="desc">A browser-based granular synthesis explorer. Node canvas UI plus the Web Audio API — pull a sound apart and listen to its grains.</div>
-                <div class="foot"><span class="url">/grainfield/</span><span class="arrow">→</span></div>
-            </a>
-
             <a class="card" href="/marmalade/">
-                <div class="card-head"><span class="num">10</span><span class="tag">Generative</span></div>
+                <div class="card-head"><span class="num">18</span><span class="tag">Generative</span></div>
                 <div class="title">Marmalade</div>
-                <div class="desc">An autonomous generative collage engine making art in the wild. New work, on its own schedule.</div>
+                <div class="desc">An autonomous generative collage engine making art in the wild, on its own schedule.</div>
                 <div class="foot"><span class="url">/marmalade/</span><span class="arrow">→</span></div>
             </a>
 
             <a class="card" href="/stimviz/">
-                <div class="card-head"><span class="num">11</span><span class="tag">Archive</span></div>
+                <div class="card-head"><span class="num">19</span><span class="tag">Archive</span></div>
                 <div class="title">Stimviz</div>
                 <div class="desc">138 digital archives spanning illustration, design, audio, architecture, typography, science, photography, and film.</div>
                 <div class="foot"><span class="url">/stimviz/</span><span class="arrow">→</span></div>
             </a>
 
             <a class="card" href="/terragod/">
-                <div class="card-head"><span class="num">12</span><span class="tag">Generative · Maps</span></div>
+                <div class="card-head"><span class="num">20</span><span class="tag">Generative · Maps</span></div>
                 <div class="title">Terragod</div>
-                <div class="desc">Roll a continent, an island, an atoll, or a section of a whole world. Each map renders as a vector topographic plate — pan, zoom, export as SVG or PNG.</div>
+                <div class="desc">Roll a continent, an island, an atoll, or a whole world. Pan, zoom, export as SVG or PNG.</div>
                 <div class="foot"><span class="url">/terragod/</span><span class="arrow">→</span></div>
             </a>
 
-            <a class="card" href="/chord-loom/">
-                <div class="card-head"><span class="num">13</span><span class="tag">Instrument · Web Audio</span></div>
-                <div class="title">Chord Loom</div>
-                <div class="desc">Build a chord on the keys and load it onto one of twelve breathing pads. Each pad has its own envelope, tape-loop memory, and weather; all of them share one air of echo, shimmer, and reverb.</div>
-                <div class="foot"><span class="url">/chord-loom/</span><span class="arrow">→</span></div>
-            </a>
-
             <a class="card" href="/gazetteer/">
-                <div class="card-head"><span class="num">14</span><span class="tag">Generative · Toponymy</span></div>
+                <div class="card-head"><span class="num">21</span><span class="tag">Generative · Toponymy</span></div>
                 <div class="title">Gazetteer</div>
-                <div class="desc">Invent place names from a phoneme grammar. Seed a name by integer, map coordinate, or landmark, and watch it break into its onset, vowel, and coda. Every name is reproducible from its seed.</div>
+                <div class="desc">Invent place names from a phoneme grammar. Seed one by integer, coordinate, or landmark, and watch it break apart.</div>
                 <div class="foot"><span class="url">/gazetteer/</span><span class="arrow">→</span></div>
             </a>
 
-            <a class="card" href="/cadastre/">
-                <div class="card-head"><span class="num">15</span><span class="tag">Generative · Cartography</span></div>
-                <div class="title">Cadastre</div>
-                <div class="desc">Generate a whole city from a seed — terrain, rivers with bridges, downtown cores, streets, parcels, parks and rail, every place invented and named. Pan and zoom through detail tiers, scale from hamlet to metropolis, share a view by URL, and export it poster-size.</div>
-                <div class="foot"><span class="url">/cadastre/</span><span class="arrow">→</span></div>
-            </a>
-
-            <a class="card" href="/Weather-Reports-Field-Guide/">
-                <div class="card-head"><span class="num">16</span><span class="tag">Anthology · Fiction</span></div>
-                <div class="title">Weather Reports</div>
-                <div class="desc">Forty-six writers were handed one premise — an unexplained weather phenomenon over World C6H-ɛ — and each filed a single specimen report from inside it. Read the anthology as a research archive: page through specimens by author, watch the behavioral matrix read out an integration threshold, or apply for a researcher post.</div>
-                <div class="foot"><span class="url">/Weather-Reports-Field-Guide/</span><span class="arrow">→</span></div>
-            </a>
-
-            <a class="card" href="/earshot/">
-                <div class="card-head"><span class="num">17</span><span class="tag">Live audio · Composition</span></div>
-                <div class="title">Earshot</div>
-                <div class="desc">Several open field microphones, permanently installed thousands of kilometres apart, are streaming right now. This listens to four at once and composes from whatever happens to coincide — a hum in Otsuchi and rain in Lima inside the same three seconds. Nothing is pre-recorded: every generated layer is made from the streams themselves. Read it as growth, as a survey, or as stacked measurement.</div>
-                <div class="foot"><span class="url">/earshot/</span><span class="arrow">→</span></div>
-            </a>
-
             <a class="card" href="/trungle-bunch/">
-                <div class="card-head"><span class="num">18</span><span class="tag">Instrument · Web Audio</span></div>
+                <div class="card-head"><span class="num">22</span><span class="tag">Instrument · Web Audio</span></div>
                 <div class="title">Trungle Bunch</div>
-                <div class="desc">A generative instrument grown rather than laid out. Triangular fruiting bodies sit on a living mycelial network; threads reach toward consonance and rot where they go unused, carrying each strike onward as a travelling pulse. Every body has three tuned edges, and its voice is decided by the company it keeps — the pair of colours a thread joins picks a marimba bar, a plucked string, a drum head, a singing bowl, a water drop or a blown tone. Drag a corner to deform the body and its timbre follows. Shove two together and they thud. Sweep the field to bend time and gravity, and the whole colony re-voices over a major drone that rises with the population and ducks under whatever is being played.</div>
+                <div class="desc">A generative instrument grown, not laid out. Triangular bodies on a mycelial network, voiced by the colours their threads join.</div>
                 <div class="foot"><span class="url">/trungle-bunch/</span><span class="arrow">→</span></div>
-            </a>
-
-            <a class="card" href="/lampo/">
-                <div class="card-head"><span class="num">19</span><span class="tag">Generative</span></div>
-                <div class="title">Lampo</div>
-                <div class="desc">Twelve random points in four dimensions, resolved to a single Bezier curve and swept through a full rotation into a surface of revolution. Tune the points, spread, passes and line weight, orbit the result, and cast the ones worth keeping into a numbered collection.</div>
-                <div class="foot"><span class="url">/lampo/</span><span class="arrow">→</span></div>
-            </a>
-
-            <a class="card" href="/jems/">
-                <div class="card-head"><span class="num">20</span><span class="tag">Generative</span></div>
-                <div class="title">Jems</div>
-                <div class="desc">Random points, Delaunay-triangulated into a mosaic of muted tonal glass — one piece or up to twenty tiled across the frame. Choose a light or dark ground, regenerate for a new arrangement, and export the result as SVG or PNG.</div>
-                <div class="foot"><span class="url">/jems/</span><span class="arrow">→</span></div>
-            </a>
-
-            <a class="card" href="/single-cell-battle/">
-                <div class="card-head"><span class="num">21</span><span class="tag">Game · Roguelike</span></div>
-                <div class="title">Single Cell Battle</div>
-                <div class="desc">A turn-based microorganism battler ported from a Python sim — twelve randomized trait categories, full combat resolution, retro ASCII sprites that face off and shed pixels when a hit lands. Roll a roster, pick a team, fight the computer's; win and evolve a stat, lose three times and die.</div>
-                <div class="foot"><span class="url">/single-cell-battle/</span><span class="arrow">→</span></div>
-            </a>
-
-            <a class="card" href="/moira/">
-                <div class="card-head"><span class="num">22</span><span class="tag">Generative</span></div>
-                <div class="title">Moira</div>
-                <div class="desc">A base curve — a wave, a Bézier, a polygon, a spiral — swept through hundreds of rotations around one or more anchor points until it interferes with itself. Nine variations ported and invented from an old moiré-pattern sketch, with full control over geometry, density, and a two-ink color system that actually mixes where strokes overlap.</div>
-                <div class="foot"><span class="url">/moira/</span><span class="arrow">→</span></div>
             </a>
 
         </div>
