@@ -70,8 +70,8 @@
     min-width: 0;
     transition: border-color .15s ease;
   }
-  .card.p1 { border-top: 3px solid var(--p1); }
-  .card.p2 { border-top: 3px solid var(--p2); }
+  .card.p1 { border: 1px solid var(--p1); }
+  .card.p2 { border: 1px solid var(--p2); }
 
   @keyframes hitShake {
     0%, 100% { transform: translateX(0); }
@@ -101,12 +101,19 @@
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     font-size: 8.5px; line-height: 1.15; white-space: pre; overflow-x: auto;
     -webkit-overflow-scrolling: touch; margin: 4px 0 12px; text-align: left;
+    display: block;
   }
   .card.p1 .sprite { color: var(--p1); }
   .card.p2 .sprite { color: var(--p2); }
   @media (min-width: 721px) {
     .sprite { font-size: 10px; }
   }
+  @keyframes lungeRight { 0%,100% { transform: translateX(0); } 40% { transform: translateX(10px) scale(1.03); } }
+  @keyframes lungeLeft { 0%,100% { transform: translateX(0); } 40% { transform: translateX(-10px) scale(1.03); } }
+  @keyframes spriteFlinch { 0% { filter: none; transform: scale(1); } 30% { filter: invert(1); transform: scale(.94); } 100% { filter: none; transform: scale(1); } }
+  .sprite.lunge-p1 { animation: lungeRight .28s ease; }
+  .sprite.lunge-p2 { animation: lungeLeft .28s ease; }
+  .sprite.flinch { animation: spriteFlinch .28s ease; }
 
   .bar-row { display:flex; align-items:center; gap:8px; margin-bottom: 8px; font-size: 11px; color: var(--muted); }
   .bar-row > span:first-child { width: 22px; flex-shrink:0; font-weight:700; }
@@ -169,6 +176,76 @@
   .actions > * { flex:1; min-width: 140px; }
 
   .skip-hint { text-align:center; font-size:11px; color:var(--muted); margin-top:8px; }
+
+  .tabs { display:flex; gap:8px; justify-content:center; margin-bottom:22px; flex-wrap:wrap; }
+  .tab-btn {
+    background: transparent; border: 1px solid var(--border); color: var(--muted);
+    font-size: 13px; font-weight:700; padding: 10px 16px; border-radius: 999px; min-height:auto;
+  }
+  .tab-btn.active { color: var(--text); border-color: var(--text); }
+  .tab-section { display:none; }
+  .tab-section.active { display:block; }
+
+  .muted-small { color: var(--muted); font-size: 13px; font-weight:400; }
+  .cells-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:16px; flex-wrap:wrap; }
+  .cells-title { font-size:18px; font-weight:800; }
+  .btn-small { width:auto; padding:9px 14px; min-height:auto; font-size:13px; }
+
+  .roster-list { display:flex; flex-direction:column; gap:10px; }
+  .roster-row {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+    padding: 12px 14px; display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+  }
+  .roster-rank { font-size:12px; color:var(--muted); width:22px; flex-shrink:0; font-weight:700; }
+  .roster-main { flex:1; min-width:140px; }
+  .roster-name { font-weight:700; font-size:15px; }
+  .roster-sub { color:var(--muted); font-size:12px; margin-top:2px; }
+  .roster-stats { display:flex; gap:14px; font-size:12px; color:var(--muted); flex-shrink:0; }
+  .roster-stats b { color: var(--text); }
+  .roster-empty { color: var(--muted); font-size: 14px; text-align:center; padding: 30px 0; }
+  .btn-release {
+    background:transparent; border:1px solid var(--border); color:var(--muted);
+    font-size:12px; padding:8px 12px; min-height:auto; width:auto; flex-shrink:0;
+  }
+  .btn-release.confirming { color: var(--danger); border-color: var(--danger); }
+
+  .pick-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap:10px; margin-bottom:18px; }
+  .pick-card {
+    background: var(--panel); border: 2px solid var(--border); border-radius: 12px;
+    padding: 12px; cursor:pointer; text-align:left;
+  }
+  .pick-card.selected { border-color: var(--accent); background: var(--panel2); }
+  .pick-card.disabled { opacity:.35; pointer-events:none; }
+  .pick-card-name { font-weight:700; font-size:14px; }
+  .pick-card-sub { color:var(--muted); font-size:11px; margin-top:2px; }
+  .pick-card-score { color:var(--muted); font-size:11px; margin-top:6px; }
+
+  .team-counter { text-align:center; color: var(--muted); font-size:13px; margin-bottom:16px; }
+  .team-counter b { color: var(--text); }
+
+  .match-banner {
+    text-align:center; padding: 14px; margin-bottom: 16px; border-radius:14px;
+    background: var(--panel); border:1px solid var(--border); font-weight:700; font-size:14px;
+  }
+
+  .modal-overlay {
+    position:fixed; inset:0; background:rgba(0,0,0,.7); display:flex; align-items:center;
+    justify-content:center; z-index:1000; padding:16px;
+  }
+  .modal-box {
+    background: var(--panel); border: 1px solid var(--border); border-radius:16px;
+    padding: 22px; max-width: 420px; width:100%; text-align:center;
+  }
+  .modal-title { font-size:17px; font-weight:800; margin-bottom:6px; }
+  .modal-sub { color: var(--muted); font-size:13px; margin-bottom:16px; }
+  .upgrade-grid { display:grid; grid-template-columns: 1fr 1fr; gap:8px; }
+  .upgrade-btn {
+    background: var(--panel2); border:1px solid var(--border); border-radius:10px;
+    padding: 12px 8px; font-size:13px; text-align:left; min-height:auto;
+  }
+  .upgrade-btn:active { border-color: var(--accent); }
+  .upgrade-btn b { display:block; font-size:14px; }
+  .upgrade-btn small { color: var(--muted); }
 </style>
 </head>
 <body>
@@ -181,19 +258,39 @@
       <a href="../../">jontoews.com</a></p>
   </header>
 
-  <div class="arena">
-    <div class="card p1" id="card1"></div>
-    <div class="vs">
-      <div class="stage" id="stage">VS</div>
-      <button class="btn-battle" id="battleBtn">Battle</button>
-      <button class="btn-ghost" id="newBtn">New Cells</button>
-    </div>
-    <div class="card p2" id="card2"></div>
-  </div>
+  <nav class="tabs">
+    <button class="tab-btn active" data-tab="quick">Quick Battle</button>
+    <button class="tab-btn" data-tab="cells">My Cells</button>
+    <button class="tab-btn" data-tab="team">Team Battle</button>
+  </nav>
 
-  <div class="banner" id="banner"></div>
-  <div class="log-panel" id="log"></div>
-  <div class="skip-hint" id="skipHint">tap the log to skip ahead</div>
+  <section id="tab-quick" class="tab-section active">
+    <div class="arena">
+      <div class="card p1" id="card1"></div>
+      <div class="vs">
+        <div class="stage" id="stage">VS</div>
+        <button class="btn-battle" id="battleBtn">Battle</button>
+        <button class="btn-ghost" id="newBtn">New Cells</button>
+      </div>
+      <div class="card p2" id="card2"></div>
+    </div>
+
+    <div class="banner" id="banner"></div>
+    <div class="log-panel" id="log"></div>
+    <div class="skip-hint" id="skipHint">tap the log to skip ahead</div>
+  </section>
+
+  <section id="tab-cells" class="tab-section">
+    <div class="cells-head">
+      <div class="cells-title">My Cells <span class="muted-small" id="cellsCount"></span></div>
+      <button class="btn-ghost btn-small" id="rollNewCellBtn">+ New Cell</button>
+    </div>
+    <div id="rosterList" class="roster-list"></div>
+  </section>
+
+  <section id="tab-team" class="tab-section">
+    <div id="teamStage"></div>
+  </section>
 </div>
 
 <script>
@@ -340,9 +437,12 @@ function generateName() {
   return choice(NAME_PREFIXES) + choice(NAME_SUFFIXES);
 }
 
-/* ============ Organism — ported from organism.py (fresh cell, no evolution history) ============ */
+/* ============ Organism — ported from organism.py, incl. evolution/scoring for the roster meta-game ============ */
+const UPGRADE_BONUSES = { health:8, speed:1, defense:2, evasion:3, accuracy:3, damage:2, energy:5, regen:1 };
+
 class Organism {
   constructor() {
+    this.id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     this.name = generateName();
     this.size = choice(SIZES);
     this.movementType = choice(MOVEMENT_TYPES);
@@ -356,10 +456,14 @@ class Organism {
     this.environment = choice(ENVIRONMENT_ADAPTATIONS);
     this.defenseMechanism = choice(DEFENSIVE_MECHANISMS);
     this.secondaryAttack = choice(SECONDARY_ATTACKS);
-    this.damageBonus = 0;
     this.baseHealth = 100;
     this.baseEnergy = 50;
     this.baseSpeed = 5;
+    this.generation = 1;
+    this.wins = 0;
+    this.losses = 0;
+    this.battlesFought = 0;
+    this.upgrades = { health:0, speed:0, defense:0, evasion:0, accuracy:0, damage:0, energy:0, regen:0 };
     this._calculateStats();
     this.statusEffects = [];
     this.isStunned = false;
@@ -382,15 +486,78 @@ class Organism {
     if (this.energySource.passive === 'shared_life') baseHp += 15;
     if (this.defenseMechanism.effect === 'slippery') baseEvasion += this.defenseMechanism.value || 0;
 
-    this.maxHealth = baseHp;
+    const u = this.upgrades;
+    this.maxHealth = baseHp + u.health * UPGRADE_BONUSES.health;
     this.health = this.maxHealth;
-    this.maxEnergy = baseEnergyVal;
+    this.maxEnergy = baseEnergyVal + u.energy * UPGRADE_BONUSES.energy;
     this.energy = this.maxEnergy;
-    this.speed = baseSpeed;
-    this.defense = baseDefense;
-    this.accuracy = baseAccuracy;
-    this.evasion = baseEvasion;
-    this.regen = baseRegen;
+    this.speed = baseSpeed + u.speed * UPGRADE_BONUSES.speed;
+    this.defense = baseDefense + u.defense * UPGRADE_BONUSES.defense;
+    this.accuracy = baseAccuracy + u.accuracy * UPGRADE_BONUSES.accuracy;
+    this.evasion = baseEvasion + u.evasion * UPGRADE_BONUSES.evasion;
+    this.regen = baseRegen + u.regen * UPGRADE_BONUSES.regen;
+    this.damageBonus = u.damage * UPGRADE_BONUSES.damage;
+  }
+
+  evolveStat(stat) {
+    if (!(stat in this.upgrades)) return false;
+    this.upgrades[stat] += 1;
+    this._calculateStats();
+    return true;
+  }
+
+  recordBattle(won) {
+    this.battlesFought += 1;
+    if (won) this.wins += 1; else this.losses += 1;
+  }
+
+  getEvoLevel() {
+    return Object.values(this.upgrades).reduce((a, b) => a + b, 0);
+  }
+
+  getScore() {
+    return this.wins * 10 + this.getEvoLevel() * 5 + this.generation * 2;
+  }
+
+  toDict() {
+    return {
+      id: this.id, name: this.name, generation: this.generation,
+      wins: this.wins, losses: this.losses, battlesFought: this.battlesFought,
+      upgrades: this.upgrades,
+      traits: {
+        size: this.size.name, movementType: this.movementType.name, armorType: this.armorType.name,
+        energySource: this.energySource.name, attackType: this.attackType.name, sensingType: this.sensingType.name,
+        specialAbility: this.specialAbility.name, toxicity: this.toxicity.name, reproduction: this.reproduction.name,
+        environment: this.environment.name, defenseMechanism: this.defenseMechanism.name, secondaryAttack: this.secondaryAttack.name,
+      },
+    };
+  }
+
+  static fromDict(data) {
+    const find = (pool, name) => pool.find(t => t.name === name) || pool[0];
+    const org = new Organism();
+    const t = data.traits || {};
+    org.id = data.id || org.id;
+    org.name = data.name || org.name;
+    org.generation = data.generation || 1;
+    org.wins = data.wins || 0;
+    org.losses = data.losses || 0;
+    org.battlesFought = data.battlesFought || 0;
+    org.upgrades = Object.assign({ health:0, speed:0, defense:0, evasion:0, accuracy:0, damage:0, energy:0, regen:0 }, data.upgrades || {});
+    org.size = find(SIZES, t.size);
+    org.movementType = find(MOVEMENT_TYPES, t.movementType);
+    org.armorType = find(ARMOR_TYPES, t.armorType);
+    org.energySource = find(ENERGY_SOURCES, t.energySource);
+    org.attackType = find(ATTACK_TYPES, t.attackType);
+    org.sensingType = find(SENSING_TYPES, t.sensingType);
+    org.specialAbility = find(SPECIAL_ABILITIES, t.specialAbility);
+    org.toxicity = find(TOXICITY_LEVELS, t.toxicity);
+    org.reproduction = find(REPRODUCTION_TYPES, t.reproduction);
+    org.environment = find(ENVIRONMENT_ADAPTATIONS, t.environment);
+    org.defenseMechanism = find(DEFENSIVE_MECHANISMS, t.defenseMechanism);
+    org.secondaryAttack = find(SECONDARY_ATTACKS, t.secondaryAttack);
+    org._calculateStats();
+    return org;
   }
 
   resetForBattle() {
@@ -679,7 +846,8 @@ function padCenter(s, width) {
   return ' '.repeat(leftPad) + s + ' '.repeat(rightPad);
 }
 
-function generateOrganismSprite(organism) {
+function generateOrganismSprite(organism, frame) {
+  frame = frame || 0;
   const armor = organism.armorType.name;
   const energy = organism.energySource.name;
   const movement = organism.movementType.name;
@@ -691,7 +859,8 @@ function generateOrganismSprite(organism) {
   const sprite = [];
   if (moveDeco.top) sprite.push(padCenter(moveDeco.top, SPRITE_WIDTH_FINAL));
 
-  const innerRows = inner.map(row => padCenter(row, INNER_WIDTH));
+  const rot = (arr, i) => arr[(i + frame) % arr.length];
+  const innerRows = inner.map((_, i) => padCenter(rot(inner, i), INNER_WIDTH));
 
   const innerRowIndices = [];
   body.forEach((line, idx) => { if (line.includes('{INNER_')) innerRowIndices.push(idx); });
@@ -709,8 +878,8 @@ function generateOrganismSprite(organism) {
     line = padCenter(line, BODY_WIDTH);
 
     if (innerRowIndices.includes(rowIdx) && decoIdx < 5) {
-      const leftDeco = (moveDeco.left[decoIdx] || '').padEnd(DECO_WIDTH);
-      const rightDeco = (moveDeco.right[decoIdx] || '').padStart(DECO_WIDTH);
+      const leftDeco = (rot(moveDeco.left, decoIdx) || '').padEnd(DECO_WIDTH);
+      const rightDeco = (rot(moveDeco.right, decoIdx) || '').padStart(DECO_WIDTH);
       line = leftDeco + line + rightDeco;
       decoIdx++;
     } else {
@@ -1146,17 +1315,40 @@ Battle.DISSOLVE_DAMAGE = 3;
 let org1, org2;
 let animTimer = null;
 let pendingEntries = [];
+const idleTimers = {1: null, 2: null};
+const spriteFrames = {1: 0, 2: 0};
+
+function startIdleAnim(side, speed, cardEl, org) {
+  stopIdleAnim(side);
+  idleTimers[side] = setInterval(() => {
+    const o = org || (side === 1 ? org1 : org2);
+    const c = cardEl || document.getElementById('card' + side);
+    const spriteEl = c && c.querySelector('.sprite');
+    if (!o || !spriteEl) return;
+    spriteFrames[side] = (spriteFrames[side] + 1) % 5;
+    spriteEl.textContent = generateOrganismSprite(o, spriteFrames[side]).join('\n');
+  }, speed);
+}
+function stopIdleAnim(side) {
+  if (idleTimers[side]) { clearInterval(idleTimers[side]); idleTimers[side] = null; }
+}
+function flashSprite(el, cls) {
+  if (!el) return;
+  el.classList.remove('lunge-p1', 'lunge-p2', 'flinch');
+  void el.offsetWidth;
+  el.classList.add(cls);
+  setTimeout(() => el.classList.remove(cls), 300);
+}
 
 function traitRow(label, trait, extra) {
   return `<div class="trait-row"><span class="trait-label">${label}</span><span class="trait-value">${trait.name}${extra || ''}</span></div>`;
 }
 
 function renderCard(el, org) {
-  const sprite = escapeHtml(generateOrganismSprite(org).join('\n'));
   el.innerHTML = `
     <div class="cell-name">${org.name}</div>
     <div class="cell-sub">${org.size.name} · ${org.movementType.name}</div>
-    <pre class="sprite">${sprite}</pre>
+    <pre class="sprite"></pre>
     <div class="bar-row"><span>HP</span><div class="bar"><div class="bar-fill hp" data-hpfill style="width:100%"></div></div><span class="bar-num" data-hpnum>${org.health}/${org.maxHealth}</span></div>
     <div class="bar-row"><span>EN</span><div class="bar"><div class="bar-fill en" data-enfill style="width:100%"></div></div><span class="bar-num" data-ennum>${org.energy}/${org.maxEnergy}</span></div>
     <div class="stat-grid">
@@ -1179,6 +1371,7 @@ function renderCard(el, org) {
       ${traitRow('Defense Mech.', org.defenseMechanism)}
     </div>
   `;
+  el.querySelector('.sprite').textContent = generateOrganismSprite(org, 0).join('\n');
 }
 
 function newCells() {
@@ -1198,6 +1391,8 @@ function newCells() {
   stage.style.color = '';
   document.getElementById('card1').classList.remove('hit-flash','miss-flash','special-flash');
   document.getElementById('card2').classList.remove('hit-flash','miss-flash','special-flash');
+  startIdleAnim(1, 550);
+  startIdleAnim(2, 550);
 }
 
 function clearAnimation() {
@@ -1205,8 +1400,9 @@ function clearAnimation() {
   pendingEntries = [];
 }
 
-function updateBars(entry) {
-  const c1 = document.getElementById('card1'), c2 = document.getElementById('card2');
+function updateBars(entry, c1, c2) {
+  c1 = c1 || document.getElementById('card1');
+  c2 = c2 || document.getElementById('card2');
   const hp1 = Math.max(0, entry.hp1), hp2 = Math.max(0, entry.hp2);
   c1.querySelector('[data-hpfill]').style.width = Math.max(0, (hp1 / entry.maxHp1) * 100) + '%';
   c1.querySelector('[data-hpnum]').textContent = `${hp1}/${entry.maxHp1}`;
@@ -1218,8 +1414,8 @@ function updateBars(entry) {
   c2.querySelector('[data-ennum]').textContent = `${entry.en2}/${entry.maxEn2}`;
 }
 
-function appendLine(entry) {
-  const log = document.getElementById('log');
+function appendLine(entry, log) {
+  log = log || document.getElementById('log');
   const line = document.createElement('div');
   line.className = 'log-line ' + entry.type;
   line.textContent = entry.message;
@@ -1242,15 +1438,18 @@ function flashCard(card, cls) {
   setTimeout(() => card.classList.remove(cls), 380);
 }
 
-function triggerVfx(vfx) {
-  const stage = document.getElementById('stage');
-  const card1 = document.getElementById('card1');
-  const card2 = document.getElementById('card2');
+function triggerVfx(vfx, card1, card2, stage) {
+  stage = stage || document.getElementById('stage');
+  card1 = card1 || document.getElementById('card1');
+  card2 = card2 || document.getElementById('card2');
 
   if (vfx.kind === 'attack') {
     const chars = ATTACK_EFFECTS[vfx.attackName] || ['*', 'o', '*', 'o'];
     const ch = choice(chars);
+    const attackerCard = vfx.attackerSide === 1 ? card1 : card2;
     const defenderCard = vfx.defenderSide === 1 ? card1 : card2;
+    flashSprite(attackerCard.querySelector('.sprite'), vfx.attackerSide === 1 ? 'lunge-p1' : 'lunge-p2');
+    if (vfx.hit) flashSprite(defenderCard.querySelector('.sprite'), 'flinch');
     let frame = 0;
     const frames = 3;
     (function step() {
@@ -1273,28 +1472,46 @@ function triggerVfx(vfx) {
   }
 }
 
-function playNext(onDone) {
+function playNext(onDone, ctx) {
   if (!pendingEntries.length) { onDone(); return; }
   const entry = pendingEntries.shift();
-  updateBars(entry);
-  if (entry.type === 'vfx') triggerVfx(entry.vfx);
-  else appendLine(entry);
-  animTimer = setTimeout(() => playNext(onDone), delayForType(entry.type));
+  const c1 = ctx && ctx.card1, c2 = ctx && ctx.card2, stage = ctx && ctx.stage, log = ctx && ctx.log;
+  updateBars(entry, c1, c2);
+  if (entry.type === 'vfx') triggerVfx(entry.vfx, c1, c2, stage);
+  else appendLine(entry, log);
+  animTimer = setTimeout(() => playNext(onDone, ctx), delayForType(entry.type));
 }
 
-function flushRemaining() {
+function flushRemaining(ctx, onDone) {
   if (animTimer) { clearTimeout(animTimer); animTimer = null; }
+  const c1 = ctx && ctx.card1, c2 = ctx && ctx.card2, log = ctx && ctx.log;
   while (pendingEntries.length) {
     const entry = pendingEntries.shift();
-    updateBars(entry);
-    if (entry.type !== 'vfx') appendLine(entry);
+    updateBars(entry, c1, c2);
+    if (entry.type !== 'vfx') appendLine(entry, log);
   }
-  finishBattle();
+  onDone();
+}
+
+let currentCtx = null;
+let currentOnDone = null;
+
+function beginAnimation(entries, ctx, onDone) {
+  pendingEntries = entries.slice();
+  currentCtx = ctx;
+  currentOnDone = onDone;
+  playNext(onDone, ctx);
+}
+
+function handleLogSkip() {
+  if (pendingEntries.length) flushRemaining(currentCtx, currentOnDone);
 }
 
 let currentResult = null;
 
 function finishBattle() {
+  startIdleAnim(1, 550);
+  startIdleAnim(2, 550);
   const stage = document.getElementById('stage');
   stage.textContent = 'VS';
   stage.style.color = '';
@@ -1320,17 +1537,270 @@ function runBattle() {
   log.innerHTML = '';
   log.classList.add('show');
   document.getElementById('skipHint').style.display = 'block';
+  startIdleAnim(1, 220);
+  startIdleAnim(2, 220);
 
   const battle = new Battle(org1, org2, 50);
   currentResult = battle.simulate();
-  pendingEntries = currentResult.entries.slice();
-
-  playNext(finishBattle);
+  beginAnimation(currentResult.entries, null, finishBattle);
 }
 
 document.getElementById('newBtn').addEventListener('click', newCells);
 document.getElementById('battleBtn').addEventListener('click', runBattle);
-document.getElementById('log').addEventListener('click', () => { if (pendingEntries.length) flushRemaining(); });
+document.getElementById('log').addEventListener('click', handleLogSkip);
+
+/* ============ Roster persistence ============ */
+const ROSTER_KEY = 'scb_roster_v1';
+
+function loadRoster() {
+  try {
+    const raw = localStorage.getItem(ROSTER_KEY);
+    if (!raw) return [];
+    return JSON.parse(raw).map(Organism.fromDict);
+  } catch (e) {
+    return [];
+  }
+}
+function saveRoster() {
+  localStorage.setItem(ROSTER_KEY, JSON.stringify(roster.map(o => o.toDict())));
+}
+
+let roster = loadRoster();
+if (roster.length === 0) {
+  for (let i = 0; i < 5; i++) roster.push(new Organism());
+  saveRoster();
+}
+
+/* ============ My Cells (roster + leaderboard) ============ */
+let releaseConfirmId = null;
+
+function renderRosterList() {
+  const list = document.getElementById('rosterList');
+  document.getElementById('cellsCount').textContent = `(${roster.length})`;
+  if (roster.length === 0) {
+    list.innerHTML = '<div class="roster-empty">No cells yet — roll a new one to get started.</div>';
+    return;
+  }
+  const sorted = roster.slice().sort((a, b) => b.getScore() - a.getScore());
+  list.innerHTML = sorted.map((org, i) => `
+    <div class="roster-row">
+      <div class="roster-rank">#${i + 1}</div>
+      <div class="roster-main">
+        <div class="roster-name">${org.name}</div>
+        <div class="roster-sub">${org.size.name} · ${org.movementType.name} · Gen ${org.generation}</div>
+      </div>
+      <div class="roster-stats">
+        <span><b>${org.wins}</b>-${org.losses}</span>
+        <span>Evo <b>${org.getEvoLevel()}</b></span>
+        <span>Score <b>${org.getScore()}</b></span>
+      </div>
+      <button class="btn-release" data-release="${org.id}">Release</button>
+    </div>
+  `).join('');
+
+  list.querySelectorAll('[data-release]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.release;
+      if (releaseConfirmId === id) {
+        roster = roster.filter(o => o.id !== id);
+        saveRoster();
+        releaseConfirmId = null;
+        renderRosterList();
+      } else {
+        releaseConfirmId = id;
+        btn.textContent = 'Confirm?';
+        btn.classList.add('confirming');
+        setTimeout(() => { if (releaseConfirmId === id) { releaseConfirmId = null; renderRosterList(); } }, 3000);
+      }
+    });
+  });
+}
+
+document.getElementById('rollNewCellBtn').addEventListener('click', () => {
+  roster.push(new Organism());
+  saveRoster();
+  renderRosterList();
+});
+
+/* ============ Tab switching ============ */
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  document.querySelectorAll('.tab-section').forEach(s => s.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  stopIdleAnim(1);
+  stopIdleAnim(2);
+  if (tab === 'quick') { startIdleAnim(1, 550); startIdleAnim(2, 550); }
+  else if (tab === 'cells') renderRosterList();
+  else if (tab === 'team') renderTeamPicker();
+}
+document.querySelectorAll('.tab-btn').forEach(btn => btn.addEventListener('click', () => switchTab(btn.dataset.tab)));
+
+/* ============ Team Battle: pick a roster, fight the computer's team ============ */
+let selectedTeamIds = [];
+
+function renderTeamPicker() {
+  selectedTeamIds = selectedTeamIds.filter(id => roster.some(o => o.id === id));
+  const stage = document.getElementById('teamStage');
+  if (roster.length === 0) {
+    stage.innerHTML = '<div class="roster-empty">No cells to battle with — roll some in My Cells first.</div>';
+    return;
+  }
+  const sorted = roster.slice().sort((a, b) => b.getScore() - a.getScore());
+  stage.innerHTML = `
+    <div class="team-counter"><b>${selectedTeamIds.length}</b>/3 selected — pick up to 3 cells for your team</div>
+    <div class="pick-grid">
+      ${sorted.map(org => `
+        <button class="pick-card ${selectedTeamIds.includes(org.id) ? 'selected' : ''}" data-pick="${org.id}">
+          <div class="pick-card-name">${org.name}</div>
+          <div class="pick-card-sub">${org.size.name} · ${org.movementType.name}</div>
+          <div class="pick-card-score">W${org.wins}-L${org.losses} · Score ${org.getScore()}</div>
+        </button>
+      `).join('')}
+    </div>
+    <button class="btn-battle" id="startTeamBtn" ${selectedTeamIds.length === 0 ? 'disabled' : ''}>Fight!</button>
+  `;
+  stage.querySelectorAll('[data-pick]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.pick;
+      if (selectedTeamIds.includes(id)) selectedTeamIds = selectedTeamIds.filter(x => x !== id);
+      else if (selectedTeamIds.length < 3) selectedTeamIds.push(id);
+      renderTeamPicker();
+    });
+  });
+  const startBtn = document.getElementById('startTeamBtn');
+  if (startBtn) startBtn.addEventListener('click', startTeamBattle);
+}
+
+function buildMatchArena(matchIndex, total) {
+  const stage = document.getElementById('teamStage');
+  stage.innerHTML = `
+    <div class="match-banner">Match ${matchIndex + 1} of ${total}</div>
+    <div class="arena">
+      <div class="card p1" id="tCard1"></div>
+      <div class="vs"><div class="stage" id="tStage">VS</div></div>
+      <div class="card p2" id="tCard2"></div>
+    </div>
+    <div class="log-panel show" id="tLog"></div>
+    <div class="skip-hint">tap the log to skip ahead</div>
+  `;
+  document.getElementById('tLog').addEventListener('click', handleLogSkip);
+  return {
+    card1: document.getElementById('tCard1'),
+    card2: document.getElementById('tCard2'),
+    stage: document.getElementById('tStage'),
+    log: document.getElementById('tLog'),
+  };
+}
+
+function startTeamBattle() {
+  const playerTeam = selectedTeamIds.map(id => roster.find(o => o.id === id)).filter(Boolean);
+  if (playerTeam.length === 0) return;
+  const enemyTeam = playerTeam.map(() => new Organism());
+  runTeamMatch(playerTeam, enemyTeam, 0, { playerWins: 0, enemyWins: 0 });
+}
+
+function runTeamMatch(playerTeam, enemyTeam, index, tally) {
+  if (index >= playerTeam.length) { finishTeamBattle(tally); return; }
+
+  const pOrg = playerTeam[index];
+  const eOrg = enemyTeam[index];
+  const ctx = buildMatchArena(index, playerTeam.length);
+  renderCard(ctx.card1, pOrg);
+  renderCard(ctx.card2, eOrg);
+  startIdleAnim(1, 220, ctx.card1, pOrg);
+  startIdleAnim(2, 220, ctx.card2, eOrg);
+
+  const battle = new Battle(pOrg, eOrg, 50);
+  const result = battle.simulate();
+
+  beginAnimation(result.entries, ctx, () => {
+    const teamStageEl = document.getElementById('teamStage');
+    const isDraw = !result.winner;
+    const playerWon = !isDraw && result.winner === pOrg;
+    if (!isDraw) pOrg.recordBattle(playerWon);
+    if (playerWon) tally.playerWins++;
+    else if (!isDraw) tally.enemyWins++;
+    saveRoster();
+
+    const resultBanner = document.createElement('div');
+    resultBanner.className = 'match-banner';
+    resultBanner.style.color = isDraw ? 'var(--muted)' : (playerWon ? 'var(--good)' : 'var(--danger)');
+    resultBanner.textContent = isDraw ? 'Draw!' : `${result.winner.name} wins this match!`;
+    teamStageEl.appendChild(resultBanner);
+
+    setTimeout(() => {
+      if (playerWon) {
+        showUpgradePicker(pOrg, () => {
+          saveRoster();
+          runTeamMatch(playerTeam, enemyTeam, index + 1, tally);
+        });
+      } else if (!isDraw && pOrg.losses >= 3) {
+        roster = roster.filter(o => o.id !== pOrg.id);
+        saveRoster();
+        const notice = document.createElement('div');
+        notice.className = 'match-banner';
+        notice.style.color = 'var(--danger)';
+        notice.textContent = `${pOrg.name} has died after 3 losses.`;
+        teamStageEl.appendChild(notice);
+        setTimeout(() => runTeamMatch(playerTeam, enemyTeam, index + 1, tally), 1600);
+      } else {
+        runTeamMatch(playerTeam, enemyTeam, index + 1, tally);
+      }
+    }, 1400);
+  });
+}
+
+function showUpgradePicker(org, onDone) {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal-box">
+      <div class="modal-title">${org.name} leveled up!</div>
+      <div class="modal-sub">Pick a stat to permanently improve</div>
+      <div class="upgrade-grid">
+        ${Object.entries(UPGRADE_BONUSES).map(([stat, bonus]) => `
+          <button class="upgrade-btn" data-stat="${stat}">
+            <b>${stat.charAt(0).toUpperCase()}${stat.slice(1)}</b>
+            <small>+${bonus}</small>
+          </button>
+        `).join('')}
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  overlay.querySelectorAll('[data-stat]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      org.evolveStat(btn.dataset.stat);
+      overlay.remove();
+      onDone();
+    });
+  });
+}
+
+function finishTeamBattle(tally) {
+  stopIdleAnim(1);
+  stopIdleAnim(2);
+  const stage = document.getElementById('teamStage');
+  const playerWonOverall = tally.playerWins > tally.enemyWins;
+  const tied = tally.playerWins === tally.enemyWins;
+  const banner = document.createElement('div');
+  banner.className = 'match-banner';
+  banner.style.color = tied ? 'var(--muted)' : (playerWonOverall ? 'var(--good)' : 'var(--danger)');
+  banner.style.fontSize = '16px';
+  banner.textContent = tied
+    ? `Match tied ${tally.playerWins}-${tally.enemyWins}`
+    : playerWonOverall
+      ? `You won the match ${tally.playerWins}-${tally.enemyWins}!`
+      : `You lost the match ${tally.enemyWins}-${tally.playerWins}`;
+  stage.innerHTML = '';
+  stage.appendChild(banner);
+  const again = document.createElement('button');
+  again.className = 'btn-battle';
+  again.style.marginTop = '14px';
+  again.textContent = 'Back to Team Select';
+  again.addEventListener('click', renderTeamPicker);
+  stage.appendChild(again);
+}
 
 newCells();
 </script>
