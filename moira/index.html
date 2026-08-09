@@ -1,0 +1,969 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Moira</title>
+<meta name="description" content="A generative art studio: base curves swept through a full rotation until they interfere with themselves, in nine variations.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #FAF9F7;
+    --surface: #F0EEEB;
+    --border: #DDD9D4;
+    --ink: #1C1B19;
+    --muted: #7A766F;
+    --accent: #0047CC;
+    --accent-soft: rgba(0, 71, 204, 0.10);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "IBM Plex Sans", -apple-system, sans-serif;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) {
+    #canvas, #panel { transition-duration: 0.001ms !important; }
+  }
+
+  #canvas {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100vw;
+    height: 100vh;
+    display: block;
+  }
+
+  .mark {
+    position: fixed;
+    top: 24px; left: 24px;
+    z-index: 1;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    pointer-events: none;
+  }
+  .mark b { color: var(--ink); font-weight: 500; }
+
+  #tab {
+    position: fixed;
+    top: 20px; right: 20px;
+    z-index: 3;
+    background: var(--ink);
+    color: var(--bg);
+    border: none;
+    font: 600 10.5px/1 "IBM Plex Sans", sans-serif;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 11px 14px;
+    cursor: pointer;
+    display: none;
+  }
+  #tab:hover { background: var(--accent); }
+  body:not(.panel-open) #tab { display: block; }
+
+  #panel {
+    position: fixed;
+    top: 20px; right: 20px;
+    z-index: 2;
+    width: 232px;
+    max-height: calc(100vh - 40px);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    overflow-y: auto;
+    padding: 16px;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+  }
+  body:not(.panel-open) #panel {
+    opacity: 0;
+    transform: translateY(-4px);
+    pointer-events: none;
+  }
+
+  .panel-head { display: flex; justify-content: flex-end; margin: -4px -4px 10px 0; }
+  .link-btn {
+    font-family: "IBM Plex Sans", sans-serif;
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    background: none;
+    border: none;
+    padding: 4px;
+    cursor: pointer;
+  }
+  .link-btn:hover { color: var(--ink); }
+
+  .section { margin-bottom: 16px; }
+  .section-label {
+    font-family: "IBM Plex Sans", sans-serif;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  select#pattern {
+    width: 100%;
+    font-family: "Manrope", sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--ink);
+    background: var(--bg) url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="9" height="6"><path d="M0 0L4.5 6L9 0Z" fill="%237A766F"/></svg>') no-repeat right 10px center;
+    border: none;
+    padding: 8px 26px 8px 8px;
+    appearance: none;
+    cursor: pointer;
+  }
+  select#pattern:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+  .blurb {
+    font-size: 11px;
+    line-height: 1.45;
+    color: var(--muted);
+    margin: 6px 1px 0;
+  }
+
+  .ctl-row { margin-bottom: 9px; }
+  .ctl-row label {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 11px;
+    color: var(--ink);
+    margin-bottom: 4px;
+  }
+  .ctl-row .v {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 10.5px;
+    color: var(--muted);
+    min-width: 2.4em;
+    text-align: right;
+  }
+  input[type="range"] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 1px;
+    background: var(--border);
+    outline: none;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 11px; height: 11px;
+    border-radius: 50%;
+    background: var(--ink);
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  input[type="range"]:hover::-webkit-slider-thumb,
+  input[type="range"]:focus::-webkit-slider-thumb { background: var(--accent); }
+  input[type="range"]::-moz-range-thumb {
+    width: 11px; height: 11px;
+    border-radius: 50%;
+    border: none;
+    background: var(--ink);
+    cursor: pointer;
+  }
+
+  .color-field {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 11px;
+    color: var(--ink);
+    margin-bottom: 8px;
+  }
+  .color-field:last-of-type { margin-bottom: 0; }
+  .color-field input[type="color"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 22px; height: 22px;
+    padding: 0;
+    border: 1px solid var(--border);
+    background: none;
+    cursor: pointer;
+  }
+  .color-field input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+  .color-field input[type="color"]::-webkit-color-swatch { border: none; }
+  .color-field input[type="color"]::-moz-color-swatch { border: none; }
+
+  .blend-row { display: flex; gap: 4px; margin-top: 10px; }
+  .blend-btn {
+    flex: 1;
+    font-family: "IBM Plex Sans", sans-serif;
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--muted);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    padding: 6px 4px;
+    cursor: pointer;
+  }
+  .blend-btn:hover { color: var(--ink); }
+  .blend-btn.active { color: var(--bg); background: var(--ink); border-color: var(--ink); font-weight: 600; }
+
+  .btn {
+    font-family: "IBM Plex Sans", sans-serif;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--ink);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    padding: 8px 10px;
+    cursor: pointer;
+    text-align: center;
+  }
+  .btn:hover { border-color: var(--ink); }
+  .btn.primary { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  .btn.primary:hover { background: var(--accent); border-color: var(--accent); }
+  .btn.active { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+  .actions { display: flex; gap: 6px; }
+  .actions .btn { flex: 1; }
+
+  .footer {
+    margin-top: 18px;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 10px;
+    letter-spacing: 0.02em;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+</style>
+</head>
+<body class="panel-open">
+
+<canvas id="canvas"></canvas>
+<div class="mark"><b>Moira</b> — a study in interference</div>
+<button id="tab">Controls</button>
+
+<aside id="panel">
+  <div class="panel-head">
+    <button class="link-btn" id="btn-hide">Hide</button>
+  </div>
+
+  <div class="section">
+    <div class="section-label" style="margin-bottom:8px;">Pattern</div>
+    <select id="pattern"></select>
+    <p class="blurb" id="blurb"></p>
+  </div>
+
+  <div class="section" id="geometry"></div>
+
+  <div class="section">
+    <div class="section-label" style="margin-bottom:8px;">Color</div>
+    <label class="color-field">Background <input type="color" id="col-bg"></label>
+    <label class="color-field">Ink A <input type="color" id="col-a"></label>
+    <label class="color-field">Ink B <input type="color" id="col-b"></label>
+    <div class="blend-row" id="blend-row">
+      <button class="blend-btn" data-blend="source-over">Normal</button>
+      <button class="blend-btn" data-blend="multiply">Multiply</button>
+      <button class="blend-btn" data-blend="screen">Screen</button>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label" style="margin-bottom:8px;">Actions</div>
+    <div class="actions">
+      <button class="btn primary" id="btn-randomize">Randomize</button>
+      <button class="btn" id="btn-standardize">Standardize</button>
+    </div>
+    <div class="actions" style="margin-top:6px;">
+      <button class="btn" id="btn-save">Save PNG</button>
+    </div>
+  </div>
+
+  <div class="footer" id="footer"></div>
+</aside>
+
+<script>
+(function () {
+  "use strict";
+
+  var DEFAULT_BG = "#FAF9F7";
+  var DEFAULT_INK = "#1C1B19";
+  var SAMPLES = 110;
+  var SAMPLES_HI = 240; // lissajous/spiral need more points across multiple cycles
+
+  // ---------------------------------------------------------------- helpers
+
+  function mulberry32(seed) {
+    var t = seed >>> 0;
+    return function () {
+      t = (t + 0x6D2B79F5) | 0;
+      var r = Math.imul(t ^ (t >>> 15), 1 | t);
+      r = (r + Math.imul(r ^ (r >>> 7), 61 | r)) ^ r;
+      return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  function runif(rng, a, b) { return a + (b - a) * rng(); }
+  function fmt(v) { return Number.isInteger(v) ? String(v) : v.toFixed(2); }
+
+  // ------------------------------------------------------------- anchor layouts
+
+  function layoutSquare(size) {
+    return [
+      { x: 0, y: 0 }, { x: 0, y: size },
+      { x: size, y: 0 }, { x: size, y: size }
+    ];
+  }
+  function layoutCluster(n, spacing) {
+    n = Math.round(n);
+    if (n <= 1) return [{ x: 0, y: 0 }];
+    if (n === 2) return [{ x: -spacing / 2, y: 0 }, { x: spacing / 2, y: 0 }];
+    var out = [];
+    for (var i = 0; i < n; i++) {
+      var a = (i * 2 * Math.PI) / n - Math.PI / 2;
+      out.push({ x: spacing * Math.cos(a), y: spacing * Math.sin(a) });
+    }
+    return out;
+  }
+  function layoutGrid(rows, cols, spacing) {
+    rows = Math.round(rows); cols = Math.round(cols);
+    var out = [];
+    for (var r = 0; r < rows; r++) {
+      for (var c = 0; c < cols; c++) {
+        out.push({ x: (c - (cols - 1) / 2) * spacing, y: (r - (rows - 1) / 2) * spacing });
+      }
+    }
+    return out;
+  }
+
+  // ------------------------------------------------------------- curve generators
+  // All return absolute-world-space {x:Float64Array, y:Float64Array}, anchor already added in.
+
+  function genBezier(rng, anchor, reach, diagonal) {
+    var p0x = anchor.x, p0y = anchor.y;
+    var p1x = anchor.x + runif(rng, -reach, reach), p1y = anchor.y + runif(rng, -reach, reach);
+    var p2x = anchor.x + runif(rng, -reach, reach), p2y = anchor.y + runif(rng, -reach, reach);
+    var p3x = anchor.x + diagonal, p3y = anchor.y + diagonal;
+    var N = SAMPLES;
+    var x = new Float64Array(N), y = new Float64Array(N);
+    for (var i = 0; i < N; i++) {
+      var t = i / (N - 1), mt = 1 - t;
+      var b0 = mt * mt * mt, b1 = 3 * mt * mt * t, b2 = 3 * mt * t * t, b3 = t * t * t;
+      x[i] = b0 * p0x + b1 * p1x + b2 * p2x + b3 * p3x;
+      y[i] = b0 * p0y + b1 * p1y + b2 * p2y + b3 * p3y;
+    }
+    return { x: x, y: y };
+  }
+
+  function genWave(rng, anchor, length, ampScale) {
+    var amp1 = runif(rng, 0.5, 2.0) * ampScale;
+    var amp2 = runif(rng, 0.3, 1.5) * ampScale;
+    var freq2 = runif(rng, 0.5, 2.0);
+    var phase = runif(rng, 0, 2 * Math.PI);
+    var N = SAMPLES;
+    var x = new Float64Array(N), y = new Float64Array(N);
+    for (var i = 0; i < N; i++) {
+      var xv = (length * i) / (N - 1);
+      x[i] = anchor.x + xv;
+      y[i] = anchor.y + amp1 * Math.sin(xv) + amp2 * Math.sin(freq2 * xv + phase);
+    }
+    return { x: x, y: y };
+  }
+
+  function genPolygon(rng, anchor, sides, radius, irregularity) {
+    sides = Math.round(sides);
+    var baseAngle = runif(rng, 0, 2 * Math.PI);
+    var verts = [];
+    for (var s = 0; s < sides; s++) {
+      var a = baseAngle + (s * 2 * Math.PI) / sides;
+      var r = radius * (1 + runif(rng, -irregularity, irregularity));
+      verts.push([anchor.x + r * Math.cos(a), anchor.y + r * Math.sin(a)]);
+    }
+    verts.push(verts[0]);
+    var perEdge = Math.max(2, Math.round(SAMPLES / sides));
+    var x = [], y = [];
+    for (var e = 0; e < sides; e++) {
+      var x0 = verts[e][0], y0 = verts[e][1], x1 = verts[e + 1][0], y1 = verts[e + 1][1];
+      for (var k = 0; k < perEdge; k++) {
+        var t = k / perEdge;
+        x.push(x0 + (x1 - x0) * t);
+        y.push(y0 + (y1 - y0) * t);
+      }
+    }
+    x.push(verts[0][0]); y.push(verts[0][1]);
+    return { x: Float64Array.from(x), y: Float64Array.from(y) };
+  }
+
+  function genRingLayer(rng, anchor, radius, jitter) {
+    var offAngle = runif(rng, 0, 2 * Math.PI);
+    var offMag = runif(rng, 0, jitter);
+    var cx = anchor.x + offMag * Math.cos(offAngle);
+    var cy = anchor.y + offMag * Math.sin(offAngle);
+    var N = SAMPLES;
+    var x = new Float64Array(N), y = new Float64Array(N);
+    for (var i = 0; i < N; i++) {
+      var a = (2 * Math.PI * i) / (N - 1);
+      x[i] = cx + radius * Math.cos(a);
+      y[i] = cy + radius * Math.sin(a);
+    }
+    return { x: x, y: y };
+  }
+
+  function genSpoke(rng, anchor, length, wobble) {
+    var freq = runif(rng, 2, 5);
+    var N = SAMPLES;
+    var x = new Float64Array(N), y = new Float64Array(N);
+    for (var i = 0; i < N; i++) {
+      var t = i / (N - 1);
+      x[i] = anchor.x + t * length;
+      y[i] = anchor.y + (wobble > 0 ? wobble * Math.sin(t * Math.PI * freq) : 0);
+    }
+    return { x: x, y: y };
+  }
+
+  function genLissajous(rng, anchor, a, b, scale) {
+    a = Math.round(a); b = Math.round(b);
+    var delta = runif(rng, 0, 2 * Math.PI);
+    var N = SAMPLES_HI;
+    var x = new Float64Array(N), y = new Float64Array(N);
+    for (var i = 0; i < N; i++) {
+      var t = (2 * Math.PI * i) / (N - 1);
+      x[i] = anchor.x + scale * Math.sin(a * t + delta);
+      y[i] = anchor.y + scale * Math.sin(b * t);
+    }
+    return { x: x, y: y };
+  }
+
+  function genSpiral(rng, anchor, turns, growth, sign) {
+    var N = SAMPLES_HI;
+    var thetaMax = turns * 2 * Math.PI;
+    var x = new Float64Array(N), y = new Float64Array(N);
+    for (var i = 0; i < N; i++) {
+      var theta = (thetaMax * i) / (N - 1);
+      var r = (growth * theta) / (2 * Math.PI);
+      x[i] = anchor.x + sign * r * Math.cos(theta);
+      y[i] = anchor.y + r * Math.sin(theta);
+    }
+    return { x: x, y: y };
+  }
+
+  var MIXED_KINDS = ["bezier", "wave", "polygon", "spoke", "lissajous", "spiral"];
+  function mixedCurve(rng, anchor) {
+    var kind = MIXED_KINDS[Math.floor(rng() * MIXED_KINDS.length)];
+    switch (kind) {
+      case "bezier": return Object.assign(genBezier(rng, anchor, runif(rng, 2, 6), runif(rng, 5, 10)), { alpha: 0.9 });
+      case "wave": return Object.assign(genWave(rng, anchor, runif(rng, 5, 10), 1), { alpha: 0.6 });
+      case "polygon": return Object.assign(genPolygon(rng, anchor, Math.floor(runif(rng, 3, 8)), runif(rng, 2, 6), 0.1), { alpha: 0.85 });
+      case "spoke": return Object.assign(genSpoke(rng, anchor, runif(rng, 4, 9), 0), { alpha: 1 });
+      case "lissajous": return Object.assign(genLissajous(rng, anchor, Math.floor(runif(rng, 2, 6)), Math.floor(runif(rng, 2, 6)), runif(rng, 2, 5)), { alpha: 0.7 });
+      default: return Object.assign(genSpiral(rng, anchor, runif(rng, 0.2, 0.5), runif(rng, 1, 2.5), rng() < 0.5 ? 1 : -1), { alpha: 0.7 });
+    }
+  }
+
+  // ------------------------------------------------------------------ patterns
+
+  var PATTERNS = {
+    "twin-wave": {
+      label: "Twin Wave", source: "moiredouble.py",
+      blurb: "Two close anchors, each a sine-sum wave, swept a full turn — the tight spacing is what makes it interfere.",
+      layout: function (rng, p) { return layoutCluster(2, p.spacing); },
+      curves: function (rng, anchor, ai, p) {
+        var out = [];
+        // layer lengths (L, L-2, L-4…) and fading alpha generalize moiredouble.py's hardcoded 10/8 and 0.6/0.5
+        for (var i = 0; i < p.layers; i++) {
+          var len = Math.max(2, p.length - 2 * i);
+          var alpha = Math.max(0.15, 0.6 - 0.1 * i);
+          out.push(Object.assign(genWave(rng, anchor, len, p.wildness), { alpha: alpha }));
+        }
+        return out;
+      },
+      controls: [
+        { k: "spacing", label: "Spacing", min: 0.5, max: 8, step: 0.1, def: 3 },
+        { k: "length", label: "Length", min: 4, max: 16, step: 0.2, def: 10 },
+        { k: "wildness", label: "Wildness", min: 0.3, max: 2.5, step: 0.05, def: 1 },
+        { k: "layers", label: "Layers", min: 1, max: 5, step: 1, def: 2 },
+        { k: "density", label: "Density", min: 24, max: 1440, step: 2, def: 720 },
+        { k: "weight", label: "Line Weight", min: 0.2, max: 3, step: 0.05, def: 0.6 },
+        { k: "opacity", label: "Opacity", min: 0.05, max: 1, step: 0.01, def: 0.55 }
+      ]
+    },
+    "bezier-corners": {
+      label: "Bezier Corners", source: "moire.py",
+      blurb: "Random cubic Béziers anchored at four corners, each swept a full turn into its own rosette.",
+      layout: function (rng, p) { return layoutSquare(p.squareSize); },
+      curves: function (rng, anchor, ai, p) {
+        var out = [];
+        for (var i = 0; i < p.layers; i++) out.push(Object.assign(genBezier(rng, anchor, p.reach, p.diagonal), { alpha: 1 }));
+        return out;
+      },
+      controls: [
+        { k: "squareSize", label: "Square Size", min: 6, max: 20, step: 0.5, def: 10 },
+        { k: "reach", label: "Reach", min: 1, max: 10, step: 0.25, def: 5 },
+        { k: "diagonal", label: "Diagonal", min: 4, max: 16, step: 0.5, def: 10 },
+        { k: "layers", label: "Layers", min: 1, max: 4, step: 1, def: 1 },
+        { k: "density", label: "Density", min: 24, max: 1440, step: 2, def: 720 },
+        { k: "weight", label: "Line Weight", min: 0.2, max: 3, step: 0.05, def: 0.55 },
+        { k: "opacity", label: "Opacity", min: 0.05, max: 1, step: 0.01, def: 1 }
+      ]
+    },
+    "polygon-rosette": {
+      label: "Polygon Rosette", source: null,
+      blurb: "A regular polygon swept around its own anchors, beating against its own symmetry.",
+      layout: function (rng, p) { return layoutCluster(p.anchors, p.spacing); },
+      curves: function (rng, anchor, ai, p) {
+        var out = [];
+        for (var i = 0; i < p.layers; i++) out.push(Object.assign(genPolygon(rng, anchor, p.sides, p.radius, p.irregularity), { alpha: 1 }));
+        return out;
+      },
+      controls: [
+        { k: "anchors", label: "Anchors", min: 1, max: 4, step: 1, def: 2 },
+        { k: "spacing", label: "Spacing", min: 0, max: 10, step: 0.2, def: 3 },
+        { k: "sides", label: "Sides", min: 3, max: 10, step: 1, def: 5 },
+        { k: "radius", label: "Radius", min: 2, max: 12, step: 0.2, def: 6 },
+        { k: "irregularity", label: "Irregularity", min: 0, max: 0.4, step: 0.01, def: 0.08 },
+        { k: "layers", label: "Layers", min: 1, max: 3, step: 1, def: 1 },
+        { k: "density", label: "Density", min: 24, max: 1440, step: 2, def: 360 },
+        { k: "weight", label: "Line Weight", min: 0.2, max: 3, step: 0.05, def: 0.6 },
+        { k: "opacity", label: "Opacity", min: 0.05, max: 1, step: 0.01, def: 0.85 }
+      ]
+    },
+    "ring-field": {
+      label: "Ring Field", source: null,
+      blurb: "Concentric, slightly off-center rings from two overlapping anchors — the literal optical moiré.",
+      layout: function (rng, p) { return layoutCluster(2, p.spacing); },
+      curves: function (rng, anchor, ai, p) {
+        var out = [];
+        for (var i = 0; i < p.ringCount; i++) {
+          var radius = (i + 1) * p.ringSpacing;
+          out.push(Object.assign(genRingLayer(rng, anchor, radius, p.jitter), { alpha: 0.5 }));
+        }
+        return out;
+      },
+      controls: [
+        { k: "spacing", label: "Spacing", min: 1, max: 6, step: 0.1, def: 2.5 },
+        { k: "ringCount", label: "Ring Count", min: 3, max: 14, step: 1, def: 7 },
+        { k: "ringSpacing", label: "Ring Spacing", min: 0.4, max: 2.5, step: 0.05, def: 0.9 },
+        { k: "jitter", label: "Offset Jitter", min: 0.05, max: 1.2, step: 0.02, def: 0.3 },
+        { k: "density", label: "Density", min: 24, max: 720, step: 2, def: 240 },
+        { k: "weight", label: "Line Weight", min: 0.2, max: 3, step: 0.05, def: 0.5 },
+        { k: "opacity", label: "Opacity", min: 0.05, max: 1, step: 0.01, def: 0.5 }
+      ]
+    },
+    "radial-spokes": {
+      label: "Radial Spokes", source: null,
+      blurb: "A single straight spoke, swept into a sunburst — the most minimal element in the set.",
+      layout: function (rng, p) { return layoutCluster(p.anchors, p.spacing); },
+      curves: function (rng, anchor, ai, p) {
+        var out = [];
+        for (var i = 0; i < p.layers; i++) out.push(Object.assign(genSpoke(rng, anchor, p.length, p.wobble), { alpha: 1 }));
+        return out;
+      },
+      controls: [
+        { k: "anchors", label: "Anchors", min: 1, max: 4, step: 1, def: 3 },
+        { k: "spacing", label: "Spacing", min: 0, max: 8, step: 0.2, def: 4 },
+        { k: "length", label: "Spoke Length", min: 3, max: 14, step: 0.2, def: 9 },
+        { k: "wobble", label: "Wobble", min: 0, max: 1.5, step: 0.02, def: 0 },
+        { k: "layers", label: "Layers", min: 1, max: 3, step: 1, def: 1 },
+        { k: "density", label: "Density", min: 8, max: 360, step: 1, def: 72 },
+        { k: "weight", label: "Line Weight", min: 0.15, max: 2, step: 0.05, def: 0.5 },
+        { k: "opacity", label: "Opacity", min: 0.05, max: 1, step: 0.01, def: 0.9 }
+      ]
+    },
+    "lissajous-knot": {
+      label: "Lissajous Knot", source: null,
+      blurb: "A harmonic Lissajous curve, swept into a braided rosette — a different kind of interference than a sine sum.",
+      layout: function (rng, p) { return layoutCluster(p.anchors, p.spacing); },
+      curves: function (rng, anchor, ai, p) {
+        var out = [];
+        for (var i = 0; i < p.layers; i++) out.push(Object.assign(genLissajous(rng, anchor, p.freqA, p.freqB, p.scale), { alpha: Math.max(0.3, 0.75 - 0.15 * i) }));
+        return out;
+      },
+      controls: [
+        { k: "anchors", label: "Anchors", min: 1, max: 3, step: 1, def: 2 },
+        { k: "spacing", label: "Spacing", min: 0, max: 8, step: 0.2, def: 4 },
+        { k: "freqA", label: "Freq A", min: 1, max: 9, step: 1, def: 3 },
+        { k: "freqB", label: "Freq B", min: 1, max: 9, step: 1, def: 4 },
+        { k: "scale", label: "Scale", min: 2, max: 10, step: 0.2, def: 5 },
+        { k: "layers", label: "Layers", min: 1, max: 3, step: 1, def: 1 },
+        { k: "density", label: "Density", min: 24, max: 720, step: 2, def: 180 },
+        { k: "weight", label: "Line Weight", min: 0.15, max: 2, step: 0.05, def: 0.5 },
+        { k: "opacity", label: "Opacity", min: 0.05, max: 1, step: 0.01, def: 0.75 }
+      ]
+    },
+    "spiral-bloom": {
+      label: "Spiral Bloom", source: null,
+      blurb: "A spiral arm, mirrored into two, swept into a bloom of distinct petals — too many turns or too dense a sweep and it fills solid, so both stay low.",
+      layout: function (rng, p) { return layoutCluster(p.anchors, p.spacing); },
+      curves: function (rng, anchor, ai, p) {
+        var out = [];
+        for (var i = 0; i < p.layers; i++) {
+          var sign = i % 2 === 0 ? 1 : -1;
+          out.push(Object.assign(genSpiral(rng, anchor, p.turns, p.growth, sign), { alpha: 0.55 }));
+        }
+        return out;
+      },
+      controls: [
+        { k: "anchors", label: "Anchors", min: 1, max: 3, step: 1, def: 1 },
+        { k: "spacing", label: "Spacing", min: 0, max: 8, step: 0.2, def: 5 },
+        { k: "turns", label: "Turns", min: 1, max: 4, step: 0.1, def: 1.8 },
+        { k: "growth", label: "Growth", min: 0.3, max: 3, step: 0.05, def: 1.4 },
+        { k: "layers", label: "Layers", min: 1, max: 4, step: 1, def: 2 },
+        { k: "density", label: "Density", min: 3, max: 60, step: 1, def: 11 },
+        { k: "weight", label: "Line Weight", min: 0.15, max: 2, step: 0.05, def: 0.55 },
+        { k: "opacity", label: "Opacity", min: 0.05, max: 1, step: 0.01, def: 0.85 }
+      ]
+    },
+    "grid-tapestry": {
+      label: "Grid Tapestry", source: null,
+      blurb: "The four-corner idea from Bezier Corners, extended into a woven grid of anchors.",
+      layout: function (rng, p) { return layoutGrid(p.rows, p.cols, p.cellSpacing); },
+      curves: function (rng, anchor, ai, p) {
+        var out = [];
+        var diagonal = p.cellSpacing * 0.8;
+        for (var i = 0; i < p.layers; i++) out.push(Object.assign(genBezier(rng, anchor, p.reach, diagonal), { alpha: 1 }));
+        return out;
+      },
+      controls: [
+        { k: "rows", label: "Rows", min: 2, max: 6, step: 1, def: 3 },
+        { k: "cols", label: "Columns", min: 2, max: 6, step: 1, def: 3 },
+        { k: "cellSpacing", label: "Cell Spacing", min: 4, max: 14, step: 0.5, def: 8 },
+        { k: "reach", label: "Reach", min: 1, max: 8, step: 0.25, def: 4 },
+        { k: "layers", label: "Layers", min: 1, max: 2, step: 1, def: 1 },
+        { k: "density", label: "Density", min: 24, max: 360, step: 2, def: 120 },
+        { k: "weight", label: "Line Weight", min: 0.15, max: 2, step: 0.05, def: 0.5 },
+        { k: "opacity", label: "Opacity", min: 0.05, max: 1, step: 0.01, def: 0.9 }
+      ]
+    },
+    "mixed-field": {
+      label: "Mixed Field", source: null,
+      blurb: "Several anchors, each drawing a different base shape at random — every reroll mixes the family.",
+      layout: function (rng, p) { return layoutCluster(p.anchors, p.spacing); },
+      curves: function (rng, anchor, ai, p) {
+        var out = [];
+        for (var i = 0; i < p.layers; i++) out.push(mixedCurve(rng, anchor));
+        return out;
+      },
+      controls: [
+        { k: "anchors", label: "Anchors", min: 3, max: 8, step: 1, def: 5 },
+        { k: "spacing", label: "Spacing", min: 3, max: 14, step: 0.2, def: 8 },
+        { k: "layers", label: "Layers", min: 1, max: 3, step: 1, def: 1 },
+        { k: "density", label: "Density", min: 24, max: 480, step: 2, def: 180 },
+        { k: "weight", label: "Line Weight", min: 0.15, max: 2, step: 0.05, def: 0.5 },
+        { k: "opacity", label: "Opacity", min: 0.05, max: 1, step: 0.01, def: 0.75 }
+      ]
+    }
+  };
+  var PATTERN_ORDER = [
+    "twin-wave", "bezier-corners", "polygon-rosette", "ring-field", "radial-spokes",
+    "lissajous-knot", "spiral-bloom", "grid-tapestry", "mixed-field"
+  ];
+
+  // ---------------------------------------------------------------- render
+
+  function paintFrame(ctx, devW, devH, strokes, bbox, style) {
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.globalCompositeOperation = "source-over";
+    ctx.fillStyle = style.bg;
+    ctx.fillRect(0, 0, devW, devH);
+    var bw = Math.max(1e-6, bbox.maxX - bbox.minX);
+    var bh = Math.max(1e-6, bbox.maxY - bbox.minY);
+    var pad = 0.07 * Math.min(devW, devH);
+    var scale = Math.min((devW - 2 * pad) / bw, (devH - 2 * pad) / bh);
+    var cx = (bbox.minX + bbox.maxX) / 2, cy = (bbox.minY + bbox.maxY) / 2;
+    var tx = devW / 2 - scale * cx, ty = devH / 2 - scale * cy;
+    ctx.setTransform(scale, 0, 0, scale, tx, ty);
+    ctx.lineJoin = "round";
+    ctx.lineCap = "round";
+    // lineWidth is specified in the transformed (world) space, so divide by
+    // scale to keep the ON-SCREEN thickness equal to style.weight device px
+    ctx.lineWidth = style.weight / scale;
+    // Multiply/Screen blend modes are what make Ink A and Ink B genuinely
+    // MIX where strokes overlap, rather than just alpha-stacking one on top
+    // of the other the way source-over does.
+    ctx.globalCompositeOperation = style.blend;
+    // group by (alpha, ink) so each combination gets exactly one stroke() call
+    var groups = new Map();
+    for (var i = 0; i < strokes.length; i++) {
+      var s = strokes[i];
+      var a = Math.round(s.alpha * style.opacity * 1000) / 1000;
+      var key = a + "_" + s.color;
+      var g = groups.get(key);
+      if (!g) { g = { path: new Path2D(), alpha: a, color: s.color === "b" ? style.colorB : style.colorA }; groups.set(key, g); }
+      g.path.moveTo(s.x[0], s.y[0]);
+      for (var j = 1; j < s.x.length; j++) g.path.lineTo(s.x[j], s.y[j]);
+    }
+    groups.forEach(function (g) {
+      ctx.globalAlpha = g.alpha;
+      ctx.strokeStyle = g.color;
+      ctx.stroke(g.path);
+    });
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = "source-over";
+  }
+
+  // ---------------------------------------------------------------- state + wiring
+
+  var canvas = document.getElementById("canvas");
+  var ctx = canvas.getContext("2d");
+  var patternSelect = document.getElementById("pattern");
+  var geometryEl = document.getElementById("geometry");
+  var blurbEl = document.getElementById("blurb");
+  var footerEl = document.getElementById("footer");
+  var tab = document.getElementById("tab");
+  var colBg = document.getElementById("col-bg");
+  var colA = document.getElementById("col-a");
+  var colB = document.getElementById("col-b");
+  var blendRow = document.getElementById("blend-row");
+
+  var state = {
+    patternKey: "twin-wave",
+    seed: Math.floor(Math.random() * 1e6),
+    params: {},
+    bgColor: DEFAULT_BG,
+    colorA: DEFAULT_INK,
+    colorB: DEFAULT_INK,
+    blend: "source-over",
+    standardize: false,
+    strokes: null,
+    bbox: null,
+    anchorCount: 0,
+    strokeCount: 0
+  };
+
+  function defaultsFor(key) {
+    var out = {};
+    PATTERNS[key].controls.forEach(function (c) { out[c.k] = c.def; });
+    return out;
+  }
+
+  function initColorControls() {
+    colBg.value = state.bgColor;
+    colA.value = state.colorA;
+    colB.value = state.colorB;
+    colBg.addEventListener("input", function () { state.bgColor = colBg.value; draw(); });
+    colA.addEventListener("input", function () { state.colorA = colA.value; draw(); });
+    colB.addEventListener("input", function () { state.colorB = colB.value; draw(); });
+    setBlendActive(state.blend);
+    blendRow.querySelectorAll(".blend-btn").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        state.blend = btn.dataset.blend;
+        setBlendActive(state.blend);
+        draw();
+      });
+    });
+  }
+  function setBlendActive(blend) {
+    blendRow.querySelectorAll(".blend-btn").forEach(function (btn) {
+      btn.classList.toggle("active", btn.dataset.blend === blend);
+    });
+  }
+
+  function buildPanel() {
+    var p = PATTERNS[state.patternKey];
+    blurbEl.textContent = p.blurb + (p.source ? " Ported from " + p.source + "." : "");
+    geometryEl.innerHTML = "";
+    p.controls.forEach(function (c) {
+      var row = document.createElement("div");
+      row.className = "ctl-row";
+      var label = document.createElement("label");
+      label.setAttribute("for", "ctl-" + c.k);
+      label.innerHTML = c.label + ' <span class="v" id="val-' + c.k + '">' + fmt(state.params[c.k]) + "</span>";
+      var input = document.createElement("input");
+      input.type = "range";
+      input.id = "ctl-" + c.k;
+      input.min = c.min; input.max = c.max; input.step = c.step;
+      input.value = state.params[c.k];
+      input.addEventListener("input", function () {
+        var v = parseFloat(input.value);
+        state.params[c.k] = v;
+        document.getElementById("val-" + c.k).textContent = fmt(v);
+        scheduleRegenerate();
+      });
+      row.appendChild(label);
+      row.appendChild(input);
+      geometryEl.appendChild(row);
+    });
+  }
+
+  function updateFooter() {
+    footerEl.textContent =
+      "SEED " + state.seed + " · " + state.anchorCount + " ANCHORS · " + state.strokeCount + " STROKES";
+  }
+
+  function regenerateGeometry() {
+    var p = PATTERNS[state.patternKey];
+    var rng = mulberry32(state.seed);
+    var anchors = p.layout(rng, state.params);
+    var density = Math.max(1, Math.round(state.params.density || 1));
+    var step = (2 * Math.PI) / density;
+    var strokes = [];
+    var bbox = { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity };
+
+    // Standardize: generate the curve(s) once against the first anchor, then
+    // translate that same shape to every other anchor instead of letting
+    // each anchor roll its own independent random curve.
+    var templateCurves = state.standardize && anchors.length ? p.curves(rng, anchors[0], 0, state.params) : null;
+
+    anchors.forEach(function (anchor, ai) {
+      var curves;
+      if (templateCurves) {
+        var ox = anchor.x - anchors[0].x, oy = anchor.y - anchors[0].y;
+        curves = templateCurves.map(function (c) {
+          var n = c.x.length;
+          var tx = new Float64Array(n), ty = new Float64Array(n);
+          for (var k = 0; k < n; k++) { tx[k] = c.x[k] + ox; ty[k] = c.y[k] + oy; }
+          return { x: tx, y: ty, alpha: c.alpha };
+        });
+      } else {
+        curves = p.curves(rng, anchor, ai, state.params);
+      }
+      curves.forEach(function (c, ci) {
+        var colorKey = ci % 2 === 0 ? "a" : "b";
+        // sweeping a curve through a full turn traces (at worst) the disc of
+        // its farthest point from the anchor — cheaper than scanning every
+        // rotated point just to find the bounding box
+        var r = 0;
+        for (var i = 0; i < c.x.length; i++) {
+          var dx = c.x[i] - anchor.x, dy = c.y[i] - anchor.y;
+          var d = Math.hypot(dx, dy);
+          if (d > r) r = d;
+        }
+        bbox.minX = Math.min(bbox.minX, anchor.x - r);
+        bbox.maxX = Math.max(bbox.maxX, anchor.x + r);
+        bbox.minY = Math.min(bbox.minY, anchor.y - r);
+        bbox.maxY = Math.max(bbox.maxY, anchor.y + r);
+
+        for (var s = 0; s < density; s++) {
+          var ang = s * step;
+          var cos = Math.cos(ang), sin = Math.sin(ang);
+          var n = c.x.length;
+          var rx = new Float64Array(n), ry = new Float64Array(n);
+          for (var i2 = 0; i2 < n; i2++) {
+            var dx2 = c.x[i2] - anchor.x, dy2 = c.y[i2] - anchor.y;
+            rx[i2] = anchor.x + dx2 * cos - dy2 * sin;
+            ry[i2] = anchor.y + dx2 * sin + dy2 * cos;
+          }
+          strokes.push({ x: rx, y: ry, alpha: c.alpha, color: colorKey });
+        }
+      });
+    });
+
+    if (!isFinite(bbox.minX)) bbox = { minX: -1, maxX: 1, minY: -1, maxY: 1 };
+    state.strokes = strokes;
+    state.bbox = bbox;
+    state.anchorCount = anchors.length;
+    state.strokeCount = strokes.length;
+    updateFooter();
+  }
+
+  function fitCanvas() {
+    var dpr = window.devicePixelRatio || 1;
+    var w = canvas.clientWidth, h = canvas.clientHeight;
+    canvas.width = Math.round(w * dpr);
+    canvas.height = Math.round(h * dpr);
+  }
+
+  function currentStyle() {
+    return {
+      bg: state.bgColor, colorA: state.colorA, colorB: state.colorB, blend: state.blend,
+      weight: state.params.weight, opacity: state.params.opacity
+    };
+  }
+
+  function draw() {
+    if (!state.strokes) return;
+    fitCanvas();
+    paintFrame(ctx, canvas.width, canvas.height, state.strokes, state.bbox, currentStyle());
+  }
+
+  var pendingFrame = null;
+  function scheduleRegenerate() {
+    if (pendingFrame) return;
+    pendingFrame = requestAnimationFrame(function () {
+      pendingFrame = null;
+      regenerateGeometry();
+      draw();
+    });
+  }
+
+  function loadPattern(key, keepSeed) {
+    state.patternKey = key;
+    state.params = defaultsFor(key);
+    if (!keepSeed) state.seed = Math.floor(Math.random() * 1e6);
+    buildPanel();
+    regenerateGeometry();
+    draw();
+  }
+
+  function populatePatternSelect() {
+    PATTERN_ORDER.forEach(function (key) {
+      var opt = document.createElement("option");
+      opt.value = key;
+      opt.textContent = PATTERNS[key].label;
+      patternSelect.appendChild(opt);
+    });
+    patternSelect.value = state.patternKey;
+    patternSelect.addEventListener("change", function () {
+      loadPattern(patternSelect.value, false);
+    });
+  }
+
+  document.getElementById("btn-randomize").addEventListener("click", function () {
+    state.seed = Math.floor(Math.random() * 1e6);
+    regenerateGeometry();
+    draw();
+  });
+  var stdBtn = document.getElementById("btn-standardize");
+  stdBtn.addEventListener("click", function () {
+    state.standardize = !state.standardize;
+    stdBtn.classList.toggle("active", state.standardize);
+    regenerateGeometry();
+    draw();
+  });
+  document.getElementById("btn-save").addEventListener("click", exportPNG);
+
+  function exportPNG() {
+    var scaleFactor = 3;
+    var w = Math.round(canvas.clientWidth * scaleFactor);
+    var h = Math.round(canvas.clientHeight * scaleFactor);
+    var off = document.createElement("canvas");
+    off.width = w; off.height = h;
+    var octx = off.getContext("2d");
+    paintFrame(octx, w, h, state.strokes, state.bbox, currentStyle());
+    off.toBlob(function (blob) {
+      var a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "moira-" + state.patternKey + "-" + state.seed + ".png";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    }, "image/png");
+  }
+
+  function setPanelOpen(open) {
+    document.body.classList.toggle("panel-open", open);
+  }
+  tab.addEventListener("click", function () { setPanelOpen(true); });
+  document.getElementById("btn-hide").addEventListener("click", function () { setPanelOpen(false); });
+  window.addEventListener("resize", function () {
+    requestAnimationFrame(draw);
+  });
+
+  document.addEventListener("keydown", function (e) {
+    var tag = (e.target && e.target.tagName) || "";
+    if (tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA") return;
+    var k = e.key.toLowerCase();
+    if (k === "h") setPanelOpen(!document.body.classList.contains("panel-open"));
+    else if (k === "r") document.getElementById("btn-randomize").click();
+    else if (k === "s") exportPNG();
+  });
+
+  populatePatternSelect();
+  initColorControls();
+  loadPattern(state.patternKey, true);
+})();
+</script>
+</body>
+</html>
