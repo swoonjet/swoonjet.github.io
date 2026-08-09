@@ -38,7 +38,10 @@
     width: 100vw;
     height: 100vh;
     display: block;
+    cursor: grab;
+    touch-action: none;
   }
+  #canvas.dragging { cursor: grabbing; }
 
   .mark {
     position: fixed;
@@ -113,7 +116,7 @@
     color: var(--muted);
   }
 
-  select#pattern {
+  select#pattern, select#export-size {
     width: 100%;
     font-family: "Manrope", sans-serif;
     font-weight: 700;
@@ -125,7 +128,14 @@
     appearance: none;
     cursor: pointer;
   }
-  select#pattern:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  select#export-size {
+    font-family: "IBM Plex Mono", monospace;
+    font-weight: 500;
+    font-size: 11px;
+    padding: 7px 24px 7px 8px;
+    margin-bottom: 6px;
+  }
+  select#pattern:focus-visible, select#export-size:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
   .blurb {
     font-size: 11px;
@@ -277,12 +287,14 @@
       <button class="btn primary" id="btn-randomize">Randomize</button>
       <button class="btn" id="btn-standardize">Standardize</button>
     </div>
-    <div class="actions" style="margin-top:6px;">
+    <select id="export-size" style="margin-top:6px;"></select>
+    <div class="actions">
       <button class="btn" id="btn-save">Save PNG</button>
     </div>
   </div>
 
   <div class="footer" id="footer"></div>
+  <button class="link-btn" id="btn-reset-view" style="padding:4px 0 0;">Reset View</button>
 </aside>
 
 <script>
@@ -662,18 +674,33 @@
 
   // ---------------------------------------------------------------- render
 
-  function paintFrame(ctx, devW, devH, strokes, bbox, style) {
+  // The "fit" is the pure auto-frame (scale + center) from bbox and canvas
+  // size alone. The view (zoom + world-space pan offset) composes on top of
+  // it. Pan is stored in WORLD units rather than screen pixels specifically
+  // so it stays correct across window resizes and across export at a
+  // different resolution than the live canvas — no rescaling needed.
+  function computeFit(devW, devH, bbox) {
+    var bw = Math.max(1e-6, bbox.maxX - bbox.minX);
+    var bh = Math.max(1e-6, bbox.maxY - bbox.minY);
+    var pad = 0.07 * Math.min(devW, devH);
+    var fitScale = Math.min((devW - 2 * pad) / bw, (devH - 2 * pad) / bh);
+    return { fitScale: fitScale, cx: (bbox.minX + bbox.maxX) / 2, cy: (bbox.minY + bbox.maxY) / 2 };
+  }
+  function computeTransform(devW, devH, bbox, view) {
+    var fit = computeFit(devW, devH, bbox);
+    var scale = fit.fitScale * view.zoom;
+    var focusX = fit.cx + view.panX, focusY = fit.cy + view.panY;
+    return { scale: scale, tx: devW / 2 - scale * focusX, ty: devH / 2 - scale * focusY, fit: fit };
+  }
+
+  function paintFrame(ctx, devW, devH, strokes, bbox, style, view) {
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.globalCompositeOperation = "source-over";
     ctx.fillStyle = style.bg;
     ctx.fillRect(0, 0, devW, devH);
-    var bw = Math.max(1e-6, bbox.maxX - bbox.minX);
-    var bh = Math.max(1e-6, bbox.maxY - bbox.minY);
-    var pad = 0.07 * Math.min(devW, devH);
-    var scale = Math.min((devW - 2 * pad) / bw, (devH - 2 * pad) / bh);
-    var cx = (bbox.minX + bbox.maxX) / 2, cy = (bbox.minY + bbox.maxY) / 2;
-    var tx = devW / 2 - scale * cx, ty = devH / 2 - scale * cy;
-    ctx.setTransform(scale, 0, 0, scale, tx, ty);
+    var t = computeTransform(devW, devH, bbox, view);
+    var scale = t.scale;
+    ctx.setTransform(scale, 0, 0, scale, t.tx, t.ty);
     ctx.lineJoin = "round";
     ctx.lineCap = "round";
     // lineWidth is specified in the transformed (world) space, so divide by
@@ -726,6 +753,7 @@
     colorB: DEFAULT_INK,
     blend: "source-over",
     standardize: false,
+    view: { zoom: 1, panX: 0, panY: 0 },
     strokes: null,
     bbox: null,
     anchorCount: 0,
@@ -789,7 +817,14 @@
 
   function updateFooter() {
     footerEl.textContent =
-      "SEED " + state.seed + " · " + state.anchorCount + " ANCHORS · " + state.strokeCount + " STROKES";
+      "SEED " + state.seed + " · " + state.anchorCount + " ANCHORS · " + state.strokeCount + " STROKES" +
+      " · " + Math.round(state.view.zoom * 100) + "% ZOOM";
+  }
+
+  function resetView() {
+    state.view.zoom = 1;
+    state.view.panX = 0;
+    state.view.panY = 0;
   }
 
   function regenerateGeometry() {
@@ -855,7 +890,6 @@
     state.bbox = bbox;
     state.anchorCount = anchors.length;
     state.strokeCount = strokes.length;
-    updateFooter();
   }
 
   function fitCanvas() {
@@ -875,7 +909,8 @@
   function draw() {
     if (!state.strokes) return;
     fitCanvas();
-    paintFrame(ctx, canvas.width, canvas.height, state.strokes, state.bbox, currentStyle());
+    paintFrame(ctx, canvas.width, canvas.height, state.strokes, state.bbox, currentStyle(), state.view);
+    updateFooter();
   }
 
   var pendingFrame = null;
@@ -892,6 +927,7 @@
     state.patternKey = key;
     state.params = defaultsFor(key);
     if (!keepSeed) state.seed = Math.floor(Math.random() * 1e6);
+    resetView();
     buildPanel();
     regenerateGeometry();
     draw();
@@ -924,22 +960,56 @@
   });
   document.getElementById("btn-save").addEventListener("click", exportPNG);
 
+  var EXPORT_PRESETS = [
+    { label: "2000 px", long: 2000 },
+    { label: "4000 px", long: 4000 },
+    { label: "8000 px — high-res", long: 8000 },
+    { label: "12000 px — max", long: 12000 }
+  ];
+  function populateExportSelect() {
+    var sel = document.getElementById("export-size");
+    EXPORT_PRESETS.forEach(function (p, i) {
+      var opt = document.createElement("option");
+      opt.value = p.long;
+      opt.textContent = p.label;
+      if (i === 1) opt.selected = true; // default to 4000px
+      sel.appendChild(opt);
+    });
+  }
+
   function exportPNG() {
-    var scaleFactor = 3;
-    var w = Math.round(canvas.clientWidth * scaleFactor);
-    var h = Math.round(canvas.clientHeight * scaleFactor);
-    var off = document.createElement("canvas");
-    off.width = w; off.height = h;
-    var octx = off.getContext("2d");
-    paintFrame(octx, w, h, state.strokes, state.bbox, currentStyle());
-    off.toBlob(function (blob) {
-      var a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = "moira-" + state.patternKey + "-" + state.seed + ".png";
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-    }, "image/png");
+    var longEdge = parseInt(document.getElementById("export-size").value, 10);
+    var aspect = canvas.clientWidth / canvas.clientHeight;
+    var w = aspect >= 1 ? longEdge : Math.round(longEdge * aspect);
+    var h = aspect >= 1 ? Math.round(longEdge / aspect) : longEdge;
+    // exports capture exactly what's currently framed on screen (same
+    // zoom/pan), just at a higher pixel density — line weight is scaled by
+    // that same density ratio so it prints proportionally, not hairline-thin
+    var weightScale = w / canvas.width;
+
+    var btn = document.getElementById("btn-save");
+    var originalLabel = btn.textContent;
+    btn.textContent = "Rendering…";
+    btn.disabled = true;
+
+    setTimeout(function () {
+      var off = document.createElement("canvas");
+      off.width = w; off.height = h;
+      var octx = off.getContext("2d");
+      var style = currentStyle();
+      style.weight = style.weight * weightScale;
+      paintFrame(octx, w, h, state.strokes, state.bbox, style, state.view);
+      off.toBlob(function (blob) {
+        var a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = "moira-" + state.patternKey + "-" + state.seed + "-" + w + "x" + h + ".png";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        btn.textContent = originalLabel;
+        btn.disabled = false;
+      }, "image/png");
+    }, 30);
   }
 
   function setPanelOpen(open) {
@@ -951,6 +1021,59 @@
     requestAnimationFrame(draw);
   });
 
+  // ------------------------------------------------------------ zoom + pan
+
+  var ZOOM_MIN = 0.4, ZOOM_MAX = 40;
+
+  canvas.addEventListener("wheel", function (e) {
+    if (!state.bbox) return;
+    e.preventDefault();
+    var rect = canvas.getBoundingClientRect();
+    var mx = (e.clientX - rect.left) * (canvas.width / rect.width);
+    var my = (e.clientY - rect.top) * (canvas.height / rect.height);
+    var before = computeTransform(canvas.width, canvas.height, state.bbox, state.view);
+    var worldX = (mx - before.tx) / before.scale, worldY = (my - before.ty) / before.scale;
+
+    var zoomFactor = Math.exp(-e.deltaY * 0.0015);
+    state.view.zoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, state.view.zoom * zoomFactor));
+
+    // keep the point under the cursor fixed on screen while the zoom changes
+    var newScale = before.fit.fitScale * state.view.zoom;
+    state.view.panX = worldX - before.fit.cx - (mx - canvas.width / 2) / newScale;
+    state.view.panY = worldY - before.fit.cy - (my - canvas.height / 2) / newScale;
+    draw();
+  }, { passive: false });
+
+  var dragging = false, dragStart = null, panStart = null, dragScale = 1;
+  canvas.addEventListener("pointerdown", function (e) {
+    if (!state.bbox) return;
+    dragging = true;
+    canvas.classList.add("dragging");
+    canvas.setPointerCapture(e.pointerId);
+    dragStart = { x: e.clientX, y: e.clientY };
+    panStart = { x: state.view.panX, y: state.view.panY };
+    dragScale = computeTransform(canvas.width, canvas.height, state.bbox, state.view).scale;
+  });
+  canvas.addEventListener("pointermove", function (e) {
+    if (!dragging) return;
+    var rect = canvas.getBoundingClientRect();
+    var devicePerCss = canvas.width / rect.width;
+    var dx = (e.clientX - dragStart.x) * devicePerCss;
+    var dy = (e.clientY - dragStart.y) * devicePerCss;
+    state.view.panX = panStart.x - dx / dragScale;
+    state.view.panY = panStart.y - dy / dragScale;
+    draw();
+  });
+  function endDrag() {
+    if (!dragging) return;
+    dragging = false;
+    canvas.classList.remove("dragging");
+  }
+  canvas.addEventListener("pointerup", endDrag);
+  canvas.addEventListener("pointercancel", endDrag);
+  canvas.addEventListener("dblclick", function () { resetView(); draw(); });
+  document.getElementById("btn-reset-view").addEventListener("click", function () { resetView(); draw(); });
+
   document.addEventListener("keydown", function (e) {
     var tag = (e.target && e.target.tagName) || "";
     if (tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA") return;
@@ -958,10 +1081,12 @@
     if (k === "h") setPanelOpen(!document.body.classList.contains("panel-open"));
     else if (k === "r") document.getElementById("btn-randomize").click();
     else if (k === "s") exportPNG();
+    else if (e.key === "0") { resetView(); draw(); }
   });
 
   populatePatternSelect();
   initColorControls();
+  populateExportSelect();
   loadPattern(state.patternKey, true);
 })();
 </script>
