@@ -1,0 +1,1219 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Petri</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; padding: 0; height: 100%; background: #DFE7EE; overflow: hidden; }
+  canvas { position: fixed; inset: 0; display: block; }
+  #c { cursor: crosshair; }
+  #c2 { cursor: default; }
+  .hidden { display: none !important; }
+
+  /* ---------- shared tab bar ---------- */
+  .tabbar { position: fixed; top: 48px; left: 48px; z-index: 5; display: flex; gap: 24px; }
+  .tabbar button {
+    font: 500 11px/1 "IBM Plex Mono", ui-monospace, monospace;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #7A766F;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    padding: 0 0 8px 0;
+    cursor: pointer;
+  }
+  .tabbar button.active { color: #1C1B19; border-bottom-color: #0047CC; }
+  .tabbar button:hover:not(.active) { color: #1C1B19; }
+
+  /* ---------- specimen card (shared by both tabs) ---------- */
+  .specimen-card {
+    position: fixed; bottom: 48px; right: 48px; z-index: 4;
+    width: 240px;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    border-top: 1px solid #DDD9D4;
+    padding-top: 24px;
+  }
+  .sc-header {
+    display: flex; justify-content: space-between; align-items: baseline;
+    font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
+    color: #7A766F; margin-bottom: 16px;
+  }
+  .sc-header .v { color: #1C1B19; font-variant-numeric: tabular-nums; letter-spacing: 0; }
+  .sc-row { margin-bottom: 16px; }
+  .sc-row label {
+    display: flex; justify-content: space-between; align-items: baseline;
+    font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
+    color: #7A766F; margin-bottom: 8px;
+  }
+  .sc-row .v { font-variant-numeric: tabular-nums; color: #1C1B19; letter-spacing: 0; text-transform: none; }
+  .specimen-card input[type=range] {
+    -webkit-appearance: none; width: 100%; height: 1px; background: #DDD9D4; outline: none;
+  }
+  .specimen-card input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 8px; height: 8px; border-radius: 0;
+    background: #1C1B19; cursor: pointer;
+  }
+  .specimen-card input[type=range]:hover::-webkit-slider-thumb,
+  .specimen-card input[type=range]:focus::-webkit-slider-thumb { background: #0047CC; }
+  .specimen-card input[type=range]::-moz-range-thumb {
+    width: 8px; height: 8px; border-radius: 0; border: none; background: #1C1B19; cursor: pointer;
+  }
+  .sc-btn {
+    margin-top: 32px; width: 100%; padding: 8px 10px;
+    font: 500 11px/1 "IBM Plex Mono", ui-monospace, monospace;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    color: #1C1B19; background: none; border: 1px solid #DDD9D4; cursor: pointer;
+  }
+  .sc-btn:hover, .sc-btn:focus-visible { color: #0047CC; border-color: #0047CC; }
+  .sc-stat {
+    display: flex; justify-content: space-between; align-items: baseline;
+    font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
+    color: #7A766F; margin-top: 16px;
+  }
+  .sc-stat .v { font-variant-numeric: tabular-nums; color: #1C1B19; letter-spacing: 0; text-transform: none; }
+  .sc-hint {
+    margin: 16px 0 0; font-size: 10.5px; line-height: 1.5;
+    color: #7A766F; letter-spacing: 0; text-transform: none;
+  }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<canvas id="c2" class="hidden"></canvas>
+
+<nav class="tabbar" id="tabbar">
+  <button class="active" data-tab="prototype">01 — Prototype</button>
+  <button data-tab="specimen">02 — Specimen</button>
+</nav>
+
+<div class="specimen-card" id="hud-prototype">
+  <div class="sc-header"><span>Prototype</span><span class="v" id="proto-pop">5</span></div>
+  <div class="sc-row">
+    <label>Wobble <span class="v" id="v-wobble">1.00</span></label>
+    <input id="wobble" type="range" min="0" max="2" step="0.05" value="1">
+  </div>
+  <div class="sc-row">
+    <label>Pods <span class="v" id="v-pod">1.20</span></label>
+    <input id="pod" type="range" min="0" max="2" step="0.05" value="1.2">
+  </div>
+  <div class="sc-row">
+    <label>Speed <span class="v" id="v-speed">1.00</span></label>
+    <input id="speed" type="range" min="0" max="2" step="0.05" value="1">
+  </div>
+  <div class="sc-row">
+    <label>Count <span class="v" id="v-count">5</span></label>
+    <input id="count" type="range" min="1" max="10" step="1" value="5">
+  </div>
+  <button class="sc-btn" id="regen">New Organisms</button>
+  <div class="sc-stat"><span>Largest</span><span class="v" id="stat-largest">–</span></div>
+  <p class="sc-hint">Cursor attracts. Click open water to drop one. Bigger eats smaller and grows.</p>
+</div>
+
+<aside class="specimen-card hidden" id="hud-specimen">
+  <div class="sc-header"><span>Specimen</span><span class="v" id="sc-seed">000000</span></div>
+  <div class="sc-row">
+    <label>Wobble <span class="v" id="sv-wobble">1.00</span></label>
+    <input type="range" id="s-wobble" min="0" max="2" step="0.05" value="1">
+  </div>
+  <div class="sc-row">
+    <label>Reach <span class="v" id="sv-reach">1.00</span></label>
+    <input type="range" id="s-reach" min="0.2" max="2" step="0.05" value="1">
+  </div>
+  <div class="sc-row">
+    <label>Detail <span class="v" id="sv-detail">1.00</span></label>
+    <input type="range" id="s-detail" min="0.4" max="2" step="0.05" value="1">
+  </div>
+  <button class="sc-btn" id="s-regen">New Specimen</button>
+</aside>
+
+<script>
+var App = { activeTab: "prototype" };
+
+// ================================================================
+// PROTOTYPE — unchanged behavior, just pauses while its tab is hidden
+// ================================================================
+(function () {
+  "use strict";
+
+  // ------------------------------------------------------------ noise
+
+  function mulberry32(seed) {
+    var t = seed >>> 0;
+    return function () {
+      t = (t + 0x6D2B79F5) | 0;
+      var r = Math.imul(t ^ (t >>> 15), 1 | t);
+      r = (r + Math.imul(r ^ (r >>> 7), 61 | r)) ^ r;
+      return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  // classic 2D gradient (Perlin-style) noise, seeded — returns roughly [-1, 1]
+  function makeNoise2D(seed) {
+    var rng = mulberry32(seed);
+    var perm = new Uint8Array(512);
+    var p = new Uint8Array(256);
+    for (var i = 0; i < 256; i++) p[i] = i;
+    for (var i = 255; i > 0; i--) {
+      var j = Math.floor(rng() * (i + 1));
+      var tmp = p[i]; p[i] = p[j]; p[j] = tmp;
+    }
+    for (var i = 0; i < 512; i++) perm[i] = p[i & 255];
+    function fade(t) { return t * t * t * (t * (t * 6 - 15) + 10); }
+    function lerp(a, b, t) { return a + t * (b - a); }
+    function grad(hash, x, y) {
+      var h = hash & 7;
+      var u = h < 4 ? x : y;
+      var v = h < 4 ? y : x;
+      return ((h & 1) ? -u : u) + ((h & 2) ? -2 * v : 2 * v);
+    }
+    return function (x, y) {
+      var X = Math.floor(x) & 255, Y = Math.floor(y) & 255;
+      x -= Math.floor(x); y -= Math.floor(y);
+      var u = fade(x), v = fade(y);
+      var aa = perm[perm[X] + Y], ab = perm[perm[X] + Y + 1];
+      var ba = perm[perm[X + 1] + Y], bb = perm[perm[X + 1] + Y + 1];
+      return lerp(
+        lerp(grad(aa, x, y), grad(ba, x - 1, y), u),
+        lerp(grad(ab, x, y - 1), grad(bb, x - 1, y - 1), u),
+        v
+      );
+    };
+  }
+
+  function angDiff(a, b) {
+    var d = (a - b + Math.PI) % (2 * Math.PI);
+    if (d < 0) d += 2 * Math.PI;
+    return d - Math.PI;
+  }
+  function lerpAngle(a, b, t) { return a + angDiff(b, a) * t; }
+  function runif(rng, a, b) { return a + (b - a) * rng(); }
+  function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+
+  // ------------------------------------------------------------ ink + shared rendering helpers
+  // same monochrome, dot/line-only system as the Specimen tab — no gradients,
+  // no solid fills except a faint translucent body wash
+
+  var INK_PRIMARY = "#1C1B19";
+  var INK_SECONDARY = "#7A766F";
+  var INK_FRAME = "#DDD9D4";
+
+  function hash3(x, y, seed) {
+    var n1 = Math.sin(x * 127.1 + y * 311.7 + seed * 74.7) * 43758.5453;
+    var n2 = Math.sin(x * 269.5 + y * 183.3 + seed * 57.3) * 43758.5453;
+    var n3 = Math.sin(x * 419.2 + y * 371.9 + seed * 91.1) * 43758.5453;
+    return { a: n1 - Math.floor(n1), b: n2 - Math.floor(n2), c: n3 - Math.floor(n3) };
+  }
+
+  function radiusAt(pts, theta) {
+    var n = pts.length;
+    var norm = ((theta % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+    var f = (norm / (2 * Math.PI)) * n;
+    var i0 = Math.floor(f) % n, i1 = (i0 + 1) % n, t = f - Math.floor(f);
+    return pts[i0].r + (pts[i1].r - pts[i0].r) * t;
+  }
+
+  function pointAt(pts, theta) {
+    var n = pts.length;
+    var norm = ((theta % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+    var f = (norm / (2 * Math.PI)) * n;
+    var i0 = Math.floor(f) % n, i1 = (i0 + 1) % n, t = f - Math.floor(f);
+    return {
+      x: pts[i0].x + (pts[i1].x - pts[i0].x) * t,
+      y: pts[i0].y + (pts[i1].y - pts[i0].y) * t
+    };
+  }
+
+  function organicBoundary(noise, ox, oy, rad, wobble, samples, nx, ny) {
+    var pts = new Array(samples);
+    for (var i = 0; i < samples; i++) {
+      var theta = (i / samples) * Math.PI * 2;
+      var n = noise(Math.cos(theta) * 1.05 + nx, Math.sin(theta) * 1.05 + ny);
+      var r = rad * (1 + wobble * n);
+      pts[i] = { x: ox + Math.cos(theta) * r, y: oy + Math.sin(theta) * r, r: r };
+    }
+    return pts;
+  }
+
+  function drawOrganelleFill(pts, px, py, spacing, alpha, seed) {
+    var maxR = 0;
+    for (var i = 0; i < pts.length; i++) maxR = Math.max(maxR, pts[i].r);
+    ctx.fillStyle = INK_SECONDARY;
+    for (var gx = -maxR; gx <= maxR; gx += spacing) {
+      for (var gy = -maxR; gy <= maxR; gy += spacing) {
+        var h = hash3(gx, gy, seed);
+        var jx = gx + (h.a - 0.5) * spacing * 0.9;
+        var jy = gy + (h.b - 0.5) * spacing * 0.9;
+        var dist = Math.hypot(jx, jy);
+        if (dist > maxR) continue;
+        var R = radiusAt(pts, Math.atan2(jy, jx));
+        if (dist > R * 0.94) continue;
+        if (h.c > 0.88) continue;
+        ctx.globalAlpha = alpha * (0.7 + h.b * 0.3);
+        ctx.fillRect(px + jx - 0.6, py + jy - 0.6, 1.2, 1.2);
+      }
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function drawWallTies(pts, bx, by, innerScale, tieCount) {
+    ctx.strokeStyle = INK_SECONDARY;
+    ctx.lineWidth = 0.5;
+    ctx.globalAlpha = 0.45;
+    ctx.beginPath();
+    for (var k = 0; k < tieCount; k++) {
+      var theta = (k / tieCount) * Math.PI * 2;
+      var p = pointAt(pts, theta);
+      var ix = bx + (p.x - bx) * innerScale;
+      var iy = by + (p.y - by) * innerScale;
+      ctx.moveTo(ix, iy);
+      ctx.lineTo(p.x, p.y);
+    }
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+
+  function drawContourDots(pts, bx, by, ringCount, stride, scaleMin, scaleMax) {
+    ctx.fillStyle = INK_SECONDARY;
+    for (var k = 1; k <= ringCount; k++) {
+      var f = scaleMin + (k / (ringCount + 1)) * (scaleMax - scaleMin);
+      var offset = (k * 3) % stride;
+      for (var i = offset; i < pts.length; i += stride) {
+        var p = pts[i];
+        var x = bx + (p.x - bx) * f, y = by + (p.y - by) * f;
+        ctx.fillRect(x - 0.55, y - 0.55, 1.1, 1.1);
+      }
+    }
+  }
+
+  // registration frame: edge ticks + a gapped center crosshair, matching the
+  // Specimen tab's "petri dish" instrument framing
+  function drawFrame() {
+    var margin = 48, tick = 8, step = 64;
+    ctx.strokeStyle = INK_FRAME;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(margin + 0.5, margin + 0.5, W - margin * 2, H - margin * 2);
+
+    ctx.beginPath();
+    for (var x = margin; x <= W - margin; x += step) {
+      ctx.moveTo(x, margin - tick / 2); ctx.lineTo(x, margin + tick / 2);
+      ctx.moveTo(x, H - margin - tick / 2); ctx.lineTo(x, H - margin + tick / 2);
+    }
+    for (var y = margin; y <= H - margin; y += step) {
+      ctx.moveTo(margin - tick / 2, y); ctx.lineTo(margin + tick / 2, y);
+      ctx.moveTo(W - margin - tick / 2, y); ctx.lineTo(W - margin + tick / 2, y);
+    }
+    var cxm = W / 2, cym = H / 2, gapX = W * 0.3, gapY = H * 0.3;
+    ctx.moveTo(margin, cym); ctx.lineTo(cxm - gapX, cym);
+    ctx.moveTo(cxm + gapX, cym); ctx.lineTo(W - margin, cym);
+    ctx.moveTo(cxm, margin); ctx.lineTo(cxm, cym - gapY);
+    ctx.moveTo(cxm, cym + gapY); ctx.lineTo(cxm, H - margin);
+    ctx.stroke();
+  }
+
+  // ambient dish grain — not reactive to any one organism since many roam
+  // at once; ties this tab to the same "petri solution" visual system
+  function drawSolutionWash() {
+    var margin = 48, spacing = 9;
+    ctx.fillStyle = INK_SECONDARY;
+    for (var gx = margin; gx <= W - margin; gx += spacing) {
+      for (var gy = margin; gy <= H - margin; gy += spacing) {
+        var h = hash3(gx, gy, 42);
+        if (h.c > 0.28) continue;
+        var jx = gx + (h.a - 0.5) * spacing;
+        var jy = gy + (h.b - 0.5) * spacing;
+        ctx.globalAlpha = 0.14 * (0.8 + h.b * 0.2);
+        ctx.fillRect(jx - 0.55, jy - 0.55, 1.1, 1.1);
+      }
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  // ------------------------------------------------------------ organism
+
+  var SAMPLES = 96;
+  var MAX_RADIUS = 150;
+  var MIN_SPAWN_RADIUS_INITIAL = [34, 54];
+  var MIN_SPAWN_RADIUS_SMALL = [20, 30];
+  var EAT_RATIO = 1.18;      // predator must be at least this much bigger
+  var REMOVE_RADIUS = 3;      // prey below this radius is fully consumed
+
+  function makeOrganism(rng, w, h, radiusRange, atPos) {
+    var noise = makeNoise2D(Math.floor(rng() * 1e9));
+    var r0 = runif(rng, radiusRange[0], radiusRange[1]);
+    var pos = atPos || { x: runif(rng, w * 0.2, w * 0.8), y: runif(rng, h * 0.2, h * 0.8) };
+    return {
+      noise: noise,
+      center: { x: pos.x, y: pos.y },
+      heading: runif(rng, 0, Math.PI * 2),
+      turnPhase: runif(rng, 0, 1000),
+      speed: 0,
+      baseRadius: r0,
+      targetRadius: r0,
+      hueSeed: rng(),
+      phaseX: runif(rng, 0, 1000),
+      phaseY: runif(rng, 0, 1000),
+      pods: [],
+      nextPodAt: 0,
+      time: 0,
+      state: "alive", // alive | eaten
+      eatenBy: null,
+      pulseT: -999,
+      nucleus: { r: runif(rng, 0.16, 0.22) },
+      vacuoles: Array.from({ length: 2 + Math.floor(rng() * 3) }, function () {
+        return {
+          angle: runif(rng, 0, Math.PI * 2),
+          dist: runif(rng, 0.15, 0.55),
+          r: runif(rng, 0.04, 0.09),
+          driftSeed: runif(rng, 0, 1000)
+        };
+      }),
+      rng: rng
+    };
+  }
+
+  function stepOrganism(o, dt, params, w, h, mouse) {
+    o.time += dt;
+
+    // being eaten: drift into the predator and shrink to nothing, ignore
+    // every other behavior while this happens
+    if (o.state === "eaten") {
+      if (o.eatenBy) {
+        o.center.x += (o.eatenBy.center.x - o.center.x) * Math.min(1, dt * 3.5);
+        o.center.y += (o.eatenBy.center.y - o.center.y) * Math.min(1, dt * 3.5);
+      }
+      o.baseRadius += (0 - o.baseRadius) * Math.min(1, dt * 4);
+      return;
+    }
+
+    // smoothly grow/shrink toward the current target size (set by eating)
+    o.baseRadius += (o.targetRadius - o.baseRadius) * Math.min(1, dt * 1.6);
+
+    var rng = o.rng;
+
+    // slow continuous heading drift — an amoeba never travels in a
+    // perfectly straight line even at rest
+    var wander = o.noise(o.turnPhase, 0);
+    o.turnPhase += dt * 0.15;
+    o.heading += wander * dt * 0.6;
+
+    // cursor acts as a mild chemoattractant: closer organisms feel it more
+    if (mouse && mouse.active) {
+      var dxm = mouse.x - o.center.x, dym = mouse.y - o.center.y;
+      var distm = Math.hypot(dxm, dym);
+      var reach = 480;
+      if (distm < reach) {
+        var pullStrength = (1 - distm / reach);
+        var angleToMouse = Math.atan2(dym, dxm);
+        o.heading = lerpAngle(o.heading, angleToMouse, Math.min(1, dt * 0.9 * pullStrength));
+        o.speed = Math.max(o.speed, pullStrength * 34 * params.speed);
+      }
+    }
+
+    // soft wall avoidance: steer back toward center as it nears the edge
+    var margin = o.baseRadius * 2.5;
+    var toCx = w / 2 - o.center.x, toCy = h / 2 - o.center.y;
+    if (o.center.x < margin || o.center.x > w - margin || o.center.y < margin || o.center.y > h - margin) {
+      var toCenterAngle = Math.atan2(toCy, toCx);
+      o.heading = lerpAngle(o.heading, toCenterAngle, Math.min(1, dt * 1.5));
+    }
+
+    // spawn pseudopods on a randomized schedule, biased toward current heading
+    if (o.time >= o.nextPodAt && params.podActivity > 0.01) {
+      var spread = 1.1;
+      o.pods.push({
+        angle: o.heading + runif(rng, -spread, spread),
+        strength: 0,
+        target: runif(rng, 0.7, 1.15),
+        width: runif(rng, 0.3, 0.52),
+        state: "grow",
+        growRate: runif(rng, 0.9, 1.7),
+        shrinkRate: runif(rng, 0.5, 0.9),
+        hold: runif(rng, 0.4, 1.1),
+        holdT: 0
+      });
+      var gap = runif(rng, 0.6, 1.6) / Math.max(0.05, params.podActivity);
+      o.nextPodAt = o.time + gap;
+    }
+
+    // update pseudopods; the strongest growing/holding pod pulls heading and
+    // speed — this is what turns wobble into actual crawling locomotion
+    var dominant = null;
+    for (var i = o.pods.length - 1; i >= 0; i--) {
+      var pod = o.pods[i];
+      if (pod.state === "grow") {
+        pod.strength += pod.growRate * dt;
+        if (pod.strength >= pod.target) { pod.strength = pod.target; pod.state = "hold"; }
+      } else if (pod.state === "hold") {
+        pod.holdT += dt;
+        if (pod.holdT >= pod.hold) pod.state = "shrink";
+      } else {
+        pod.strength -= pod.shrinkRate * dt;
+        if (pod.strength <= 0) { o.pods.splice(i, 1); continue; }
+      }
+      if (!dominant || pod.strength > dominant.strength) dominant = pod;
+    }
+
+    var targetSpeed = 0;
+    if (dominant && dominant.state !== "shrink") {
+      o.heading = lerpAngle(o.heading, dominant.angle, Math.min(1, dt * 1.8 * params.speed));
+      targetSpeed = dominant.strength * params.speed * 34;
+    }
+    o.speed += (targetSpeed - o.speed) * Math.min(1, dt * 2.5);
+
+    o.center.x += Math.cos(o.heading) * o.speed * dt;
+    o.center.y += Math.sin(o.heading) * o.speed * dt;
+    o.center.x = clamp(o.center.x, o.baseRadius, w - o.baseRadius);
+    o.center.y = clamp(o.center.y, o.baseRadius, h - o.baseRadius);
+
+    o.phaseX += dt * 0.05;
+    o.phaseY += dt * 0.037;
+  }
+
+  // bigger organisms eat smaller ones on real overlap; the predator's target
+  // area grows by the prey's full area (mass is conserved across the system)
+  function resolveEncounters(organisms, now) {
+    for (var i = 0; i < organisms.length; i++) {
+      var a = organisms[i];
+      if (a.state !== "alive") continue;
+      for (var j = 0; j < organisms.length; j++) {
+        if (i === j) continue;
+        var b = organisms[j];
+        if (b.state !== "alive") continue;
+        if (a.baseRadius < b.baseRadius * EAT_RATIO) continue;
+        var dx = a.center.x - b.center.x, dy = a.center.y - b.center.y;
+        var dist = Math.hypot(dx, dy);
+        if (dist > a.baseRadius * 0.85 + b.baseRadius * 0.25) continue;
+
+        b.state = "eaten";
+        b.eatenBy = a;
+        var newArea = Math.PI * a.targetRadius * a.targetRadius + Math.PI * b.baseRadius * b.baseRadius;
+        a.targetRadius = Math.min(MAX_RADIUS, Math.sqrt(newArea / Math.PI));
+        a.pulseT = now;
+      }
+    }
+  }
+
+  function organismBoundary(o, params) {
+    var wobbleAmt = 0.16 * params.wobble;
+    var fineAmt = 0.05 * params.wobble;
+    var pts = new Array(SAMPLES);
+    var raw = new Array(SAMPLES);
+    var area = 0;
+
+    for (var i = 0; i < SAMPLES; i++) {
+      var theta = (i / SAMPLES) * Math.PI * 2;
+      var cx = Math.cos(theta), sy = Math.sin(theta);
+      var n1 = o.noise(cx * 1.3 + o.phaseX, sy * 1.3 + o.phaseY);
+      var n2 = o.noise(cx * 3.4 - o.phaseY, sy * 3.4 + o.phaseX);
+      var r = o.baseRadius * (1 + wobbleAmt * n1 + fineAmt * n2);
+
+      for (var pi = 0; pi < o.pods.length; pi++) {
+        var pod = o.pods[pi];
+        var d = angDiff(theta, pod.angle);
+        var w = pod.width;
+        // steeper-sided, flatter-topped falloff than a plain Gaussian —
+        // reads as an extended finger rather than a soft bump
+        var bump = Math.exp(-Math.pow(Math.abs(d) / w, 2.4));
+        r += o.baseRadius * 0.6 * pod.strength * Math.min(1.4, params.podActivity) * bump;
+      }
+      raw[i] = Math.max(4, r);
+    }
+
+    // shoelace area of the raw radial polygon, then rescale so total
+    // "mass" stays roughly constant even as pseudopods bulge outward —
+    // real cytoplasm compresses elsewhere as it extends somewhere
+    for (var i = 0; i < SAMPLES; i++) {
+      var t0 = (i / SAMPLES) * Math.PI * 2, t1 = ((i + 1) / SAMPLES) * Math.PI * 2;
+      area += 0.5 * raw[i] * raw[(i + 1) % SAMPLES] * Math.sin(t1 - t0);
+    }
+    var targetArea = Math.PI * o.baseRadius * o.baseRadius;
+    var scale = Math.sqrt(Math.abs(targetArea / (area || targetArea)));
+    scale = Math.max(0.8, Math.min(1.2, scale));
+
+    for (var i = 0; i < SAMPLES; i++) {
+      var theta = (i / SAMPLES) * Math.PI * 2;
+      var r = raw[i] * scale;
+      pts[i] = { x: o.center.x + Math.cos(theta) * r, y: o.center.y + Math.sin(theta) * r, r: r };
+    }
+    return pts;
+  }
+
+  // ------------------------------------------------------------ rendering
+
+  function smoothClosedPath(ctx, pts) {
+    var n = pts.length;
+    var mid0 = { x: (pts[n - 1].x + pts[0].x) / 2, y: (pts[n - 1].y + pts[0].y) / 2 };
+    ctx.beginPath();
+    ctx.moveTo(mid0.x, mid0.y);
+    for (var i = 0; i < n; i++) {
+      var p1 = pts[i], p2 = pts[(i + 1) % n];
+      var mid = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
+      ctx.quadraticCurveTo(p1.x, p1.y, mid.x, mid.y);
+    }
+    ctx.closePath();
+  }
+
+  function drawOrganism(ctx, o, pts, now) {
+    var pulse = clamp(1 - (now - o.pulseT) / 0.4, 0, 1); // brief "gulp" flash
+    var baseR = o.baseRadius;
+
+    // translucent body wash — flat, low-alpha, brightens briefly on a gulp
+    ctx.fillStyle = INK_SECONDARY;
+    ctx.globalAlpha = 0.04 + pulse * 0.22;
+    smoothClosedPath(ctx, pts);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+
+    drawContourDots(pts, o.center.x, o.center.y, 2, 9, 0.25, 0.9);
+
+    // nucleus, drifting gently within the body — organic outline, dense fill
+    var nAngle = o.time * 0.13 + o.nucleus.r * 10;
+    var nx = o.center.x + Math.cos(nAngle) * baseR * 0.12;
+    var ny = o.center.y + Math.sin(nAngle * 1.3) * baseR * 0.12;
+    var nRad = baseR * o.nucleus.r;
+    var nPts = organicBoundary(o.noise, nx, ny, nRad, 0.07, 44, o.nucleus.r * 91 + 11, o.nucleus.r * 47 + 33);
+    ctx.strokeStyle = INK_SECONDARY;
+    ctx.lineWidth = 0.7;
+    smoothClosedPath(ctx, nPts);
+    ctx.stroke();
+    drawOrganelleFill(nPts, nx, ny, 2.6, 0.4, o.nucleus.r * 733);
+
+    // vacuoles — organic outline, sparse/light fill
+    for (var i = 0; i < o.vacuoles.length; i++) {
+      var v = o.vacuoles[i];
+      var a = v.angle + Math.sin(o.time * 0.2 + v.driftSeed) * 0.4;
+      var d = baseR * v.dist;
+      var vx = o.center.x + Math.cos(a) * d;
+      var vy = o.center.y + Math.sin(a) * d;
+      var vRad = baseR * v.r;
+      var vPts = organicBoundary(o.noise, vx, vy, vRad, 0.1, 36, v.angle * 91 + 11, v.angle * 47 + 33);
+      ctx.strokeStyle = INK_SECONDARY;
+      ctx.lineWidth = 0.7;
+      smoothClosedPath(ctx, vPts);
+      ctx.stroke();
+      drawOrganelleFill(vPts, vx, vy, 4.2, 0.16, v.driftSeed);
+    }
+
+    // cell wall — double line with tonal cross-ties between them
+    var gapPx = 3;
+    var innerScale = Math.max(0.82, 1 - gapPx / baseR);
+    var tieCount = Math.max(10, Math.min(90, Math.round(baseR * 0.5)));
+    drawWallTies(pts, o.center.x, o.center.y, innerScale, tieCount);
+
+    var wallInner = pts.map(function (p) {
+      return { x: o.center.x + (p.x - o.center.x) * innerScale, y: o.center.y + (p.y - o.center.y) * innerScale };
+    });
+    ctx.strokeStyle = INK_SECONDARY;
+    ctx.lineWidth = 0.5 + pulse * 0.3;
+    smoothClosedPath(ctx, wallInner);
+    ctx.stroke();
+
+    ctx.strokeStyle = INK_PRIMARY;
+    ctx.lineWidth = 0.7 + pulse * 0.5;
+    ctx.lineJoin = "round";
+    smoothClosedPath(ctx, pts);
+    ctx.stroke();
+  }
+
+  // ------------------------------------------------------------ setup + loop
+
+  var canvas = document.getElementById("c");
+  var ctx = canvas.getContext("2d");
+  var dpr = window.devicePixelRatio || 1;
+  var W = 0, H = 0;
+
+  function fit() {
+    W = window.innerWidth; H = window.innerHeight;
+    canvas.width = Math.round(W * dpr);
+    canvas.height = Math.round(H * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  window.addEventListener("resize", fit);
+  fit();
+
+  var params = { wobble: 1, podActivity: 1.2, speed: 1 };
+  var organisms = [];
+  var globalRng = mulberry32(Math.floor(Math.random() * 1e9));
+  var nextRespawnAt = 0;
+  var mouse = { x: 0, y: 0, active: false };
+
+  function targetCount() { return parseInt(document.getElementById("count").value, 10); }
+
+  function regenerate() {
+    globalRng = mulberry32(Math.floor(Math.random() * 1e9));
+    organisms = [];
+    for (var i = 0; i < targetCount(); i++) {
+      organisms.push(makeOrganism(globalRng, W, H, MIN_SPAWN_RADIUS_INITIAL, null));
+    }
+    nextRespawnAt = 0;
+  }
+
+  ["wobble", "pod", "speed"].forEach(function (key) {
+    var input = document.getElementById(key);
+    var label = document.getElementById("v-" + key);
+    var paramKey = key === "pod" ? "podActivity" : key;
+    function sync() {
+      params[paramKey] = parseFloat(input.value);
+      label.textContent = input.value;
+    }
+    input.addEventListener("input", sync);
+    sync();
+  });
+  document.getElementById("count").addEventListener("input", function () {
+    document.getElementById("v-count").textContent = this.value;
+  });
+  document.getElementById("v-count").textContent = document.getElementById("count").value;
+  document.getElementById("regen").addEventListener("click", regenerate);
+
+  canvas.addEventListener("mousemove", function (e) {
+    mouse.x = e.clientX; mouse.y = e.clientY; mouse.active = true;
+  });
+  canvas.addEventListener("mouseleave", function () { mouse.active = false; });
+  canvas.addEventListener("click", function (e) {
+    if (organisms.length >= 24) return;
+    organisms.push(makeOrganism(globalRng, W, H, MIN_SPAWN_RADIUS_SMALL, { x: e.clientX, y: e.clientY }));
+  });
+
+  regenerate();
+
+  var last = performance.now();
+  function frame(now) {
+    requestAnimationFrame(frame);
+    var dt = Math.min(0.05, (now - last) / 1000);
+    last = now;
+    if (App.activeTab !== "prototype") return;
+    var simNow = now / 1000;
+
+    resolveEncounters(organisms, simNow);
+    for (var i = 0; i < organisms.length; i++) {
+      stepOrganism(organisms[i], dt, params, W, H, mouse);
+    }
+    organisms = organisms.filter(function (o) {
+      return !(o.state === "eaten" && o.baseRadius < REMOVE_RADIUS);
+    });
+
+    if (organisms.length < targetCount() && simNow >= nextRespawnAt) {
+      var edge = Math.floor(globalRng() * 4);
+      var pos = edge === 0 ? { x: runif(globalRng, 0, W), y: 20 }
+        : edge === 1 ? { x: runif(globalRng, 0, W), y: H - 20 }
+        : edge === 2 ? { x: 20, y: runif(globalRng, 0, H) }
+        : { x: W - 20, y: runif(globalRng, 0, H) };
+      organisms.push(makeOrganism(globalRng, W, H, MIN_SPAWN_RADIUS_SMALL, pos));
+      nextRespawnAt = simNow + runif(globalRng, 1, 3);
+    }
+
+    ctx.clearRect(0, 0, W, H);
+    drawSolutionWash();
+    drawFrame();
+
+    // cursor reticle — a ring + four ticks, not a glow, so the attraction
+    // affordance stays inside the dot/line vocabulary instead of a gradient
+    if (mouse.active) {
+      ctx.strokeStyle = INK_SECONDARY;
+      ctx.lineWidth = 1;
+      ctx.globalAlpha = 0.55;
+      var tickLen = 6, gap = 20;
+      ctx.beginPath();
+      ctx.arc(mouse.x, mouse.y, 14, 0, Math.PI * 2);
+      ctx.moveTo(mouse.x - gap - tickLen, mouse.y); ctx.lineTo(mouse.x - gap, mouse.y);
+      ctx.moveTo(mouse.x + gap, mouse.y); ctx.lineTo(mouse.x + gap + tickLen, mouse.y);
+      ctx.moveTo(mouse.x, mouse.y - gap - tickLen); ctx.lineTo(mouse.x, mouse.y - gap);
+      ctx.moveTo(mouse.x, mouse.y + gap); ctx.lineTo(mouse.x, mouse.y + gap + tickLen);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+
+    var largest = 0;
+    for (var i = 0; i < organisms.length; i++) {
+      var o = organisms[i];
+      var pts = organismBoundary(o, params);
+      drawOrganism(ctx, o, pts, simNow);
+      if (o.state === "alive") largest = Math.max(largest, o.baseRadius);
+    }
+
+    document.getElementById("proto-pop").textContent = organisms.length;
+    document.getElementById("stat-largest").textContent = Math.round(largest) + "px";
+  }
+  requestAnimationFrame(frame);
+})();
+
+// ================================================================
+// SPECIMEN — single large monochrome organism, dot/line detail only
+// ================================================================
+(function () {
+  "use strict";
+
+  var canvas = document.getElementById("c2");
+  var ctx = canvas.getContext("2d");
+  var dpr = window.devicePixelRatio || 1;
+  var W = 0, H = 0, cx = 0, cy = 0, baseRadius = 100;
+
+  function fit() {
+    W = window.innerWidth; H = window.innerHeight;
+    canvas.width = Math.round(W * dpr);
+    canvas.height = Math.round(H * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    cx = W / 2; cy = H / 2;
+    baseRadius = Math.max(80, Math.min(W, H) / 2 - 130);
+  }
+  window.addEventListener("resize", fit);
+  fit();
+
+  var INK_PRIMARY = "#1C1B19";
+  var INK_SECONDARY = "#7A766F";
+  var INK_FRAME = "#DDD9D4";
+
+  // ------------------------------------------------------------ noise + math
+
+  function mulberry32(seed) {
+    var t = seed >>> 0;
+    return function () {
+      t = (t + 0x6D2B79F5) | 0;
+      var r = Math.imul(t ^ (t >>> 15), 1 | t);
+      r = (r + Math.imul(r ^ (r >>> 7), 61 | r)) ^ r;
+      return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  function makeNoise2D(seed) {
+    var rng = mulberry32(seed);
+    var perm = new Uint8Array(512);
+    var p = new Uint8Array(256);
+    for (var i = 0; i < 256; i++) p[i] = i;
+    for (var i = 255; i > 0; i--) {
+      var j = Math.floor(rng() * (i + 1));
+      var tmp = p[i]; p[i] = p[j]; p[j] = tmp;
+    }
+    for (var i = 0; i < 512; i++) perm[i] = p[i & 255];
+    function fade(t) { return t * t * t * (t * (t * 6 - 15) + 10); }
+    function lerp(a, b, t) { return a + t * (b - a); }
+    function grad(hash, x, y) {
+      var h = hash & 7;
+      var u = h < 4 ? x : y;
+      var v = h < 4 ? y : x;
+      return ((h & 1) ? -u : u) + ((h & 2) ? -2 * v : 2 * v);
+    }
+    return function (x, y) {
+      var X = Math.floor(x) & 255, Y = Math.floor(y) & 255;
+      x -= Math.floor(x); y -= Math.floor(y);
+      var u = fade(x), v = fade(y);
+      var aa = perm[perm[X] + Y], ab = perm[perm[X] + Y + 1];
+      var ba = perm[perm[X + 1] + Y], bb = perm[perm[X + 1] + Y + 1];
+      return lerp(
+        lerp(grad(aa, x, y), grad(ba, x - 1, y), u),
+        lerp(grad(ab, x, y - 1), grad(bb, x - 1, y - 1), u),
+        v
+      );
+    };
+  }
+
+  function angDiff(a, b) {
+    var d = (a - b + Math.PI) % (2 * Math.PI);
+    if (d < 0) d += 2 * Math.PI;
+    return d - Math.PI;
+  }
+  function runif(rng, a, b) { return a + (b - a) * rng(); }
+  function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+
+  // deterministic per-cell pseudo-random triplet — same (x,y) always hashes
+  // to the same values, so the stipple field never flickers frame to frame
+  function hash3(x, y, seed) {
+    var n1 = Math.sin(x * 127.1 + y * 311.7 + seed * 74.7) * 43758.5453;
+    var n2 = Math.sin(x * 269.5 + y * 183.3 + seed * 57.3) * 43758.5453;
+    var n3 = Math.sin(x * 419.2 + y * 371.9 + seed * 91.1) * 43758.5453;
+    return { a: n1 - Math.floor(n1), b: n2 - Math.floor(n2), c: n3 - Math.floor(n3) };
+  }
+
+  // ------------------------------------------------------------ organism
+
+  var SAMPLES = 220;
+
+  function makeSpecimen(rng) {
+    return {
+      noise: makeNoise2D(Math.floor(rng() * 1e9)),
+      phaseX: runif(rng, 0, 1000),
+      phaseY: runif(rng, 0, 1000),
+      time: 0,
+      pods: [],
+      nextPodAt: 0,
+      jitterSeed: runif(rng, 0, 1000),
+      nucleus: { angle: runif(rng, 0, Math.PI * 2), dist: runif(rng, 0.04, 0.12), r: runif(rng, 0.14, 0.19) },
+      vacuoles: Array.from({ length: 3 + Math.floor(rng() * 4) }, function () {
+        return {
+          angle: runif(rng, 0, Math.PI * 2),
+          dist: runif(rng, 0.22, 0.6),
+          r: runif(rng, 0.05, 0.11),
+          driftSeed: runif(rng, 0, 1000)
+        };
+      }),
+      rng: rng
+    };
+  }
+
+  function stepSpecimen(o, dt, params) {
+    o.time += dt;
+    o.phaseX += dt * 0.035;
+    o.phaseY += dt * 0.027;
+
+    var maxPods = Math.round(3 + Math.min(2, params.reach) * 5);
+    if (o.pods.length < maxPods && o.time >= o.nextPodAt) {
+      o.pods.push({
+        angle: runif(o.rng, 0, Math.PI * 2), // any direction — no dominant heading to favor
+        spin: runif(o.rng, -0.4, 0.4), // slow per-arm curl, part of the "squirm"
+        strength: 0,
+        target: runif(o.rng, 0.7, 1.2),
+        width: runif(o.rng, 0.10, 0.22),
+        state: "grow",
+        growRate: runif(o.rng, 0.5, 1.0),
+        shrinkRate: runif(o.rng, 0.35, 0.6),
+        hold: runif(o.rng, 0.8, 2.2),
+        holdT: 0
+      });
+      var gap = runif(o.rng, 0.12, 0.45) / Math.max(0.3, params.reach);
+      o.nextPodAt = o.time + gap;
+    }
+
+    for (var i = o.pods.length - 1; i >= 0; i--) {
+      var pod = o.pods[i];
+      pod.angle += pod.spin * dt;
+      if (pod.state === "grow") {
+        pod.strength += pod.growRate * dt;
+        if (pod.strength >= pod.target) { pod.strength = pod.target; pod.state = "hold"; }
+      } else if (pod.state === "hold") {
+        pod.holdT += dt;
+        if (pod.holdT >= pod.hold) pod.state = "shrink";
+      } else {
+        pod.strength -= pod.shrinkRate * dt;
+        if (pod.strength <= 0) { o.pods.splice(i, 1); }
+      }
+    }
+  }
+
+  // every pod bulges independently at once — no dominant pod; locomotion is
+  // handled separately as a slow drift of the whole body (see frame() below)
+  // approaches maxR asymptotically instead of a hard cutoff — a bump that
+  // would exceed the limit tapers smoothly, so its tip stays rounded rather
+  // than being sliced into a flat chord
+  function softCap(r, maxR) {
+    var knee = maxR * 0.82;
+    if (r <= knee) return r;
+    var range = maxR - knee;
+    return knee + range * (1 - Math.exp(-(r - knee) / range));
+  }
+
+  function specimenBoundary(o, params, baseR, bx, by) {
+    var wobbleAmt = 0.14 * params.wobble;
+    var fineAmt = 0.045 * params.wobble;
+    var reachMul = 0.6 + 0.4 * Math.min(2, params.reach);
+    var maxR = Math.min(W, H) / 2 - 16; // soft ceiling — reach tapers off before the viewport edge
+    var pts = new Array(SAMPLES);
+    for (var i = 0; i < SAMPLES; i++) {
+      var theta = (i / SAMPLES) * Math.PI * 2;
+      var c = Math.cos(theta), s = Math.sin(theta);
+      var n1 = o.noise(c * 1.3 + o.phaseX, s * 1.3 + o.phaseY);
+      var n2 = o.noise(c * 3.6 - o.phaseY, s * 3.6 + o.phaseX);
+      var r = baseR * (1 + wobbleAmt * n1 + fineAmt * n2);
+      for (var p = 0; p < o.pods.length; p++) {
+        var pod = o.pods[p];
+        var d = angDiff(theta, pod.angle);
+        var bump = Math.exp(-Math.pow(Math.abs(d) / pod.width, 2.4));
+        r += baseR * 0.8 * reachMul * pod.strength * bump;
+      }
+      r = softCap(Math.max(6, r), maxR);
+      pts[i] = { x: bx + Math.cos(theta) * r, y: by + Math.sin(theta) * r, r: r };
+    }
+    return pts;
+  }
+
+  // ------------------------------------------------------------ rendering
+
+  function smoothClosedPath(ctx, pts) {
+    var n = pts.length;
+    var mid0 = { x: (pts[n - 1].x + pts[0].x) / 2, y: (pts[n - 1].y + pts[0].y) / 2 };
+    ctx.beginPath();
+    ctx.moveTo(mid0.x, mid0.y);
+    for (var i = 0; i < n; i++) {
+      var p1 = pts[i], p2 = pts[(i + 1) % n];
+      var mid = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
+      ctx.quadraticCurveTo(p1.x, p1.y, mid.x, mid.y);
+    }
+    ctx.closePath();
+  }
+
+  function radiusAt(pts, theta) {
+    var n = pts.length;
+    var norm = ((theta % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+    var f = (norm / (2 * Math.PI)) * n;
+    var i0 = Math.floor(f) % n, i1 = (i0 + 1) % n, t = f - Math.floor(f);
+    return pts[i0].r + (pts[i1].r - pts[i0].r) * t;
+  }
+
+  // the "petri solution" — a clearly visible grain across the whole dish,
+  // with a dense, larger-grained boundary layer where the organism actually
+  // meets the medium; still pure dot density, never a gradient
+  function drawSolutionWash(pts, bx, by) {
+    var margin = 48, spacing = 7;
+    ctx.fillStyle = INK_SECONDARY;
+    for (var gx = margin; gx <= W - margin; gx += spacing) {
+      for (var gy = margin; gy <= H - margin; gy += spacing) {
+        var h = hash3(gx, gy, 42);
+        var jx = gx + (h.a - 0.5) * spacing;
+        var jy = gy + (h.b - 0.5) * spacing;
+        var dx = jx - bx, dy = jy - by;
+        var dist = Math.hypot(dx, dy);
+        var R = radiusAt(pts, Math.atan2(dy, dx));
+        var band = clamp(1 - Math.abs(dist - R) / 64, 0, 1);
+        var threshold = 0.28 + band * 0.35;
+        if (h.c > threshold) continue;
+        ctx.globalAlpha = (0.14 + band * 0.22) * (0.8 + h.b * 0.2);
+        var size = 1.1 + band * 0.4;
+        ctx.fillRect(jx - size / 2, jy - size / 2, size, size);
+      }
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  // registration frame: edge ticks + a center crosshair gapped through the
+  // middle 60% so it reads as measurement, never a rule cutting the specimen
+  function drawFrame() {
+    var margin = 48, tick = 8, step = 64;
+    ctx.strokeStyle = INK_FRAME;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(margin + 0.5, margin + 0.5, W - margin * 2, H - margin * 2);
+
+    ctx.beginPath();
+    for (var x = margin; x <= W - margin; x += step) {
+      ctx.moveTo(x, margin - tick / 2); ctx.lineTo(x, margin + tick / 2);
+      ctx.moveTo(x, H - margin - tick / 2); ctx.lineTo(x, H - margin + tick / 2);
+    }
+    for (var y = margin; y <= H - margin; y += step) {
+      ctx.moveTo(margin - tick / 2, y); ctx.lineTo(margin + tick / 2, y);
+      ctx.moveTo(W - margin - tick / 2, y); ctx.lineTo(W - margin + tick / 2, y);
+    }
+    var gapX = W * 0.3, gapY = H * 0.3;
+    ctx.moveTo(margin, cy); ctx.lineTo(cx - gapX, cy);
+    ctx.moveTo(cx + gapX, cy); ctx.lineTo(W - margin, cy);
+    ctx.moveTo(cx, margin); ctx.lineTo(cx, cy - gapY);
+    ctx.moveTo(cx, cy + gapY); ctx.lineTo(cx, H - margin);
+    ctx.stroke();
+  }
+
+  function organicBoundary(noise, ox, oy, rad, wobble, samples, nx, ny) {
+    var pts = new Array(samples);
+    for (var i = 0; i < samples; i++) {
+      var theta = (i / samples) * Math.PI * 2;
+      var n = noise(Math.cos(theta) * 1.05 + nx, Math.sin(theta) * 1.05 + ny);
+      var r = rad * (1 + wobble * n);
+      pts[i] = { x: ox + Math.cos(theta) * r, y: oy + Math.sin(theta) * r, r: r };
+    }
+    return pts;
+  }
+
+  // a dense, semi-transparent dot fill rather than a sparse beaded ring —
+  // alpha lets density and any overlap with neighboring components (the
+  // membrane's own texture, another organelle) build genuine tonal weight
+  function drawOrganelleFill(pts, px, py, spacing, alpha, seed) {
+    var maxR = 0;
+    for (var i = 0; i < pts.length; i++) maxR = Math.max(maxR, pts[i].r);
+    ctx.fillStyle = INK_SECONDARY;
+    for (var gx = -maxR; gx <= maxR; gx += spacing) {
+      for (var gy = -maxR; gy <= maxR; gy += spacing) {
+        var h = hash3(gx, gy, seed);
+        var jx = gx + (h.a - 0.5) * spacing * 0.9;
+        var jy = gy + (h.b - 0.5) * spacing * 0.9;
+        var dist = Math.hypot(jx, jy);
+        if (dist > maxR) continue;
+        var R = radiusAt(pts, Math.atan2(jy, jx));
+        if (dist > R * 0.94) continue; // stay a hair inside the outline so the stroke reads crisp
+        if (h.c > 0.88) continue; // dense but still legibly dot-based, not a flat fill
+        ctx.globalAlpha = alpha * (0.7 + h.b * 0.3);
+        ctx.fillRect(px + jx - 0.6, py + jy - 0.6, 1.2, 1.2);
+      }
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  // organic outline, not a perfect circle — nucleus reads dense/dark,
+  // vacuoles read sparse/clear, purely through dot density and alpha
+  function drawOrganelle(o, v, baseR, isVacuole, bx, by) {
+    var sway = isVacuole ? Math.sin(o.time * 0.05 + v.driftSeed) * 0.06 : 0;
+    var px = bx + Math.cos(v.angle + sway) * v.dist * baseR;
+    var py = by + Math.sin(v.angle + sway) * v.dist * baseR;
+    var rad = v.r * baseR;
+    var wobble = isVacuole ? 0.10 : 0.07;
+    var samples = isVacuole ? 46 : 60;
+    var pts = organicBoundary(o.noise, px, py, rad, wobble, samples, v.angle * 91 + 11, v.angle * 47 + 33);
+    ctx.strokeStyle = INK_SECONDARY;
+    ctx.lineWidth = 0.75;
+    smoothClosedPath(ctx, pts);
+    ctx.stroke();
+    if (isVacuole) {
+      drawOrganelleFill(pts, px, py, 5.5, 0.16, v.driftSeed);
+    } else {
+      drawOrganelleFill(pts, px, py, 2.8, 0.4, v.dist * 733);
+    }
+  }
+
+  // sparse beaded dots along a nested set of contours — used for the main
+  // body's "detail" control and for the tonal band inside the cell wall
+  function drawContourDots(pts, bx, by, ringCount, stride, scaleMin, scaleMax) {
+    ctx.fillStyle = INK_SECONDARY;
+    for (var k = 1; k <= ringCount; k++) {
+      var f = scaleMin + (k / (ringCount + 1)) * (scaleMax - scaleMin);
+      var offset = (k * 3) % stride;
+      for (var i = offset; i < pts.length; i += stride) {
+        var p = pts[i];
+        var x = bx + (p.x - bx) * f, y = by + (p.y - by) * f;
+        ctx.fillRect(x - 0.6, y - 0.6, 1.2, 1.2);
+      }
+    }
+  }
+
+  // tonal cell-wall architecture between the double line — short cross-ties
+  // rather than dots, evenly spaced all the way around the membrane
+  // interpolated point at an arbitrary angle — lets tie count exceed the
+  // boundary's own sample count without landing duplicate ties on the same point
+  function pointAt(pts, theta) {
+    var n = pts.length;
+    var norm = ((theta % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+    var f = (norm / (2 * Math.PI)) * n;
+    var i0 = Math.floor(f) % n, i1 = (i0 + 1) % n, t = f - Math.floor(f);
+    return {
+      x: pts[i0].x + (pts[i1].x - pts[i0].x) * t,
+      y: pts[i0].y + (pts[i1].y - pts[i0].y) * t
+    };
+  }
+
+  function drawWallTies(pts, bx, by, innerScale) {
+    var tieCount = 280;
+    ctx.strokeStyle = INK_SECONDARY;
+    ctx.lineWidth = 0.55;
+    ctx.globalAlpha = 0.45;
+    ctx.beginPath();
+    for (var k = 0; k < tieCount; k++) {
+      var theta = (k / tieCount) * Math.PI * 2;
+      var p = pointAt(pts, theta);
+      var ix = bx + (p.x - bx) * innerScale;
+      var iy = by + (p.y - by) * innerScale;
+      ctx.moveTo(ix, iy);
+      ctx.lineTo(p.x, p.y);
+    }
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+
+  function drawSpecimen(o, params, baseR, bx, by) {
+    ctx.clearRect(0, 0, W, H);
+
+    var pts = specimenBoundary(o, params, baseR, bx, by);
+
+    drawSolutionWash(pts, bx, by);
+    drawFrame();
+
+    // the organism's own translucent layer — a flat, low-alpha fill (not a
+    // gradient) so the cell reads as subtly different from the dish even
+    // where there's no dot or line detail yet
+    if (params.opacity > 0.001) {
+      ctx.fillStyle = INK_SECONDARY;
+      ctx.globalAlpha = params.opacity;
+      smoothClosedPath(ctx, pts);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+
+    var ringCount = Math.round(clamp(2 + params.detail * 2, 2, 6));
+    var stride = Math.round(clamp(16 - params.detail * 6, 6, 16));
+    drawContourDots(pts, bx, by, ringCount, stride, 0.25, 0.9);
+
+    drawOrganelle(o, o.nucleus, baseR, false, bx, by);
+    o.vacuoles.forEach(function (v) { drawOrganelle(o, v, baseR, true, bx, by); });
+
+    // cell wall — a double line (outer = true edge, inner = a structural
+    // line just inward) with tonal cross-ties between them, not dots
+    drawWallTies(pts, bx, by, 0.975);
+
+    var wallInner = pts.map(function (p) { return { x: bx + (p.x - bx) * 0.975, y: by + (p.y - by) * 0.975 }; });
+    ctx.strokeStyle = INK_SECONDARY;
+    ctx.lineWidth = 0.65;
+    ctx.lineJoin = "round";
+    smoothClosedPath(ctx, wallInner);
+    ctx.stroke();
+
+    ctx.strokeStyle = INK_PRIMARY;
+    ctx.lineWidth = 0.85;
+    ctx.lineJoin = "round";
+    smoothClosedPath(ctx, pts);
+    ctx.stroke();
+  }
+
+  // ------------------------------------------------------------ state + wiring
+
+  var params = { wobble: 1, reach: 1, detail: 1, opacity: 0.03 };
+  var organism = null;
+
+  function regenerate() {
+    var seed = Math.floor(Math.random() * 1e6);
+    organism = makeSpecimen(mulberry32(seed));
+    document.getElementById("sc-seed").textContent = ("000000" + seed).slice(-6);
+  }
+
+  ["wobble", "reach", "detail"].forEach(function (key) {
+    var input = document.getElementById("s-" + key);
+    var label = document.getElementById("sv-" + key);
+    function sync() {
+      params[key] = parseFloat(input.value);
+      label.textContent = params[key].toFixed(2);
+    }
+    input.addEventListener("input", sync);
+    sync();
+  });
+  document.getElementById("s-regen").addEventListener("click", regenerate);
+
+  regenerate();
+
+  var last = performance.now();
+  function frame(now) {
+    requestAnimationFrame(frame);
+    var dt = Math.min(0.05, (now - last) / 1000);
+    last = now;
+    if (App.activeTab !== "specimen") return;
+    stepSpecimen(organism, dt, params);
+    // slow whole-body drift — "swimming" within the dish; the registration
+    // frame stays fixed at true canvas center, only the organism wanders
+    var driftAmt = 0.16 * baseRadius;
+    var bx = cx + organism.noise(organism.time * 0.09, 137.7) * driftAmt;
+    var by = cy + organism.noise(organism.time * 0.09, 941.3) * driftAmt;
+    drawSpecimen(organism, params, baseRadius, bx, by);
+  }
+  requestAnimationFrame(frame);
+})();
+
+// ================================================================
+// TAB SWITCHING — shared chrome, coordinates which scene is live
+// ================================================================
+(function () {
+  "use strict";
+  var buttons = document.querySelectorAll(".tabbar button");
+  var c1 = document.getElementById("c"), c2 = document.getElementById("c2");
+  var hud1 = document.getElementById("hud-prototype"), hud2 = document.getElementById("hud-specimen");
+  buttons.forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var target = btn.dataset.tab;
+      if (target === App.activeTab) return;
+      App.activeTab = target;
+      buttons.forEach(function (b) { b.classList.toggle("active", b === btn); });
+      c1.classList.toggle("hidden", target !== "prototype");
+      c2.classList.toggle("hidden", target !== "specimen");
+      hud1.classList.toggle("hidden", target !== "prototype");
+      hud2.classList.toggle("hidden", target !== "specimen");
+    });
+  });
+})();
+</script>
+</body>
+</html>
