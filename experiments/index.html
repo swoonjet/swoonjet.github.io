@@ -69,10 +69,6 @@
             margin-bottom: clamp(40px, 6vw, 80px);
         }
 
-        @media (min-width: 760px) {
-            .hero { grid-template-columns: 2fr 1fr; gap: 80px; align-items: end; }
-        }
-
         h1 {
             font-size: clamp(3.2rem, 9vw, 7rem);
             font-weight: 800;
@@ -81,16 +77,6 @@
         }
 
         h1 .accent { color: var(--accent); }
-
-        .lede {
-            font-size: clamp(1rem, 1.3vw, 1.15rem);
-            color: var(--dim);
-            font-weight: 400;
-            max-width: 36ch;
-            line-height: 1.55;
-        }
-
-        .lede strong { color: var(--text); font-weight: 500; }
 
         /* ── Grid ── */
         .meta-row {
@@ -235,12 +221,6 @@
 
         <header class="hero">
             <h1 class="accent">Experiments.</h1>
-            <p class="lede">
-                Small, strange things I keep building on the side —
-                <strong>agents</strong>, <strong>sonifications</strong>,
-                generative engines, language games. Most are live.
-                A few are still finding their shape.
-            </p>
         </header>
 
         <div class="meta-row">
