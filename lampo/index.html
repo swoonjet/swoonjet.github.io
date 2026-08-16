@@ -60,6 +60,27 @@
   }
   .tagline { margin: 0; color: var(--muted); font-size: 1.02rem; max-width: 30rem; }
 
+  .mode-tabs {
+    display: inline-flex;
+    gap: 0.25rem;
+    padding: 0.25rem;
+    background: var(--ground-raised);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+  }
+  .mode-tab {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 0.78rem;
+    letter-spacing: 0.06em;
+    padding: 0.4rem 1.1rem;
+    border: none;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+  }
+  .mode-tab.active { background: var(--ember); color: var(--ground); }
+
   .section-eyebrow {
     font-family: ui-monospace, "SF Mono", Menlo, monospace;
     font-size: 0.74rem;
@@ -314,7 +335,11 @@
   <header class="masthead">
     <div class="eyebrow">Generative Studies</div>
     <h1 class="wordmark">Lampo</h1>
-    <p class="tagline">A surface of revolution, drawn one random curve at a time.</p>
+    <div class="mode-tabs" role="tablist" aria-label="Lampo or Storto">
+      <button class="mode-tab active" id="tab-lampo" role="tab" aria-selected="true">Lampo</button>
+      <button class="mode-tab" id="tab-storto" role="tab" aria-selected="false">Storto</button>
+    </div>
+    <p class="tagline" id="tagline">A surface of revolution, drawn one random curve at a time.</p>
   </header>
 
   <section class="atelier" aria-label="Make a study">
@@ -348,6 +373,10 @@
         <div class="control">
           <label for="ctl-angle4d">Fourth Axis <span class="value" id="val-angle4d">0&deg;</span></label>
           <input type="range" id="ctl-angle4d" min="-180" max="180" step="1" value="0">
+        </div>
+        <div class="control" id="control-asymmetry" hidden>
+          <label for="ctl-asymmetry">Asymmetry <span class="value" id="val-asymmetry">50%</span></label>
+          <input type="range" id="ctl-asymmetry" min="0" max="0.85" step="0.01" value="0.5">
         </div>
 
         <div class="actions">
@@ -431,6 +460,37 @@
       pts.push([rand(-spread, spread), rand(-spread, spread), rand(-spread, spread), rand(-spread, spread)]);
     }
     return pts;
+  }
+
+  // Three harmonics of an angular warp (see warpAt below), random weight and
+  // phase each. Weights are normalized to sum to 1 so the Asymmetry slider
+  // alone controls overall strength -- which harmonic dominates (a 1-lobe
+  // lean, a 2-lobe pinch, a 3-lobe clover) is what varies between forms.
+  // This is Storto's contribution: the same curve, an angle-dependent
+  // radius scale applied at sweep time instead of any change to the curve.
+  function generateAsymmetryHarmonics() {
+    var raw = [rand(0, 1), rand(0, 1), rand(0, 1)];
+    var sum = raw[0] + raw[1] + raw[2];
+    return {
+      weights: raw.map(function (v) { return v / sum; }),
+      phases: [rand(0, Math.PI * 2), rand(0, Math.PI * 2), rand(0, Math.PI * 2)]
+    };
+  }
+
+  // The angular scale factor applied to a pass's radius before it's swept
+  // into place -- the whole trick that lets the surface lean instead of
+  // staying a perfect lathe form. Sum of the first three harmonics of theta,
+  // scaled by `amount` (the Asymmetry slider, 0..MAX_ASYMMETRY). Weights sum
+  // to 1 and MAX_ASYMMETRY is capped below 1, so warp can dip as low as
+  // 1 - MAX_ASYMMETRY but never crosses zero into a self-intersecting
+  // radius flip. amount === 0 makes this the identity (warp === 1 always).
+  function warpAt(theta, harmonics, amount) {
+    var w = harmonics.weights, p = harmonics.phases;
+    return 1 + amount * (
+      w[0] * Math.cos(theta - p[0]) +
+      w[1] * Math.cos(2 * theta - p[1]) +
+      w[2] * Math.cos(3 * theta - p[2])
+    );
   }
 
   function bezierAxis(values, t) {
@@ -560,13 +620,18 @@
   }
 
   // ---------------- state ----------------
+  var MAX_ASYMMETRY = 0.85; // keeps warp's floor at 1 - MAX_ASYMMETRY, safely above zero
+
   var state = {
+    mode: "lampo", // "lampo" | "storto" -- which tab is active
     controlPoints: [],
     numPoints: 12,
     spread: 5,
     passes: 720,
     lineWeight: 0.7,
     angle4D: 0,
+    asymmetry: 0.5,
+    asymHarmonics: { weights: [0, 0, 0], phases: [0, 0, 0] }, // replaced by newForm() below
     camera: { matrix: defaultCameraMatrix(), zoom: 1 }
   };
 
@@ -582,6 +647,8 @@
     targetCtx.fillRect(0, 0, w, h);
 
     var profile = computeProfile(scene.controlPoints, (scene.angle4D || 0) * Math.PI / 180);
+    var harmonics = scene.asymHarmonics || { weights: [0, 0, 0], phases: [0, 0, 0] };
+    var asymmetry = scene.asymmetry || 0;
     var maxR = 0, minZ = Infinity, maxZ = -Infinity;
     for (var i = 0; i < profile.length; i++) {
       var p = profile[i];
@@ -590,7 +657,10 @@
       if (p[2] < minZ) minZ = p[2];
       if (p[2] > maxZ) maxZ = p[2];
     }
-    var halfExtent = Math.max(maxR, (maxZ - minZ) / 2, 0.5);
+    // maxR alone is the un-warped radius; warpAt's weights sum to 1, so its
+    // largest possible value at any angle is (1 + asymmetry) -- scale the
+    // fit bound by that so a heavily-leaning (Storto) form never clips.
+    var halfExtent = Math.max(maxR * (1 + asymmetry), (maxZ - minZ) / 2, 0.5);
     var scale = (Math.min(w, h) * 0.42 * scene.camera.zoom) / halfExtent;
     var zOffset = (minZ + maxZ) / 2;
     var cx = w / 2, cy = h / 2;
@@ -605,9 +675,10 @@
     for (var pass = 0; pass < scene.passes; pass++) {
       var theta = pass * step;
       var cosT = Math.cos(theta), sinT = Math.sin(theta);
+      var warp = warpAt(theta, harmonics, asymmetry);
       targetCtx.beginPath();
       for (var j = 0; j < profile.length; j++) {
-        var x0 = profile[j][0], y0 = profile[j][1], z0 = profile[j][2] - zOffset;
+        var x0 = profile[j][0] * warp, y0 = profile[j][1] * warp, z0 = profile[j][2] - zOffset;
         var x = x0 * cosT + y0 * sinT;
         var y = -x0 * sinT + y0 * cosT;
         var rotated = applyMat3(M, [x, y, z0]);
@@ -619,7 +690,19 @@
     }
   }
 
-  function render() { renderScene(ctx, canvas.width, canvas.height, state); }
+  // The live canvas renders the Lampo tab as truly symmetric (asymmetry
+  // forced to 0) regardless of what the Asymmetry slider is currently set
+  // to -- switching to Storto reveals that same stored value again. This
+  // way the two tabs are visibly "the same curve, warp on or off," and
+  // flipping between them compares a form against its own straightened
+  // version instead of losing your place in the slider.
+  function render() {
+    var scene = state;
+    if (state.mode !== "storto") {
+      scene = Object.assign({}, state, { asymmetry: 0 });
+    }
+    renderScene(ctx, canvas.width, canvas.height, scene);
+  }
 
   // Rendering happens synchronously on every input, not via requestAnimationFrame:
   // rAF is throttled or paused entirely for backgrounded/occluded tabs in real
@@ -629,6 +712,7 @@
 
   function newForm() {
     state.controlPoints = generateControlPoints(state.numPoints, state.spread);
+    state.asymHarmonics = generateAsymmetryHarmonics();
     scheduleRender();
   }
 
@@ -638,11 +722,35 @@
   var elPasses = document.getElementById("ctl-passes");
   var elWeight = document.getElementById("ctl-weight");
   var elAngle4D = document.getElementById("ctl-angle4d");
+  var elAsymmetry = document.getElementById("ctl-asymmetry");
   var valPoints = document.getElementById("val-points");
   var valSpread = document.getElementById("val-spread");
   var valPasses = document.getElementById("val-passes");
   var valWeight = document.getElementById("val-weight");
   var valAngle4D = document.getElementById("val-angle4d");
+  var valAsymmetry = document.getElementById("val-asymmetry");
+  var controlAsymmetry = document.getElementById("control-asymmetry");
+  var tabLampo = document.getElementById("tab-lampo");
+  var tabStorto = document.getElementById("tab-storto");
+  var tagline = document.getElementById("tagline");
+
+  var TAGLINES = {
+    lampo: "A surface of revolution, drawn one random curve at a time.",
+    storto: "A surface of revolution that refuses to stay round."
+  };
+
+  function setMode(mode) {
+    state.mode = mode;
+    tabLampo.classList.toggle("active", mode === "lampo");
+    tabLampo.setAttribute("aria-selected", mode === "lampo");
+    tabStorto.classList.toggle("active", mode === "storto");
+    tabStorto.setAttribute("aria-selected", mode === "storto");
+    controlAsymmetry.hidden = mode !== "storto";
+    tagline.textContent = TAGLINES[mode];
+    scheduleRender();
+  }
+  tabLampo.addEventListener("click", function () { setMode("lampo"); });
+  tabStorto.addEventListener("click", function () { setMode("storto"); });
 
   elPoints.addEventListener("input", function () {
     state.numPoints = parseInt(elPoints.value, 10);
@@ -685,6 +793,12 @@
   elAngle4D.addEventListener("input", function () {
     state.angle4D = parseFloat(elAngle4D.value);
     valAngle4D.textContent = state.angle4D.toFixed(0) + "°";
+    scheduleRender();
+  });
+
+  elAsymmetry.addEventListener("input", function () {
+    state.asymmetry = parseFloat(elAsymmetry.value);
+    valAsymmetry.textContent = Math.round(state.asymmetry * 100) + "%";
     scheduleRender();
   });
 
@@ -871,6 +985,8 @@
     state.passes = entry.passes;
     state.lineWeight = entry.lineWeight;
     state.angle4D = entry.angle4D || 0;
+    state.asymmetry = entry.asymmetry || 0;
+    state.asymHarmonics = entry.asymHarmonics || { weights: [0, 0, 0], phases: [0, 0, 0] };
     state.controlPoints = entry.controlPoints.map(function (p) { return p.slice(); });
     state.camera = { matrix: cameraMatrixFromEntry(entry.camera), zoom: (entry.camera && entry.camera.zoom) || 1 };
     elPoints.value = state.numPoints; valPoints.textContent = state.numPoints;
@@ -878,7 +994,10 @@
     elPasses.value = state.passes; valPasses.textContent = state.passes;
     elWeight.value = state.lineWeight; valWeight.textContent = state.lineWeight.toFixed(2);
     elAngle4D.value = state.angle4D; valAngle4D.textContent = state.angle4D.toFixed(0) + "°";
-    scheduleRender();
+    elAsymmetry.value = state.asymmetry; valAsymmetry.textContent = Math.round(state.asymmetry * 100) + "%";
+    // A study cast with asymmetry > 0 could only have been made on the
+    // Storto tab -- reopen it there so what you see matches what you get.
+    setMode(state.asymmetry > 0 ? "storto" : "lampo");
     castNote.className = "note";
     castNote.textContent = "Viewing Study " + toRoman(entry.studyNumber) + " \u2014 tweak freely; casting saves it as a new study.";
     document.querySelector(".atelier").scrollIntoView({ behavior: "smooth", block: "start" });
@@ -904,6 +1023,11 @@
       passes: state.passes,
       lineWeight: state.lineWeight,
       angle4D: state.angle4D,
+      // The effective value, not necessarily the slider's: casting from the
+      // Lampo tab always saves a symmetric study even if Storto's slider is
+      // sitting on a nonzero value underneath it.
+      asymmetry: state.mode === "storto" ? state.asymmetry : 0,
+      asymHarmonics: { weights: state.asymHarmonics.weights.slice(), phases: state.asymHarmonics.phases.slice() },
       camera: { matrix: state.camera.matrix.slice(), zoom: state.camera.zoom },
       createdAt: new Date().toISOString()
     };
@@ -1063,6 +1187,8 @@
       passes: entry.passes,
       lineWeight: entry.lineWeight,
       angle4D: entry.angle4D || 0,
+      asymmetry: entry.asymmetry || 0,
+      asymHarmonics: entry.asymHarmonics || { weights: [0, 0, 0], phases: [0, 0, 0] },
       camera: { matrix: cameraMatrixFromEntry(entry.camera), zoom: (entry.camera && entry.camera.zoom) || 1 }
     });
     return Promise.resolve(off);
