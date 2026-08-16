@@ -345,6 +345,10 @@
           <label for="ctl-weight">Line Weight <span class="value" id="val-weight">0.70</span></label>
           <input type="range" id="ctl-weight" min="0.2" max="2.5" step="0.05" value="0.7">
         </div>
+        <div class="control">
+          <label for="ctl-angle4d">Fourth Axis <span class="value" id="val-angle4d">0&deg;</span></label>
+          <input type="range" id="ctl-angle4d" min="-180" max="180" step="1" value="0">
+        </div>
 
         <div class="actions">
           <button class="btn" id="btn-new-form">New Form</button>
@@ -440,14 +444,55 @@
   }
 
   var T_STEPS = 100;
-  function computeProfile(points) {
-    var xs = points.map(function (p) { return p[0]; });
-    var ys = points.map(function (p) { return p[1]; });
-    var zs = points.map(function (p) { return p[2]; });
+  var WEIGHT_RANGE = 5; // heaviest point pulls WEIGHT_RANGE x harder than the lightest
+
+  // A genuine 4D rotation, in the one plane that pairs the normally-unused
+  // 4th coordinate with an axis the render pipeline already understands:
+  // spin x and w into each other by angle4D, same 2x2 rotation as the 3D
+  // sweep uses, just one dimension over. y and z are untouched -- this is
+  // a single-plane rotation, one of the six planes a full 4D (SO(4)) turn
+  // is built from, not the whole group. angle4D === 0 is the identity, so
+  // old saved entries (no angle4D field, defaults to 0 below) render bit-
+  // for-bit as before.
+  function rotate4D(p, angle4D) {
+    var c = Math.cos(angle4D), s = Math.sin(angle4D);
+    return [p[0] * c - p[3] * s, p[1], p[2], p[0] * s + p[3] * c];
+  }
+
+  // Rational Bezier via homogeneous de Casteljau: the 4th control-point
+  // coordinate becomes a per-point weight, lerped alongside x/y/z through
+  // the same de Casteljau recursion (bezierAxis, unchanged) and divided
+  // out at the end -- that division is what makes it "rational" instead
+  // of ordinary Bezier. Its value comes from rotate4D, not the original
+  // w straight from generateControlPoints: dragging Fourth Axis rotates
+  // each point's (x, w) pair together, so position and pull come from the
+  // same turning 4-vector instead of two unrelated numbers, and w=0 (the
+  // slider's rest position) makes every weight equal -- an ordinary,
+  // unweighted Bezier curve. Weights are normalized against this point
+  // set's own spread of rotated-w, so it behaves the same at any Spread
+  // and any angle.
+  function computeProfile(points, angle4D) {
+    var rotated = points.map(function (p) { return rotate4D(p, angle4D); });
+    var xs = rotated.map(function (p) { return p[0]; });
+    var ys = rotated.map(function (p) { return p[1]; });
+    var zs = rotated.map(function (p) { return p[2]; });
+
+    var maxAbsW = 0;
+    for (var i = 0; i < rotated.length; i++) {
+      var aw = Math.abs(rotated[i][3]);
+      if (aw > maxAbsW) maxAbsW = aw;
+    }
+    if (maxAbsW === 0) maxAbsW = 1;
+    var ws = rotated.map(function (p) { return Math.pow(WEIGHT_RANGE, p[3] / maxAbsW); });
+    var wxs = xs.map(function (x, i) { return x * ws[i]; });
+    var wys = ys.map(function (y, i) { return y * ws[i]; });
+    var wzs = zs.map(function (z, i) { return z * ws[i]; });
+
     var profile = [];
     for (var i = 0; i < T_STEPS; i++) {
       var t = i / (T_STEPS - 1);
-      profile.push([bezierAxis(xs, t), bezierAxis(ys, t), bezierAxis(zs, t)]);
+      var w = bezierAxis(ws, t);
+      profile.push([bezierAxis(wxs, t) / w, bezierAxis(wys, t) / w, bezierAxis(wzs, t) / w]);
     }
     return profile;
   }
@@ -521,6 +566,7 @@
     spread: 5,
     passes: 720,
     lineWeight: 0.7,
+    angle4D: 0,
     camera: { matrix: defaultCameraMatrix(), zoom: 1 }
   };
 
@@ -535,7 +581,7 @@
     targetCtx.fillStyle = "#f7f6f3";
     targetCtx.fillRect(0, 0, w, h);
 
-    var profile = computeProfile(scene.controlPoints);
+    var profile = computeProfile(scene.controlPoints, (scene.angle4D || 0) * Math.PI / 180);
     var maxR = 0, minZ = Infinity, maxZ = -Infinity;
     for (var i = 0; i < profile.length; i++) {
       var p = profile[i];
@@ -591,10 +637,12 @@
   var elSpread = document.getElementById("ctl-spread");
   var elPasses = document.getElementById("ctl-passes");
   var elWeight = document.getElementById("ctl-weight");
+  var elAngle4D = document.getElementById("ctl-angle4d");
   var valPoints = document.getElementById("val-points");
   var valSpread = document.getElementById("val-spread");
   var valPasses = document.getElementById("val-passes");
   var valWeight = document.getElementById("val-weight");
+  var valAngle4D = document.getElementById("val-angle4d");
 
   elPoints.addEventListener("input", function () {
     state.numPoints = parseInt(elPoints.value, 10);
@@ -603,16 +651,19 @@
     scheduleRender();
   });
 
-  // Only the radial axes (x, y) scale here, height (z) does not: a uniform scale
-  // on all four axes is invisible after auto-fit (Bezier curves are scale-invariant,
-  // so the fit-to-canvas step exactly cancels a uniform resize). Scaling radius
-  // against a fixed height is what actually changes the rendered proportions.
+  // Only the radial axes (x, y, w) scale here, height (z) does not: a uniform
+  // scale on all four axes is invisible after auto-fit (Bezier curves are
+  // scale-invariant, so the fit-to-canvas step exactly cancels a uniform
+  // resize). Scaling radius against a fixed height is what actually changes
+  // the rendered proportions. w scales alongside x because rotate4D pairs
+  // them -- leaving w out would turn the x/w rotation plane into an ellipse
+  // the moment Spread changed after Fourth Axis had been touched.
   elSpread.addEventListener("input", function () {
     var newSpread = parseFloat(elSpread.value);
     var oldSpread = state.spread || 1;
     var ratio = newSpread / oldSpread;
     state.controlPoints = state.controlPoints.map(function (p) {
-      return [p[0] * ratio, p[1] * ratio, p[2], p[3]];
+      return [p[0] * ratio, p[1] * ratio, p[2], p[3] * ratio];
     });
     state.spread = newSpread;
     valSpread.textContent = newSpread.toFixed(1);
@@ -628,6 +679,12 @@
   elWeight.addEventListener("input", function () {
     state.lineWeight = parseFloat(elWeight.value);
     valWeight.textContent = state.lineWeight.toFixed(2);
+    scheduleRender();
+  });
+
+  elAngle4D.addEventListener("input", function () {
+    state.angle4D = parseFloat(elAngle4D.value);
+    valAngle4D.textContent = state.angle4D.toFixed(0) + "°";
     scheduleRender();
   });
 
@@ -813,12 +870,14 @@
     state.spread = entry.spread;
     state.passes = entry.passes;
     state.lineWeight = entry.lineWeight;
+    state.angle4D = entry.angle4D || 0;
     state.controlPoints = entry.controlPoints.map(function (p) { return p.slice(); });
     state.camera = { matrix: cameraMatrixFromEntry(entry.camera), zoom: (entry.camera && entry.camera.zoom) || 1 };
     elPoints.value = state.numPoints; valPoints.textContent = state.numPoints;
     elSpread.value = state.spread; valSpread.textContent = state.spread.toFixed(1);
     elPasses.value = state.passes; valPasses.textContent = state.passes;
     elWeight.value = state.lineWeight; valWeight.textContent = state.lineWeight.toFixed(2);
+    elAngle4D.value = state.angle4D; valAngle4D.textContent = state.angle4D.toFixed(0) + "°";
     scheduleRender();
     castNote.className = "note";
     castNote.textContent = "Viewing Study " + toRoman(entry.studyNumber) + " \u2014 tweak freely; casting saves it as a new study.";
@@ -844,6 +903,7 @@
       spread: state.spread,
       passes: state.passes,
       lineWeight: state.lineWeight,
+      angle4D: state.angle4D,
       camera: { matrix: state.camera.matrix.slice(), zoom: state.camera.zoom },
       createdAt: new Date().toISOString()
     };
@@ -1002,6 +1062,7 @@
       controlPoints: entry.controlPoints,
       passes: entry.passes,
       lineWeight: entry.lineWeight,
+      angle4D: entry.angle4D || 0,
       camera: { matrix: cameraMatrixFromEntry(entry.camera), zoom: (entry.camera && entry.camera.zoom) || 1 }
     });
     return Promise.resolve(off);
