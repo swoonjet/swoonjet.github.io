@@ -1,0 +1,1413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Magpie</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>
+  /* Palette, type and component vocabulary ported from Earshot (the other
+     sound-collage piece): paper/ink instead of a dark terminal, accent kept
+     to ONE meaning (trouble/emphasis, never decoration), no rule lines —
+     separation by space and weight — and identity carried by ink color
+     rather than by a uniform highlight. */
+  :root{
+    --paper: #f2f0eb;
+    --ink: #16150f;
+    --ink-70: rgba(22,21,15,0.70);
+    --ink-45: rgba(22,21,15,0.45);
+    --ink-24: rgba(22,21,15,0.24);
+    --ink-10: rgba(22,21,15,0.10);
+    --accent: #d93d18;
+    --sans: "Helvetica Neue", Helvetica, Inter, "Segoe UI", Arial, sans-serif;
+    --mono: "SF Mono", ui-monospace, "IBM Plex Mono", Menlo, monospace;
+    --unit: 8px;
+  }
+  *{ box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html,body{
+    margin:0; padding:0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -webkit-text-size-adjust: 100%;
+  }
+  body{
+    min-height:100vh;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+  /* Paper grain — a surface, not an animation. Static, very faint. */
+  body::before{
+    content:""; position:fixed; inset:0; pointer-events:none; z-index:30;
+    opacity:0.045; mix-blend-mode:multiply;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/></filter><rect width='180' height='180' filter='url(%23n)'/></svg>");
+  }
+
+  #overlay{
+    position:fixed; inset:0;
+    background: var(--paper);
+    display:flex; align-items:center; justify-content:center; flex-direction:column;
+    z-index:50; text-align:center; padding: 2rem 1.5rem;
+  }
+  #overlay h1{ margin:0 0 1rem 0; line-height:0; }
+  #overlay h1 svg{ width:190px; height:auto; color: var(--ink); }
+  #overlay p{ color: var(--ink-70); max-width:26rem; line-height:1.6; font-size:0.92rem; margin:0 0 2rem 0; }
+  #begin-btn{
+    appearance:none; background: var(--ink); border:0; color: var(--paper);
+    font-family: var(--sans); font-weight:500; letter-spacing:0.1em; text-transform:uppercase; font-size:0.85rem;
+    padding: 1.1rem 2rem; width:100%; max-width:20rem; cursor:pointer;
+    transition: background 250ms ease;
+  }
+  #begin-btn:active{ background: var(--accent); }
+  #overlay .note{ font-size:0.75rem; color: var(--ink-45); margin-top:1.5rem; max-width:22rem; line-height:1.5; }
+
+  #app{ display:none; max-width:32rem; margin:0 auto; padding: 1.2rem 1.1rem 3rem; }
+
+  header{ display:flex; align-items:baseline; justify-content:space-between; margin-bottom:1.1rem; }
+  header h1{ margin:0; line-height:0; }
+  header h1 svg{ width:98px; height:auto; color: var(--ink); display:block; }
+  #status{ font-size:0.65rem; letter-spacing:0.12em; text-transform:uppercase; color: var(--ink-24); transition:color 400ms ease; }
+  #status.active{ color: var(--ink-70); }
+
+  #ticker{
+    color: var(--ink-70); font-size:0.95rem; min-height:2.6em; line-height:1.5;
+    margin-bottom:1.3rem;
+  }
+  #stat-row{
+    display:flex; gap:1.5rem; font-size:0.72rem; color: var(--ink-45);
+    margin-bottom:1.6rem; letter-spacing:0.01em;
+  }
+  #stat-row b{ color: var(--ink); font-family: var(--mono); font-weight:500; font-size:0.95rem; margin-right:0.3rem; }
+
+  section{ margin-top:1.8rem; }
+  section h2{
+    font-size:0.62rem; letter-spacing:0.14em; text-transform:uppercase;
+    color: var(--ink-45); margin:0 0 1.1rem 0; font-weight:500;
+  }
+
+  .ctrl{ margin-bottom:1.3rem; }
+  .ctrl label{ display:flex; justify-content:space-between; font-size:0.85rem; color: var(--ink-70); margin-bottom:0.6rem; }
+  .ctrl label span.val{ color: var(--ink-45); font-family: var(--mono); font-size:0.78rem; }
+  .ctrl-caption{ font-size:0.68rem; color: var(--ink-45); line-height:1.5; margin-top:0.5rem; }
+
+  input[type=range]{
+    width:100%; -webkit-appearance:none; appearance:none;
+    height:24px; background:none; outline:none;
+    touch-action: pan-y;
+  }
+  input[type=range]::-webkit-slider-runnable-track{ height:3px; background: var(--ink-10); }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none; width:16px; height:16px; margin-top:-6.5px;
+    background: var(--ink); cursor:pointer; border:0;
+  }
+  input[type=range]:hover::-webkit-slider-thumb{ background: var(--accent); }
+  input[type=range]::-moz-range-track{ height:3px; background: var(--ink-10); }
+  input[type=range]::-moz-range-thumb{ width:16px; height:16px; border:0; border-radius:0; background: var(--ink); }
+  input[type=range]:focus-visible{ outline:1px solid var(--accent); outline-offset:4px; }
+
+  .role-grid{ display:grid; grid-template-columns: 1fr 1fr; gap: 0 1.4rem; }
+  @media (max-width: 380px){ .role-grid{ grid-template-columns: 1fr; } }
+
+  /* Toggle chip — the one button vocabulary, used everywhere from here down:
+     dim fill at rest, inverts to solid ink when the state it names is on. */
+  .chip{
+    appearance:none; border:0; background: var(--ink-10); color: var(--ink-45);
+    font-family: var(--sans); font-weight:500; font-size:0.72rem; letter-spacing:0.08em;
+    text-transform:uppercase; padding:0.6rem; cursor:pointer; transition: background 200ms ease, color 200ms ease;
+  }
+  .chip:hover{ color: var(--ink); }
+  .chip.active{ background: var(--ink); color: var(--paper); }
+
+  #big-controls{ display:flex; flex-direction:column; gap:0.6rem; margin-top:1.6rem; }
+  .big-btn{ width:100%; padding:1rem; font-size:0.8rem; }
+
+  #tab-bar{ display:flex; gap:0.5rem; margin-top:1.6rem; }
+  .tab-btn{ flex:1; padding:0.6rem; }
+  .tab-panel{ display:none; }
+  .tab-panel.active{ display:block; }
+
+  #grain-list .empty-note{ font-size:0.78rem; color: var(--ink-45); padding:0.6rem 0; line-height:1.5; }
+  .grain-row{ padding:1.1rem 0; }
+  .grain-row + .grain-row{ margin-top:0.2rem; }
+  .grain-row:first-child{ padding-top:0.2rem; }
+  .grain-label{ font-size:0.82rem; margin-bottom:0.8rem; line-height:1.4; color: var(--ink-70); }
+  .grain-label .marker{ color: var(--ink); margin-right:0.4rem; }
+  .grain-label .passing{ color: var(--ink-45); }
+  .grain-ctrl-row{ display:flex; align-items:center; gap:0.7rem; margin-bottom:0.4rem; }
+  .grain-ctrl-row span.g-tag{ font-size:0.65rem; color: var(--ink-45); width:3.4rem; flex-shrink:0; text-transform:uppercase; letter-spacing:0.06em; }
+  .grain-ctrl-row input[type=range]{ flex:1; }
+  .grain-ctrl-row .g-val{ font-size:0.7rem; color: var(--ink-45); font-family: var(--mono); width:2.8rem; text-align:right; flex-shrink:0; }
+  .grain-btn-row{ display:flex; gap:0.5rem; margin-top:0.8rem; }
+  .grain-btn-row button{ flex:1; padding:0.55rem; font-size:0.65rem; }
+
+  details#log-details{ margin-top:1.8rem; }
+  summary{
+    font-size:0.62rem; letter-spacing:0.14em; text-transform:uppercase; font-weight:500;
+    color: var(--ink-45); cursor:pointer; outline:none;
+  }
+  #log{ margin-top:1rem; font-size:0.78rem; line-height:1.7; max-height:14rem; overflow-y:auto; }
+  #log .entry{ margin-bottom:0.5rem; color: var(--ink-70); }
+  #log .entry .tag{ color: var(--ink-45); font-weight:500; margin-right:0.4rem; }
+  #log .entry.faded{ color: var(--ink-45); }
+
+  #wakelock-note{ font-size:0.68rem; color: var(--ink-45); margin-top:1.2rem; line-height:1.5; }
+</style>
+</head>
+<body>
+
+<svg style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true">
+  <symbol id="magpie-wordmark" viewBox="0 0 229 41"><path fill="currentColor" d="M17.088 35.088L10.848 40.272C10.528 40.592 10.032 40.752 9.36 40.752H2.208C0.735996 40.752 -3.57628e-06 40.016 -3.57628e-06 38.544V7.44C-3.57628e-06 6.64 0.223996 6.048 0.671997 5.664L6.864 0.432C7.216 0.144 7.728 0 8.4 0H16.128C16.736 0 17.232 0.127999 17.616 0.383998C18.032 0.607999 18.416 1.04 18.768 1.68L22.032 7.68L22.464 6.912C22.72 6.432 23.008 6.048 23.328 5.76L29.52 0.575998C29.776 0.383999 30.032 0.239999 30.288 0.143998C30.576 0.0479994 30.912 0 31.296 0H39.072C40.544 0 41.28 0.736 41.28 2.208V33.312C41.28 34.112 41.056 34.704 40.608 35.088L34.368 40.272C34.048 40.592 33.552 40.752 32.88 40.752H25.488C24.688 40.752 24.112 40.576 23.76 40.224C23.44 39.872 23.28 39.312 23.28 38.544V25.872L20.448 28.224C19.904 28.672 19.216 28.896 18.384 28.896H17.76V33.312C17.76 34.112 17.536 34.704 17.088 35.088ZM15.552 35.04C16.704 35.04 17.28 34.464 17.28 33.312V16.416L20.112 21.648C20.656 22.672 21.504 23.184 22.656 23.184H24.576C25.728 23.184 26.576 22.672 27.12 21.648L29.952 16.416V33.312C29.952 34.464 30.528 35.04 31.68 35.04H39.072C40.224 35.04 40.8 34.464 40.8 33.312V2.208C40.8 1.056 40.224 0.48 39.072 0.48H31.296C30.336 0.48 29.6 0.959999 29.088 1.92L24.816 9.744C24.656 10.032 24.512 10.24 24.384 10.368C24.288 10.496 24.144 10.56 23.952 10.56H23.52C23.328 10.56 23.168 10.496 23.04 10.368C22.944 10.24 22.816 10.032 22.656 9.744L18.336 1.92C17.824 0.959999 17.088 0.48 16.128 0.48H8.4C7.248 0.48 6.672 1.056 6.672 2.208V33.312C6.672 34.464 7.248 35.04 8.4 35.04H15.552ZM23.568 16.56C24.144 16.56 24.56 16.432 24.816 16.176C25.072 15.92 25.472 15.376 26.016 14.544L31.872 5.616C32.064 5.296 32.272 5.088 32.496 4.992C32.752 4.864 33.008 4.8 33.264 4.8H34.08C34.944 4.8 35.376 5.296 35.376 6.288V30.72H34.896V6.288C34.896 6.032 34.848 5.808 34.752 5.616C34.656 5.392 34.432 5.28 34.08 5.28H33.36C33.136 5.28 32.944 5.312 32.784 5.376C32.624 5.44 32.448 5.632 32.256 5.952L26.4 14.784C25.824 15.648 25.376 16.24 25.056 16.56C24.768 16.88 24.272 17.04 23.568 17.04C22.864 17.04 22.352 16.88 22.032 16.56C21.744 16.24 21.312 15.648 20.736 14.784L14.88 5.952C14.688 5.632 14.496 5.44 14.304 5.376C14.144 5.312 13.952 5.28 13.728 5.28H13.008C12.688 5.28 12.48 5.392 12.384 5.616C12.288 5.808 12.24 6.032 12.24 6.288V30.72H11.76V6.288C11.76 5.296 12.176 4.8 13.008 4.8H13.824C14.08 4.8 14.336 4.864 14.592 4.992C14.848 5.088 15.072 5.296 15.264 5.616L21.12 14.544C21.664 15.376 22.064 15.92 22.32 16.176C22.576 16.432 22.992 16.56 23.568 16.56ZM55.5945 40.272C55.2745 40.592 54.7785 40.752 54.1065 40.752H47.0505C45.5785 40.752 44.8425 40.016 44.8425 38.544V25.872C44.8425 24.88 44.9865 23.76 45.2745 22.512C45.5945 21.232 46.0905 19.728 46.7625 18L50.8905 7.152C50.9865 6.864 51.0985 6.624 51.2265 6.432C51.3865 6.208 51.5465 6.016 51.7065 5.856L51.7545 5.808L57.8985 0.672C58.3785 0.224 59.0825 0 60.0105 0H72.9225C74.3945 0 75.3385 0.624 75.7545 1.872L79.9305 12.768C80.6025 14.496 81.0825 16 81.3705 17.28C81.6905 18.528 81.8505 19.648 81.8505 20.64V33.312C81.8505 34.112 81.6265 34.704 81.1785 35.088L74.9385 40.272C74.6185 40.592 74.1225 40.752 73.4505 40.752H66.2025C64.6345 40.752 63.8505 40.016 63.8505 38.544V32.304H62.5065V33.312C62.5065 34.112 62.2825 34.704 61.8345 35.088L55.5945 40.272ZM62.0265 33.312V26.592H70.5225V33.312C70.5225 34.464 71.1465 35.04 72.3945 35.04H79.6425C80.7945 35.04 81.3705 34.464 81.3705 33.312V20.64C81.3705 19.68 81.2105 18.576 80.8905 17.328C80.6025 16.08 80.1385 14.624 79.4985 12.96L75.3225 2.064C74.9705 1.008 74.1705 0.48 72.9225 0.48H60.0105C58.7305 0.48 57.9145 1.008 57.5625 2.064L53.3865 12.96C52.7465 14.624 52.2665 16.08 51.9465 17.328C51.6585 18.576 51.5145 19.68 51.5145 20.64V33.312C51.5145 34.464 52.0905 35.04 53.2425 35.04H60.2985C61.4505 35.04 62.0265 34.464 62.0265 33.312ZM76.2825 30.72H75.8025V22.464H57.0825V30.72H56.6025V20.496C56.6025 19.6 56.6665 18.784 56.7945 18.048C56.9545 17.28 57.1625 16.544 57.4185 15.84L60.4905 7.968C60.8425 7.072 61.2425 6.32 61.6905 5.712C62.1385 5.104 62.9065 4.8 63.9945 4.8H68.6985C69.7545 4.8 70.4905 5.104 70.9065 5.712C71.3545 6.32 71.7705 7.088 72.1545 8.016L75.4665 15.84C75.7225 16.544 75.9145 17.28 76.0425 18.048C76.2025 18.784 76.2825 19.6 76.2825 20.496V30.72ZM57.0825 21.984H75.8025V20.496C75.8025 19.632 75.7385 18.832 75.6105 18.096C75.4825 17.36 75.2905 16.672 75.0345 16.032L71.7225 8.208C71.3705 7.376 71.0025 6.688 70.6185 6.144C70.2345 5.568 69.5945 5.28 68.6985 5.28H63.9945C63.0345 5.28 62.3625 5.552 61.9785 6.096C61.5945 6.64 61.2425 7.328 60.9225 8.16L57.8505 16.032C57.6265 16.672 57.4345 17.36 57.2745 18.096C57.1465 18.832 57.0825 19.632 57.0825 20.496V21.984ZM64.7625 10.56C64.9865 10.016 65.2905 9.744 65.6745 9.744H66.8745C67.2585 9.744 67.5625 10.016 67.7865 10.56L70.0425 17.856H62.5065L64.7625 10.56ZM112.286 40.752H97.1662C94.3502 40.752 92.0302 40.256 90.2062 39.264C88.4142 38.272 87.0702 36.896 86.1742 35.136C85.3102 33.376 84.8782 31.344 84.8782 29.04V15.504C84.8782 12.048 85.8862 9.456 87.9022 7.728L94.0942 2.496C96.0782 0.832 99.1662 0 103.358 0H115.358C116.83 0 117.566 0.736 117.566 2.208V8.016C117.566 8.816 117.342 9.408 116.894 9.792L110.654 14.976C110.334 15.296 109.838 15.456 109.166 15.456H102.926V22.368C102.99 22.272 103.118 22.128 103.31 21.936L109.502 16.704C109.854 16.416 110.366 16.272 111.038 16.272H118.478C119.95 16.272 120.686 17.008 120.686 18.48V33.312C120.686 34.112 120.462 34.704 120.014 35.088L113.774 40.272C113.454 40.592 112.958 40.752 112.286 40.752ZM118.478 35.04C119.63 35.04 120.206 34.464 120.206 33.312V18.48C120.206 17.328 119.63 16.752 118.478 16.752H111.038C109.886 16.752 109.31 17.328 109.31 18.48V25.968H104.654C103.182 25.968 102.446 25.184 102.446 23.616V12.144C102.446 10.544 103.422 9.744 105.374 9.744H115.358C116.51 9.744 117.086 9.168 117.086 8.016V2.208C117.086 1.056 116.51 0.48 115.358 0.48H103.358C99.3262 0.48 96.3502 1.28 94.4302 2.88C92.5102 4.48 91.5502 6.944 91.5502 10.272V25.248C91.5502 28.576 92.5102 31.04 94.4302 32.64C96.3502 34.24 99.3262 35.04 103.358 35.04H118.478ZM114.974 21.072V30.72H105.422C103.086 30.72 101.294 30.512 100.046 30.096C98.7982 29.68 97.9342 29.024 97.4542 28.128C97.0062 27.2 96.7822 26 96.7822 24.528V11.088C96.7822 9.552 96.9902 8.336 97.4062 7.44C97.8542 6.512 98.6222 5.84 99.7102 5.424C100.83 5.008 102.414 4.8 104.462 4.8H112.766V5.28H104.462C102.574 5.28 101.102 5.472 100.046 5.856C99.0222 6.208 98.3022 6.816 97.8862 7.68C97.4702 8.512 97.2622 9.648 97.2622 11.088V24.528C97.2622 25.904 97.4862 27.024 97.9342 27.888C98.4142 28.72 99.2462 29.328 100.43 29.712C101.614 30.064 103.278 30.24 105.422 30.24H114.494V21.072H114.974ZM133.82 40.752H126.38C124.908 40.752 124.172 40.016 124.172 38.544V7.44C124.172 6.64 124.396 6.048 124.844 5.664L131.036 0.432C131.388 0.144 131.9 0 132.572 0H147.26C150.332 0 152.716 0.415999 154.412 1.248C156.14 2.08 157.34 3.232 158.012 4.704C158.716 6.176 159.068 7.888 159.068 9.84V15.984C159.068 17.52 158.844 18.928 158.396 20.208C157.98 21.456 157.244 22.528 156.188 23.424L149.948 28.608C149.148 29.28 148.108 29.84 146.828 30.288C145.58 30.704 144.044 30.944 142.22 31.008V33.312C142.22 34.112 141.996 34.704 141.548 35.088L135.308 40.272C134.988 40.592 134.492 40.752 133.82 40.752ZM140.012 35.04C141.164 35.04 141.74 34.464 141.74 33.312V25.344H147.26C150.172 25.344 152.444 24.96 154.076 24.192C155.74 23.392 156.908 22.288 157.58 20.88C158.252 19.472 158.588 17.84 158.588 15.984V9.84C158.588 7.984 158.252 6.352 157.58 4.944C156.908 3.536 155.74 2.448 154.076 1.68C152.444 0.879999 150.172 0.48 147.26 0.48H132.572C131.42 0.48 130.844 1.056 130.844 2.208V33.312C130.844 34.464 131.42 35.04 132.572 35.04H140.012ZM136.7 21.264V30.72H136.22V4.8H146.588C148.604 4.8 150.124 5.088 151.148 5.664C152.204 6.24 152.908 7.024 153.26 8.016C153.612 8.976 153.788 10.08 153.788 11.328V14.88C153.788 16.128 153.612 17.232 153.26 18.192C152.908 19.152 152.204 19.904 151.148 20.448C150.124 20.992 148.604 21.264 146.588 21.264H136.7ZM146.588 20.784C148.476 20.784 149.9 20.544 150.86 20.064C151.82 19.552 152.46 18.848 152.78 17.952C153.132 17.056 153.308 16.032 153.308 14.88V11.328C153.308 10.176 153.132 9.152 152.78 8.256C152.46 7.328 151.82 6.608 150.86 6.096C149.9 5.552 148.476 5.28 146.588 5.28H136.7V20.784H146.588ZM141.644 9.456H145.964C146.892 9.456 147.5 9.696 147.788 10.176C148.076 10.624 148.22 11.168 148.22 11.808V14.352C148.22 14.96 148.076 15.504 147.788 15.984C147.5 16.464 146.892 16.704 145.964 16.704H141.644V9.456ZM183.607 40.752H163.159C161.687 40.752 160.951 40.016 160.951 38.544V32.832C160.951 32.032 161.175 31.44 161.623 31.056L167.431 26.16V15.456H163.159C161.687 15.456 160.951 14.72 160.951 13.248V7.44C160.951 6.64 161.175 6.048 161.623 5.664L167.815 0.432C168.167 0.144 168.679 0 169.351 0H189.799C191.271 0 192.007 0.736 192.007 2.208V8.016C192.007 8.816 191.783 9.408 191.335 9.792L185.623 14.592V25.392H189.799C191.271 25.392 192.007 26.128 192.007 27.6V33.312C192.007 34.112 191.783 34.704 191.335 35.088L185.095 40.272C184.775 40.592 184.279 40.752 183.607 40.752ZM169.351 35.04H189.799C190.951 35.04 191.527 34.464 191.527 33.312V27.6C191.527 26.448 190.951 25.872 189.799 25.872H185.143V9.744H189.799C190.951 9.744 191.527 9.168 191.527 8.016V2.208C191.527 1.056 190.951 0.48 189.799 0.48H169.351C168.199 0.48 167.623 1.056 167.623 2.208V8.016C167.623 9.168 168.199 9.744 169.351 9.744H174.103V25.872H169.351C168.199 25.872 167.623 26.448 167.623 27.6V33.312C167.623 34.464 168.199 35.04 169.351 35.04ZM171.943 4.8H187.207V5.28H179.863V30.24H187.207V30.72H171.943V30.24H179.383V5.28H171.943V4.8ZM220.042 40.752H197.77C196.298 40.752 195.562 40.016 195.562 38.544V7.44C195.562 6.64 195.786 6.048 196.234 5.664L202.426 0.432C202.778 0.144 203.29 0 203.962 0H226.234C227.706 0 228.442 0.736 228.442 2.208V7.824C228.442 8.624 228.218 9.216 227.77 9.6L223.642 13.008C224.25 13.328 224.554 13.984 224.554 14.976V20.112C224.554 20.912 224.33 21.504 223.882 21.888L219.61 25.488H226.234C227.706 25.488 228.442 26.224 228.442 27.696V33.312C228.442 34.112 228.218 34.704 227.77 35.088L221.53 40.272C221.21 40.592 220.714 40.752 220.042 40.752ZM226.234 35.04C227.386 35.04 227.962 34.464 227.962 33.312V27.696C227.962 26.544 227.386 25.968 226.234 25.968H212.986V21.84H222.346C223.498 21.84 224.074 21.264 224.074 20.112V14.976C224.074 13.824 223.498 13.248 222.346 13.248H212.986V9.552H226.234C227.386 9.552 227.962 8.976 227.962 7.824V2.208C227.962 1.056 227.386 0.48 226.234 0.48H203.962C202.81 0.48 202.234 1.056 202.234 2.208V33.312C202.234 34.464 202.81 35.04 203.962 35.04H226.234ZM223.642 30.24V30.72H207.466V4.8H223.642V5.28H207.946V17.328H219.754V17.808H207.946V30.24H223.642Z"/></symbol>
+</svg>
+
+<div id="overlay">
+  <h1><svg viewBox="0 0 229 41"><use href="#magpie-wordmark"></use></svg></h1>
+  <p>No drone this time &mdash; just a collage of found sound that builds the longer you let it run.
+  Foragers wander Archive.org's open collections asking their own strange questions, bring back
+  fragments, transform them, and fold them into an ever-thickening texture. Made for a walk, headphones in.
+  Needs your tap to start: audio can't begin on its own.</p>
+  <button id="begin-btn">START LISTENING</button>
+  <p class="note">Uses your connection to fetch real recordings from Archive.org. Keeping the screen on
+  will help keep audio running &mdash; phones often pause background tabs.</p>
+</div>
+
+<div id="app">
+  <header>
+    <h1><svg viewBox="0 0 229 41"><use href="#magpie-wordmark"></use></svg></h1>
+    <span id="status">idle</span>
+  </header>
+
+  <div id="ticker">Waiting for the first foragers to set out&hellip;</div>
+  <div id="stat-row">
+    <div><b id="s-collected">0</b>collected</div>
+    <div><b id="s-resident">0</b>resident</div>
+    <div><b id="s-out">0</b>out foraging</div>
+  </div>
+
+  <div id="tab-bar">
+    <button class="chip tab-btn active" data-tab="forage">Forage</button>
+    <button class="chip tab-btn" data-tab="grains">Grains</button>
+  </div>
+
+  <div id="tab-forage" class="tab-panel active">
+    <section id="roles">
+      <h2>Guide the foragers</h2>
+      <div class="role-grid">
+        <div class="ctrl">
+          <label>Rhythm <span class="val" id="v-role-rhythm">50%</span></label>
+          <input type="range" id="role-rhythm" min="0" max="100" step="5" value="50">
+        </div>
+        <div class="ctrl">
+          <label>Ambiance <span class="val" id="v-role-ambiance">50%</span></label>
+          <input type="range" id="role-ambiance" min="0" max="100" step="5" value="50">
+        </div>
+        <div class="ctrl">
+          <label>Stretch <span class="val" id="v-role-stretch">50%</span></label>
+          <input type="range" id="role-stretch" min="0" max="100" step="5" value="50">
+        </div>
+        <div class="ctrl">
+          <label>Texture <span class="val" id="v-role-texture">50%</span></label>
+          <input type="range" id="role-texture" min="0" max="100" step="5" value="50">
+        </div>
+      </div>
+      <div class="ctrl-caption">each forager leans toward one of these when it decides what to bring back and how to treat it &mdash; turn one down to send fewer of that kind out</div>
+    </section>
+
+    <section id="master">
+      <h2>Mix</h2>
+      <div class="ctrl">
+        <label>Pace <span class="val" id="v-pace">steady</span></label>
+        <input type="range" id="pace" min="0" max="100" step="1" value="50">
+      </div>
+      <div class="ctrl">
+        <label>Space <span class="val" id="v-space">40%</span></label>
+        <input type="range" id="space" min="0" max="100" step="1" value="40">
+      </div>
+      <div class="ctrl">
+        <label>Volume <span class="val" id="v-volume">80%</span></label>
+        <input type="range" id="volume" min="0" max="100" step="1" value="80">
+      </div>
+    </section>
+  </div>
+
+  <div id="tab-grains" class="tab-panel">
+    <section id="grain-mixer">
+      <h2>In the collage now</h2>
+      <div id="grain-list"><div class="empty-note">Nothing collected yet &mdash; give the foragers a minute.</div></div>
+    </section>
+  </div>
+
+  <div id="big-controls">
+    <button id="pause-btn" class="chip big-btn active">PAUSE THE FORAGERS</button>
+    <button id="mute-btn" class="chip big-btn">MUTE</button>
+  </div>
+
+  <div id="wakelock-note"></div>
+
+  <details id="log-details">
+    <summary>Journal</summary>
+    <div id="log"></div>
+  </details>
+</div>
+
+<script>
+"use strict";
+
+/* ============================================================
+   UTILITIES
+   ============================================================ */
+
+function randRange(a,b){ return a + Math.random()*(b-a); }
+function randInt(a,b){ return Math.floor(randRange(a,b+1)); }
+function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+function clamp(v,a,b){ return Math.max(a, Math.min(b,v)); }
+function aOrAn(word){ return /^[aeiou]/i.test(word) ? 'an' : 'a'; }
+
+function weightedPick(items, weightFn){
+  const weights = items.map(weightFn);
+  const total = weights.reduce((a,b)=>a+b, 0);
+  if(total <= 0) return pick(items);
+  let r = Math.random() * total;
+  for(let i=0;i<items.length;i++){
+    r -= weights[i];
+    if(r <= 0) return items[i];
+  }
+  return items[items.length-1];
+}
+
+function fetchWithTimeout(url, opts, ms){
+  const ctrl = new AbortController();
+  const id = setTimeout(()=>ctrl.abort(), ms || 15000);
+  return fetch(url, Object.assign({signal: ctrl.signal}, opts||{})).finally(()=>clearTimeout(id));
+}
+
+/* ============================================================
+   GENERATIVE QUESTIONS — the rover asks a near-infinite variety of
+   strange little questions instead of picking from a fixed list.
+   A handful of good fixed ones (from the prior project) are kept too,
+   mixed in occasionally.
+   ============================================================ */
+
+const WORD_BANK = {
+  place: ['a quarry','an attic','a greenhouse','a boiler room','a tide pool','a lighthouse','a monastery',
+    'a subway platform','a typewriter shop','a shipyard','a stable','a carnival','a library',
+    'a glassworks','a tannery','a brickyard','a windmill','a cannery','a foundry','a bathhouse',
+    'a paper mill','a clock tower','an ice house','a smokehouse','a rope walk','a distillery',
+    'a mine shaft','a grain elevator','a switching yard','a hangar','a greenhouse nursery','a root cellar'],
+  object: ['a kettle','a music box','a typewriter','a bell','a loom','an engine','a clock','a fan',
+    'a radiator','a gate','a windmill','a printing press','a sewing machine','a phonograph',
+    'a bicycle wheel','a screen door','a rocking chair','a violin','an accordion','a harmonica',
+    'a tin roof','a wooden floor','a chandelier','a birdcage','a music stand','a spinning wheel'],
+  material: ['glass','iron','water','paper','stone','wax','copper','ice','sand','wood','tin',
+    'gravel','ash','rope','leather','chalk','rubber','brass','wet clay','dry leaves','thin metal',
+    'wet stone','loose gravel','coiled wire','old rope'],
+  action: ['creaking','dripping','humming','rattling','grinding','settling','breathing','splashing',
+    'clicking','groaning','whistling','buzzing','ticking','sighing','popping','hissing','scraping',
+    'trickling','fluttering','snapping','rustling','echoing','straining','unwinding'],
+  quality: ['distant','hollow','warm','brittle','frantic','submerged','muffled','metallic','fragile',
+    'restless','patient','worn','ancient','half-broken','half-remembered','unfinished','abandoned',
+    'overgrown','waterlogged','sun-bleached','frost-bitten','wind-worn'],
+  moment: ['at dawn','at midnight','during a storm','at low tide','in winter','after the rain',
+    'before it opens','after closing','underwater','from far away','through a wall','on a slow afternoon',
+    'in the dead of summer','just before dark','right after it breaks']
+};
+
+const QUESTION_TEMPLATES = [
+  b => ({ text: `what does ${aOrAn(b.object)} ${b.object} sound like when it's ${b.action}?`, terms: [b.object, b.action] }),
+  b => ({ text: `is there a recording of ${b.place} ${b.moment}?`, terms: [b.place, b.moment] }),
+  b => ({ text: `what happens when ${b.material} keeps ${b.action}?`, terms: [b.material, b.action] }),
+  b => ({ text: `has anyone captured something ${b.quality} in ${b.place}?`, terms: [b.place, b.quality] }),
+  b => ({ text: `what does ${b.quality} ${b.material} sound like?`, terms: [b.material, b.quality] }),
+  b => ({ text: `listen for ${aOrAn(b.object)} ${b.object} ${b.moment}.`, terms: [b.object, b.moment] }),
+  b => ({ text: `${b.place}, ${b.moment} &mdash; what's ${b.action} in there?`, terms: [b.place, b.action] }),
+  b => ({ text: `a ${b.quality} ${b.object}, still ${b.action}?`, terms: [b.object, b.action] })
+];
+
+// strategy 1: THEME — search by subject. Same idea as the prior project's
+// fixed list, generated combinatorially so it rarely repeats, but this is
+// only ONE of five search LOGICS below, not the whole variety mechanism —
+// swapping nouns into the same title-search template isn't real variety by
+// itself; the other four strategies actually search differently.
+const FIXED_THEMES = [
+  {label:'a cave', flavor:'dark', query:'title:(cave) OR title:(cavern)'},
+  {label:'a pipe organ', flavor:'dark', query:'title:("pipe organ")'},
+  {label:'shortwave radio', flavor:'dark', query:'title:(shortwave) AND title:(radio)'},
+  {label:'a storm', flavor:'noisy', query:'title:(rain) OR title:(thunderstorm)'},
+  {label:'the coast', flavor:'quiet', query:'title:(ocean) OR title:(waves) OR title:(coast)'},
+  {label:'a forest', flavor:'bright', query:'title:(forest) OR title:(birdsong) OR title:(rainforest)'},
+  {label:'old vinyl', flavor:'quiet', query:'title:(vinyl) AND (title:(crackle) OR title:(surface noise))'},
+  {label:'a marketplace', flavor:'noisy', query:'title:(marketplace) OR title:(street market) OR title:(crowd)'},
+  {label:'bells and chimes', flavor:'bright', query:'title:(bells) OR title:(chimes) OR title:(carillon)'}
+];
+function themeQuestion(){
+  if(Math.random() < 0.25) return pick(FIXED_THEMES);
+  const b = {};
+  for(const k in WORD_BANK) b[k] = pick(WORD_BANK[k]);
+  const tpl = pick(QUESTION_TEMPLATES);
+  const q = tpl(b);
+  const terms = q.terms.filter(Boolean);
+  const query = terms.map(t=> 'title:(' + t.replace(/^(a|an|the)\s+/i,'') + ')').join(' OR ');
+  return { label: q.text, flavor: pick(['bright','dark','noisy','quiet']), query };
+}
+
+// strategy 2: OBSCURITY — ignores theme entirely. Sorts by fewest downloads
+// instead of most, actively hunting for things almost no one has ever
+// listened to. A real change in retrieval logic, not just vocabulary.
+const OBSCURITY_SEEDS = ['recording','sound','audio','field recording','tape','archive','session'];
+function obscurityQuestion(){
+  const seed = pick(OBSCURITY_SEEDS);
+  return {
+    label: 'something almost no one has listened to',
+    flavor: pick(['dark','quiet']),
+    query: 'title:(' + seed + ')',
+    sort: 'downloads asc'
+  };
+}
+
+// strategy 3: ERA — also ignores theme. Searches a whole decade's worth of
+// audio, whatever it turns out to be. Time is the axis, not subject.
+const ERAS = [
+  {label:'the 1900s', start:'1900-01-01', end:'1909-12-31'},
+  {label:'the 1920s', start:'1920-01-01', end:'1929-12-31'},
+  {label:'the 1930s', start:'1930-01-01', end:'1939-12-31'},
+  {label:'the 1940s', start:'1940-01-01', end:'1949-12-31'},
+  {label:'the 1950s', start:'1950-01-01', end:'1959-12-31'},
+  {label:'the 1970s', start:'1970-01-01', end:'1979-12-31'},
+  {label:'the 1990s', start:'1990-01-01', end:'1999-12-31'}
+];
+function eraQuestion(){
+  const era = pick(ERAS);
+  return {
+    label: era.label,
+    flavor: pick(['dark','bright','quiet']),
+    query: 'date:[' + era.start + ' TO ' + era.end + ']'
+  };
+}
+
+// strategy 4: COLLECTION — dives wholesale into one of Archive.org's own
+// named collections, landing wherever that collection's own curator already
+// gathered things, rather than picking its own keywords. Identifiers
+// confirmed live against the real API before shipping.
+const COLLECTIONS = [
+  {id:'georgeblood', label:'a crate of old 78rpm records'},
+  {id:'oldtimeradio', label:'a shelf of old radio dramas'},
+  {id:'opensource_audio', label:'a pile of community-uploaded recordings'},
+  {id:'netlabels', label:"a netlabel's back catalog"},
+  {id:'radioprograms', label:'a stack of old radio programs'},
+  {id:'librivoxaudio', label:'a shelf of read-aloud recordings'}
+];
+function collectionQuestion(){
+  const c = pick(COLLECTIONS);
+  return { label: c.label, flavor: pick(['dark','bright','quiet','noisy']), query: 'collection:(' + c.id + ')' };
+}
+
+// strategy 5: ECHO — instead of exploring somewhere new, goes back to
+// wherever a sound already in the collage came from, deepening a thread
+// instead of scattering wider. Falls back to a theme search until
+// something has actually taken root.
+function echoQuestion(engine){
+  const pool = engine.residents.concat(engine.transients).filter(g=> g.sourceQuestion);
+  if(!pool.length) return themeQuestion();
+  const g = pick(pool);
+  return Object.assign({}, g.sourceQuestion, { label: 'back to ' + g.sourceQuestion.label });
+}
+
+/* ============================================================
+   LOGGING / UI
+   ============================================================ */
+
+// Each forager's identity ink, ported directly from Earshot's CHANNEL_INKS
+// palette (ink/blue/moss/ochre/slate — vermilion held back as the accent,
+// same rule as there: red means trouble, never identity). Picked to fit:
+// the Namer gets the base ink (it's the original/default mechanism), the
+// Forgotten-Finder gets slate (quiet, muted), the Antiquarian gets ochre
+// (aged, sepia), the Collector gets blue (curatorial), the Echo gets moss
+// (something already-planted deepening).
+const FORAGER_INKS = {
+  'the Namer': '#16150f',
+  'the Forgotten-Finder': '#5c616b',
+  'the Antiquarian': '#9e7312',
+  'the Collector': '#1a3da8',
+  'the Echo': '#386647'
+};
+
+const logEl = document.getElementById('log');
+function log(tag, text, faded){
+  const div = document.createElement('div');
+  div.className = 'entry' + (faded ? ' faded' : '');
+  const tagColor = FORAGER_INKS[tag] || (tag === 'error' ? 'var(--accent)' : null);
+  const tagStyle = tagColor ? ' style="color:' + tagColor + '"' : '';
+  div.innerHTML = '<span class="tag"' + tagStyle + '>' + tag + '</span>' + text;
+  logEl.appendChild(div);
+  logEl.scrollTop = logEl.scrollHeight;
+  while(logEl.children.length > 60){ logEl.removeChild(logEl.firstChild); }
+}
+const tickerEl = document.getElementById('ticker');
+function ticker(line){ tickerEl.textContent = line; }
+
+const stats = { collected:0 };
+function renderStats(residentCount, outCount){
+  document.getElementById('s-collected').textContent = stats.collected;
+  document.getElementById('s-resident').textContent = residentCount;
+  document.getElementById('s-out').textContent = outCount;
+}
+
+// log2-ish scale so most of the slider's travel sits in the useful range
+// rather than bunching everything into the top 10% the way a linear map
+// from 0-100% to 300-16000Hz would.
+function toneValueToHz(pct){ return 300 * Math.pow(16000/300, pct/100); }
+function toneWord(pct){ return pct<35 ? 'dark' : (pct>70 ? 'bright' : 'even'); }
+
+function renderGrainMixer(){
+  const wrap = document.getElementById('grain-list');
+  if(!wrap || !engine) return;
+  const all = engine.residents.concat(engine.transients);
+  if(!all.length){
+    wrap.innerHTML = '<div class="empty-note">Nothing collected yet &mdash; give the foragers a minute.</div>';
+    return;
+  }
+  wrap.innerHTML = '';
+  all.slice().reverse().forEach(g=>{
+    const row = document.createElement('div');
+    row.className = 'grain-row';
+    const vol = g._volPct != null ? g._volPct : 100;
+    const tone = g._tonePct != null ? g._tonePct : 100;
+    const marker = g.kind === 'resident' ? '&#9679;' : '&#9675;';
+    const suffix = g.kind === 'resident' ? '' : ' <span class="passing">(passing through)</span>';
+    const markerColor = FORAGER_INKS[g.forager] || 'var(--ink)';
+    row.innerHTML =
+      '<div class="grain-label"><span class="marker" style="color:' + markerColor + '">' + marker + '</span>' + g.label + suffix + '</div>' +
+      '<div class="grain-ctrl-row"><span class="g-tag">volume</span><input type="range" class="g-vol" min="0" max="150" step="5" value="' + vol + '"><span class="g-val">' + vol + '%</span></div>' +
+      '<div class="grain-ctrl-row"><span class="g-tag">tone</span><input type="range" class="g-tone" min="0" max="100" step="5" value="' + tone + '"><span class="g-val g-tone-val">' + toneWord(tone) + '</span></div>' +
+      '<div class="grain-btn-row"><button class="chip g-mute-btn' + (g.muted?' active':'') + '">' + (g.muted?'Unmute':'Mute') + '</button><button class="chip g-release-btn">Let go</button></div>';
+
+    row.querySelector('.g-vol').addEventListener('input', e=>{
+      const v = parseInt(e.target.value,10);
+      engine.setGrainVolume(g.id, v);
+      row.querySelector('.g-val').textContent = v + '%';
+    });
+    row.querySelector('.g-tone').addEventListener('input', e=>{
+      const v = parseInt(e.target.value,10);
+      g._tonePct = v;
+      engine.setGrainTone(g.id, toneValueToHz(v));
+      row.querySelector('.g-tone-val').textContent = toneWord(v);
+    });
+    row.querySelector('.g-mute-btn').addEventListener('click', ()=>{
+      const updated = engine.toggleGrainMute(g.id);
+      const btn = row.querySelector('.g-mute-btn');
+      btn.textContent = updated.muted ? 'Unmute' : 'Mute';
+      btn.classList.toggle('active', updated.muted);
+    });
+    row.querySelector('.g-release-btn').addEventListener('click', ()=>{
+      engine.release(g.id);
+    });
+    wrap.appendChild(row);
+  });
+}
+
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab-btn').forEach(b=> b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p=> p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+    if(btn.dataset.tab === 'grains') renderGrainMixer();
+  });
+});
+
+/* ============================================================
+   GRAIN NORMALIZATION — a pre-gate so no incoming grain lands way
+   too hot (or too buried) relative to the rest of the collage.
+   ============================================================ */
+
+function measurePeakRMS(buffer){
+  const d = buffer.getChannelData(0);
+  let peak = 0, sum = 0;
+  for(let i=0;i<d.length;i++){
+    const a = Math.abs(d[i]);
+    if(a > peak) peak = a;
+    sum += d[i]*d[i];
+  }
+  return { peak, rms: Math.sqrt(sum/d.length) };
+}
+
+// brings every transformed grain toward a common target loudness before it
+// ever reaches the mix — quiet transforms (long stretches) get boosted,
+// loud/spiky ones get pulled down — rather than trusting each transform's
+// naturally very different output level.
+function computeNormalizationGain(buffer, targetRMS, minGain, maxGain, peakCeiling){
+  targetRMS = targetRMS || 0.14;
+  minGain = minGain || 0.2;
+  maxGain = maxGain || 8;
+  peakCeiling = peakCeiling || 0.85;
+  const { peak, rms } = measurePeakRMS(buffer);
+  if(rms < 0.0004) return 0; // effectively silent — let the caller discard it
+  let gain = targetRMS / rms;
+  gain = clamp(gain, minGain, maxGain);
+  const resultingPeak = peak * gain;
+  if(resultingPeak > peakCeiling) gain *= peakCeiling / resultingPeak;
+  return gain;
+}
+
+/* ============================================================
+   COLLAGE ENGINE — no drone. Every sound in the mix is a grain the
+   foragers brought back. This just holds the shared space (reverb),
+   a gentle bus limiter (grains arrive already normalized — this is
+   only for when several coincide), and per-grain lifecycle/mixing.
+   ============================================================ */
+
+class CollageEngine{
+  constructor(ctx){
+    this.ctx = ctx;
+    this.params = { pace:50, space:40, volume:80 };
+    this.residents = [];
+    this.transients = [];
+    this.residentCap = 16;
+    this._nextId = 1;
+    this.onResidentsChanged = null;
+    this._build();
+  }
+
+  _makeImpulse(seconds, decay){
+    const len = Math.floor(this.ctx.sampleRate*seconds);
+    const buf = this.ctx.createBuffer(2, len, this.ctx.sampleRate);
+    for(let ch=0; ch<2; ch++){
+      const d = buf.getChannelData(ch);
+      for(let i=0;i<len;i++) d[i] = (Math.random()*2-1) * Math.pow(1 - i/len, decay);
+    }
+    return buf;
+  }
+
+  // unity gain below `threshold`, only compresses toward the ceiling above
+  // it — transparent for normal levels, a true safety net near the top.
+  _softLimitCurve(threshold){
+    const n = 1024;
+    const curve = new Float32Array(n);
+    for(let i=0;i<n;i++){
+      const x = (i/(n-1))*2-1;
+      const ax = Math.abs(x);
+      const sign = x < 0 ? -1 : 1;
+      if(ax <= threshold){ curve[i] = x; }
+      else{
+        const excess = (ax - threshold) / (1 - threshold);
+        curve[i] = sign * (threshold + (1-threshold) * Math.tanh(excess));
+      }
+    }
+    return curve;
+  }
+
+  _build(){
+    const ctx = this.ctx;
+
+    this.masterBus = ctx.createGain(); // every grain lands here
+    this.masterBus.gain.value = 1.0;
+
+    this.dryGain = ctx.createGain();
+    this.wetGain = ctx.createGain();
+    this.convolver = ctx.createConvolver();
+    this.convolver.buffer = this._makeImpulse(3.5, 2.2);
+    this.masterBus.connect(this.dryGain);
+    this.masterBus.connect(this.convolver);
+    this.convolver.connect(this.wetGain);
+
+    // grains are individually pre-normalized before they arrive, so this is
+    // a light touch — it only matters when several coincide.
+    this.compressor = ctx.createDynamicsCompressor();
+    this.compressor.threshold.value = -12;
+    this.compressor.ratio.value = 4;
+    this.compressor.knee.value = 8;
+    this.compressor.attack.value = 0.005;
+    this.compressor.release.value = 0.25;
+
+    this.masterGain = ctx.createGain();
+    this.masterGain.gain.value = this.params.volume/100;
+
+    this.finalClip = ctx.createWaveShaper();
+    this.finalClip.curve = this._softLimitCurve(0.85);
+    this.finalClip.oversample = 'none';
+
+    this.dryGain.connect(this.compressor);
+    this.wetGain.connect(this.compressor);
+    this.compressor.connect(this.masterGain);
+    this.masterGain.connect(this.finalClip);
+    this.finalClip.connect(ctx.destination);
+
+    this._applyParams();
+  }
+
+  _applyParams(){
+    const p = this.params;
+    const now = this.ctx.currentTime;
+    const wet = (p.space/100) * 0.65;
+    this.wetGain.gain.setTargetAtTime(wet, now, 0.3);
+    this.dryGain.gain.setTargetAtTime(1 - wet*0.25, now, 0.3);
+    this.masterGain.gain.setTargetAtTime(p.volume/100, now, 0.1);
+  }
+
+  setParam(name, value){
+    this.params[name] = value;
+    this._applyParams();
+  }
+
+  silence(){
+    const now = this.ctx.currentTime;
+    this.masterGain.gain.cancelScheduledValues(now);
+    this.masterGain.gain.setValueAtTime(this.masterGain.gain.value, now);
+    this.masterGain.gain.linearRampToValueAtTime(0, now+0.5);
+  }
+  unsilence(){
+    const now = this.ctx.currentTime;
+    this.masterGain.gain.cancelScheduledValues(now);
+    this.masterGain.gain.setValueAtTime(this.masterGain.gain.value, now);
+    this.masterGain.gain.linearRampToValueAtTime(this.params.volume/100, now+0.5);
+  }
+
+  // briefly duck everything ALREADY in the collage (not the newcomer) so a
+  // fresh arrival gets a moment to be heard before settling into the mix.
+  duckExisting(newId, depthDb, attack, hold, release){
+    const now = this.ctx.currentTime;
+    const target = Math.pow(10, -Math.abs(depthDb)/20);
+    this.residents.concat(this.transients).forEach(g=>{
+      if(g.id === newId) return;
+      const gn = g.duckGain.gain;
+      gn.cancelScheduledValues(now);
+      gn.setValueAtTime(gn.value, now);
+      gn.linearRampToValueAtTime(target, now+attack);
+      gn.setValueAtTime(target, now+attack+hold);
+      gn.linearRampToValueAtTime(1, now+attack+hold+release);
+    });
+  }
+
+  // loops only a crossfaded inner segment of a transform's render, since the
+  // transform's own one-shot fade-in/out would otherwise create a periodic
+  // swell-then-silence pulse when looped whole.
+  _makeLoopableCore(buffer){
+    const ctx = this.ctx;
+    const sr = buffer.sampleRate;
+    const total = buffer.length;
+    const start = Math.floor(total*0.15);
+    const end = Math.floor(total*0.85);
+    const coreLen = Math.max(Math.floor(sr*0.5), end-start);
+    const out = ctx.createBuffer(1, coreLen, sr);
+    const src = buffer.getChannelData(0);
+    const dst = out.getChannelData(0);
+    for(let i=0;i<coreLen;i++){ dst[i] = src[start+i] || 0; }
+    const fadeLen = Math.min(Math.floor(sr*0.05), Math.floor(coreLen/4));
+    for(let i=0;i<fadeLen;i++){
+      const g = i/fadeLen;
+      dst[i] *= g; dst[coreLen-1-i] *= g;
+    }
+    return out;
+  }
+
+  // slow, independently-timed wandering pan so residents don't collapse to
+  // fixed points in the stereo field — each glide picks its own random
+  // target and duration, then reschedules itself, so many residents drift
+  // out of phase with each other rather than in lockstep.
+  _schedulePanDrift(panParam, holder){
+    const ctx = this.ctx;
+    const step = () => {
+      const target = randRange(-0.85, 0.85);
+      const dur = randRange(6, 18);
+      const now = ctx.currentTime;
+      panParam.cancelScheduledValues(now);
+      panParam.setValueAtTime(panParam.value, now);
+      panParam.linearRampToValueAtTime(target, now+dur);
+      holder.panTimer = setTimeout(step, dur*1000);
+    };
+    step();
+  }
+
+  _findGrain(id){
+    return this.residents.find(r=>r.id===id) || this.transients.find(r=>r.id===id);
+  }
+
+  // per-grain volume, independent of the algorithmic arrival/eviction
+  // envelope, so a person can mix an individual sound up or down by hand.
+  setGrainVolume(id, pct){
+    const g = this._findGrain(id);
+    if(!g) return;
+    g._volPct = pct;
+    if(!g.muted) g.userGain.gain.setTargetAtTime(pct/100, this.ctx.currentTime, 0.05);
+  }
+
+  toggleGrainMute(id){
+    const g = this._findGrain(id);
+    if(!g) return g;
+    g.muted = !g.muted;
+    const target = g.muted ? 0 : (g._volPct!=null ? g._volPct/100 : 1);
+    g.userGain.gain.setTargetAtTime(target, this.ctx.currentTime, 0.05);
+    return g;
+  }
+
+  // a simple lowpass "tone" per grain — darker or brighter than the rest of
+  // the collage, independent of whichever transform it arrived through.
+  setGrainTone(id, hz){
+    const g = this._findGrain(id);
+    if(!g) return;
+    g.filt.frequency.setTargetAtTime(hz, this.ctx.currentTime, 0.05);
+  }
+
+  // let a person send a specific grain away early, resident or passing
+  // through &mdash; the manual counterpart to cap eviction / natural fade-out.
+  release(id){
+    const ctx = this.ctx;
+    let g = null;
+    let idx = this.residents.findIndex(r=>r.id===id);
+    if(idx>=0) g = this.residents.splice(idx,1)[0];
+    else{
+      idx = this.transients.findIndex(r=>r.id===id);
+      if(idx>=0) g = this.transients.splice(idx,1)[0];
+    }
+    if(!g) return;
+    if(g.panTimer) clearTimeout(g.panTimer);
+    const t = ctx.currentTime;
+    g.gain.gain.cancelScheduledValues(t);
+    g.gain.gain.setValueAtTime(g.gain.gain.value, t);
+    g.gain.gain.linearRampToValueAtTime(0, t+1.2);
+    try{ g.source.stop(t+1.4); }catch(e){}
+    if(this.onResidentsChanged) this.onResidentsChanged();
+    log('released', g.label + ' let go by hand.', true);
+  }
+
+  introduce(buffer, opts){
+    opts = opts || {};
+    const ctx = this.ctx;
+    const now = ctx.currentTime;
+    const id = this._nextId++;
+    const playBuffer = opts.takeRoot ? this._makeLoopableCore(buffer) : buffer;
+
+    const src = ctx.createBufferSource();
+    src.buffer = playBuffer;
+    const env = ctx.createGain(); env.gain.value = 0;
+    const filt = ctx.createBiquadFilter(); filt.type = 'lowpass'; filt.frequency.value = 16000; filt.Q.value = 0.4;
+    const duckGain = ctx.createGain(); duckGain.gain.value = 1;
+    const userGain = ctx.createGain(); userGain.gain.value = 1;
+    const pan = ctx.createStereoPanner(); pan.pan.value = randRange(-0.8, 0.8);
+    src.connect(env); env.connect(filt); filt.connect(duckGain); duckGain.connect(userGain); userGain.connect(pan); pan.connect(this.masterBus);
+
+    const level = opts.level || 0.5;
+    const fadeIn = opts.fadeIn || 0.6;
+
+    this.duckExisting(id, opts.takeRoot ? 3.5 : 2.5, 0.15, 0.25, opts.takeRoot ? 1.8 : 1.0);
+
+    if(opts.takeRoot){
+      src.loop = true;
+      env.gain.linearRampToValueAtTime(level, now+fadeIn);
+      src.start(now);
+      const resident = { id, kind:'resident', source:src, gain:env, filt, duckGain, userGain, pan, label: opts.label || 'unnamed grain', startedAt: now, sourceQuestion: opts.sourceQuestion, forager: opts.forager, panTimer:null, muted:false, _volPct:100, _tonePct:100 };
+      this.residents.push(resident);
+      this._schedulePanDrift(pan.pan, resident);
+      if(this.residents.length > this.residentCap){
+        const oldest = this.residents.shift();
+        if(oldest.panTimer) clearTimeout(oldest.panTimer);
+        const t = ctx.currentTime;
+        oldest.gain.gain.cancelScheduledValues(t);
+        oldest.gain.gain.setValueAtTime(oldest.gain.gain.value, t);
+        oldest.gain.gain.linearRampToValueAtTime(0, t+4);
+        oldest.source.stop(t+4.2);
+        log('fades', oldest.label + ' fades out of the collage.', true);
+      }
+      if(this.onResidentsChanged) this.onResidentsChanged();
+      return resident;
+    } else {
+      const dur = buffer.duration;
+      const fadeOut = opts.fadeOut || Math.max(0.8, dur*0.25);
+      env.gain.linearRampToValueAtTime(level*1.1, now+fadeIn);
+      env.gain.setValueAtTime(level*1.1, now + Math.max(fadeIn, dur-fadeOut));
+      env.gain.linearRampToValueAtTime(0, now+dur);
+      src.start(now);
+      src.stop(now+dur+0.1);
+      // one slow glide across its short lifetime rather than a repeating
+      // schedule — enough to feel like it's moving through space, not
+      // parked, without needing cleanup on a timer that would outlive it.
+      pan.pan.setValueAtTime(pan.pan.value, now);
+      pan.pan.linearRampToValueAtTime(randRange(-0.85, 0.85), now+dur);
+
+      const transient = { id, kind:'transient', source:src, gain:env, filt, duckGain, userGain, pan, label: opts.label || 'unnamed grain', startedAt: now, sourceQuestion: opts.sourceQuestion, forager: opts.forager, muted:false, _volPct:100, _tonePct:100 };
+      this.transients.push(transient);
+      if(this.onResidentsChanged) this.onResidentsChanged();
+      src.onended = () => {
+        this.transients = this.transients.filter(t=> t.id !== id);
+        if(this.onResidentsChanged) this.onResidentsChanged();
+      };
+      return null;
+    }
+  }
+
+  residentCount(){ return this.residents.length; }
+}
+
+/* ============================================================
+   GRAIN TRANSFORMS — the same palette proven in the prior project,
+   minus the one that was tied to a drone's chord (there's no drone
+   here to harmonize toward).
+   ============================================================ */
+
+function downmixToMono(ctx, audioBuffer){
+  const len = audioBuffer.length;
+  const mono = ctx.createBuffer(1, len, audioBuffer.sampleRate);
+  const out = mono.getChannelData(0);
+  const chans = audioBuffer.numberOfChannels;
+  for(let c=0;c<chans;c++){
+    const d = audioBuffer.getChannelData(c);
+    for(let i=0;i<len;i++) out[i] += d[i]/chans;
+  }
+  return mono;
+}
+
+function extractGrain(ctx, monoBuffer, startSec, durSec){
+  const sr = monoBuffer.sampleRate;
+  const startSample = Math.floor(startSec*sr);
+  const lenSample = Math.max(1, Math.floor(durSec*sr));
+  const buf = ctx.createBuffer(1, lenSample, sr);
+  const src = monoBuffer.getChannelData(0);
+  const dst = buf.getChannelData(0);
+  for(let i=0;i<lenSample;i++) dst[i] = src[startSample+i] || 0;
+  const fadeLen = Math.min(Math.floor(sr*0.01), Math.floor(lenSample/4));
+  for(let i=0;i<fadeLen;i++){
+    const g = i/fadeLen;
+    dst[i] *= g; dst[lenSample-1-i] *= g;
+  }
+  return buf;
+}
+
+function measureRMS(buffer){
+  const d = buffer.getChannelData(0);
+  let sum = 0;
+  for(let i=0;i<d.length;i++) sum += d[i]*d[i];
+  return Math.sqrt(sum/d.length);
+}
+function measureZCR(buffer){
+  const d = buffer.getChannelData(0);
+  let crossings = 0;
+  for(let i=1;i<d.length;i++){ if((d[i-1]>=0) !== (d[i]>=0)) crossings++; }
+  return crossings/d.length;
+}
+
+async function transformFreeze(sampleRate, grain){
+  const sliceMs = randRange(20,70);
+  const sliceLen = Math.max(8, Math.floor(sampleRate*sliceMs/1000));
+  const maxStart = Math.max(0, grain.length - sliceLen);
+  const start = randInt(0, maxStart);
+  const renderSeconds = randRange(3,6);
+  const off = new OfflineAudioContext(1, Math.ceil(sampleRate*renderSeconds), sampleRate);
+  const loopBuf = off.createBuffer(1, sliceLen, sampleRate);
+  const src = grain.getChannelData(0);
+  const dst = loopBuf.getChannelData(0);
+  for(let i=0;i<sliceLen;i++) dst[i] = src[start+i] || 0;
+  const fadeLen = Math.min(Math.floor(sliceLen/4), Math.floor(sampleRate*0.005));
+  for(let i=0;i<fadeLen;i++){ const g=i/fadeLen; dst[i]*=g; dst[sliceLen-1-i]*=g; }
+  const bufSrc = off.createBufferSource();
+  bufSrc.buffer = loopBuf; bufSrc.loop = true;
+  const lfo = off.createOscillator();
+  lfo.type='sine'; lfo.frequency.value = randRange(0.05,0.2);
+  const lfoDepth = off.createGain(); lfoDepth.gain.value = randRange(4,14);
+  lfo.connect(lfoDepth); lfoDepth.connect(bufSrc.detune);
+  const env = off.createGain();
+  env.gain.setValueAtTime(0,0);
+  env.gain.linearRampToValueAtTime(0.85, Math.min(1.5, renderSeconds*0.3));
+  env.gain.setValueAtTime(0.85, Math.max(0, renderSeconds-1.5));
+  env.gain.linearRampToValueAtTime(0, renderSeconds);
+  bufSrc.connect(env); env.connect(off.destination);
+  bufSrc.start(0); bufSrc.stop(renderSeconds);
+  lfo.start(0); lfo.stop(renderSeconds);
+  return off.startRendering();
+}
+
+async function transformStretch(sampleRate, grain){
+  const rate = randRange(0.05,0.16);
+  const renderSeconds = clamp(grain.duration/rate, 2, 8);
+  const off = new OfflineAudioContext(1, Math.ceil(sampleRate*renderSeconds), sampleRate);
+  const src = off.createBufferSource();
+  src.buffer = grain; src.playbackRate.value = rate;
+  const filt = off.createBiquadFilter();
+  filt.type='lowpass'; filt.frequency.value = 2200; filt.Q.value=0.5;
+  const env = off.createGain();
+  env.gain.setValueAtTime(0,0);
+  env.gain.linearRampToValueAtTime(0.9, renderSeconds*0.18);
+  env.gain.setValueAtTime(0.9, renderSeconds*0.75);
+  env.gain.linearRampToValueAtTime(0, renderSeconds);
+  src.connect(filt); filt.connect(env); env.connect(off.destination);
+  src.start(0);
+  return off.startRendering();
+}
+
+async function transformResonate(sampleRate, grain){
+  const renderSeconds = randRange(4,6.5);
+  const off = new OfflineAudioContext(1, Math.ceil(sampleRate*renderSeconds), sampleRate);
+  const src = off.createBufferSource();
+  src.buffer = grain; src.playbackRate.value = randRange(0.4,0.85);
+  const outEnv = off.createGain();
+  outEnv.gain.setValueAtTime(0,0);
+  outEnv.gain.linearRampToValueAtTime(0.8, renderSeconds*0.2);
+  outEnv.gain.setValueAtTime(0.8, renderSeconds*0.7);
+  outEnv.gain.linearRampToValueAtTime(0, renderSeconds);
+  outEnv.connect(off.destination);
+  [randRange(120,300), randRange(300,700), randRange(700,1500)].forEach(f=>{
+    const bp = off.createBiquadFilter();
+    bp.type='bandpass'; bp.frequency.value=f; bp.Q.value=randRange(8,18);
+    const delay = off.createDelay(0.2); delay.delayTime.value = randRange(0.006,0.02);
+    const fb = off.createGain(); fb.gain.value = randRange(0.72,0.88);
+    src.connect(bp); bp.connect(delay); delay.connect(fb); fb.connect(delay);
+    delay.connect(outEnv); bp.connect(outEnv);
+  });
+  src.start(0);
+  return off.startRendering();
+}
+
+async function transformGranulate(sampleRate, grain){
+  const renderSeconds = randRange(3,5);
+  const off = new OfflineAudioContext(1, Math.ceil(sampleRate*renderSeconds), sampleRate);
+  const outEnv = off.createGain();
+  outEnv.gain.setValueAtTime(0,0);
+  outEnv.gain.linearRampToValueAtTime(0.75, renderSeconds*0.15);
+  outEnv.gain.setValueAtTime(0.75, renderSeconds*0.8);
+  outEnv.gain.linearRampToValueAtTime(0, renderSeconds);
+  outEnv.connect(off.destination);
+  const n = randInt(18,45);
+  const grainLen = clamp(grain.duration, 0.01, 1);
+  for(let i=0;i<n;i++){
+    const src = off.createBufferSource();
+    src.buffer = grain; src.playbackRate.value = randRange(0.6,1.5);
+    const g = off.createGain();
+    const t = Math.random()*renderSeconds*0.85;
+    const dur = randRange(0.02,0.09);
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(randRange(0.3,0.7), t+dur*0.4);
+    g.gain.linearRampToValueAtTime(0, t+dur);
+    const offsetInGrain = Math.random()*Math.max(0.001, grainLen-0.02);
+    src.connect(g); g.connect(outEnv);
+    try{ src.start(t, offsetInGrain, Math.min(dur*2, grainLen-offsetInGrain)); }catch(e){ src.start(t); }
+  }
+  return off.startRendering();
+}
+
+async function transformConvolveSelf(sampleRate, grain){
+  const renderSeconds = clamp(grain.duration + 2.5, 3, 7);
+  const off = new OfflineAudioContext(1, Math.ceil(sampleRate*renderSeconds), sampleRate);
+  const conv = off.createConvolver(); conv.normalize = true; conv.buffer = grain;
+  const burstLen = randRange(0.08,0.3);
+  const burstBuf = off.createBuffer(1, Math.floor(sampleRate*burstLen), sampleRate);
+  const d = burstBuf.getChannelData(0);
+  for(let i=0;i<d.length;i++) d[i] = Math.random()*2-1;
+  const burst = off.createBufferSource(); burst.buffer = burstBuf;
+  const bp = off.createBiquadFilter();
+  bp.type='bandpass'; bp.frequency.value = randRange(200,2000); bp.Q.value = randRange(0.5,2);
+  const env = off.createGain();
+  env.gain.setValueAtTime(0,0);
+  env.gain.linearRampToValueAtTime(0.9, renderSeconds*0.1);
+  env.gain.setValueAtTime(0.9, renderSeconds*0.65);
+  env.gain.linearRampToValueAtTime(0, renderSeconds);
+  burst.connect(bp); bp.connect(conv); conv.connect(env); env.connect(off.destination);
+  burst.start(0);
+  return off.startRendering();
+}
+
+async function transformReverse(sampleRate, grain){
+  const rate = randRange(0.3, 0.7);
+  const renderSeconds = clamp(grain.duration/rate, 2, 7);
+  const off = new OfflineAudioContext(1, Math.ceil(sampleRate*renderSeconds), sampleRate);
+  const rev = off.createBuffer(1, grain.length, sampleRate);
+  const src = grain.getChannelData(0);
+  const dst = rev.getChannelData(0);
+  for(let i=0;i<grain.length;i++) dst[i] = src[grain.length-1-i];
+  const bufSrc = off.createBufferSource();
+  bufSrc.buffer = rev; bufSrc.playbackRate.value = rate;
+  const filt = off.createBiquadFilter();
+  filt.type='lowpass'; filt.frequency.value = 2500; filt.Q.value = 0.6;
+  const env = off.createGain();
+  env.gain.setValueAtTime(0,0);
+  env.gain.linearRampToValueAtTime(0.85, renderSeconds*0.2);
+  env.gain.setValueAtTime(0.85, renderSeconds*0.7);
+  env.gain.linearRampToValueAtTime(0, renderSeconds);
+  bufSrc.connect(filt); filt.connect(env); env.connect(off.destination);
+  bufSrc.start(0);
+  return off.startRendering();
+}
+
+async function transformCascade(sampleRate, grain){
+  const renderSeconds = randRange(5, 8);
+  const off = new OfflineAudioContext(1, Math.ceil(sampleRate*renderSeconds), sampleRate);
+  const src = off.createBufferSource();
+  src.buffer = grain; src.playbackRate.value = randRange(0.5, 1.0);
+  const outEnv = off.createGain();
+  outEnv.gain.setValueAtTime(0,0);
+  outEnv.gain.linearRampToValueAtTime(0.8, renderSeconds*0.1);
+  outEnv.gain.setValueAtTime(0.8, renderSeconds*0.5);
+  outEnv.gain.linearRampToValueAtTime(0, renderSeconds);
+  outEnv.connect(off.destination);
+  src.connect(outEnv);
+  const taps = 4;
+  for(let i=0;i<taps;i++){
+    const delay = off.createDelay(2.0);
+    delay.delayTime.value = 0.18 + i*randRange(0.12,0.2);
+    const filt = off.createBiquadFilter();
+    filt.type = 'lowpass'; filt.frequency.value = 3000 - i*600;
+    const g = off.createGain(); g.gain.value = 0.6 * Math.pow(0.65, i);
+    src.connect(delay); delay.connect(filt); filt.connect(g); g.connect(outEnv);
+  }
+  src.start(0);
+  return off.startRendering();
+}
+
+// short, rhythmic pulses chopped straight from the grain — built for the
+// Rhythm role specifically, distinct from granulate's shimmering scramble.
+async function transformPulse(sampleRate, grain){
+  const renderSeconds = randRange(3, 5);
+  const off = new OfflineAudioContext(1, Math.ceil(sampleRate*renderSeconds), sampleRate);
+  const outEnv = off.createGain();
+  outEnv.gain.setValueAtTime(0,0);
+  outEnv.gain.linearRampToValueAtTime(0.8, 0.3);
+  outEnv.gain.setValueAtTime(0.8, renderSeconds-0.6);
+  outEnv.gain.linearRampToValueAtTime(0, renderSeconds);
+  outEnv.connect(off.destination);
+  const pulseLen = randRange(0.05, 0.12);
+  const gap = pulseLen * pick([1, 1.5, 2, 3]);
+  const grainLen = clamp(grain.duration, 0.02, 1);
+  let t = 0;
+  while(t < renderSeconds - pulseLen){
+    const src = off.createBufferSource();
+    src.buffer = grain; src.playbackRate.value = randRange(0.9,1.3);
+    const g = off.createGain();
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(1, t+pulseLen*0.3);
+    g.gain.linearRampToValueAtTime(0, t+pulseLen);
+    const offsetInGrain = Math.random()*Math.max(0.001, grainLen-pulseLen);
+    src.connect(g); g.connect(outEnv);
+    try{ src.start(t, offsetInGrain, pulseLen*1.5); }catch(e){ src.start(t); }
+    t += pulseLen + gap;
+  }
+  return off.startRendering();
+}
+
+const TRANSFORMS = {
+  freeze: transformFreeze,
+  stretch: transformStretch,
+  resonate: transformResonate,
+  granulate: transformGranulate,
+  convolveSelf: transformConvolveSelf,
+  reverse: transformReverse,
+  cascade: transformCascade,
+  pulse: transformPulse
+};
+
+/* ============================================================
+   FORAGER ROLES — the main creative dial. Each role biases grain
+   length and which transforms get used, so "more rhythm" or "more
+   texture" is a real, audible lean rather than a label.
+   ============================================================ */
+
+const FORAGER_ROLES = [
+  { key:'rhythm',   label:'rhythm',   grainRange:[0.04,0.22],
+    weights:{ pulse:3, granulate:2, cascade:1.5, reverse:1, freeze:0.6, resonate:0.6, stretch:0.15, convolveSelf:0.3 } },
+  { key:'ambiance', label:'ambiance', grainRange:[0.6,2.2],
+    weights:{ stretch:2.5, freeze:1.8, convolveSelf:1.8, resonate:1, cascade:0.6, granulate:0.3, reverse:0.4, pulse:0.1 } },
+  { key:'stretch',  label:'stretch',  grainRange:[0.3,1.6],
+    weights:{ stretch:3.5, reverse:1.4, freeze:1, convolveSelf:0.7, resonate:0.5, cascade:0.4, granulate:0.3, pulse:0.15 } },
+  { key:'texture',  label:'texture',  grainRange:[0.05,0.4],
+    weights:{ granulate:2.2, resonate:2, cascade:1.2, convolveSelf:1, freeze:0.7, reverse:0.6, stretch:0.3, pulse:0.5 } }
+];
+
+function chooseTransformForRole(role, adventurousness){
+  const keys = Object.keys(TRANSFORMS);
+  const weights = keys.map(k=> (role.weights[k] || 0.2) * (0.7 + adventurousness*0.6));
+  let r = Math.random()*weights.reduce((a,b)=>a+b,0);
+  for(let i=0;i<keys.length;i++){ r -= weights[i]; if(r<=0) return keys[i]; }
+  return pick(keys);
+}
+
+/* ============================================================
+   FORAGER — the search → metadata → download → decode → transform
+   → normalize → introduce pipeline. Several of these run at once
+   for real throughput ("more grains to collect").
+   ============================================================ */
+
+const roleWeights = { rhythm:50, ambiance:50, stretch:50, texture:50 };
+let paceValue = 50;
+
+class Forager{
+  constructor(engine, name, strategy){
+    this.engine = engine;
+    this.name = name;
+    this.strategy = strategy;
+    this.running = false;
+    this.busy = false;
+    this.timer = null;
+    this.recentlyVisited = [];
+    this.traits = { adventurousness: randRange(0.3,0.6) };
+  }
+
+  start(){ if(this.running) return; this.running = true; this._scheduleNext(randRange(500,4000)); }
+  stop(){ this.running = false; if(this.timer) clearTimeout(this.timer); }
+
+  _scheduleNext(delayMs){
+    if(this.timer) clearTimeout(this.timer);
+    this.timer = setTimeout(()=>{
+      this.expedition().catch(e=>{ console.error(e); log('error', this.name + ' hit a snag: ' + e.message, true); });
+    }, delayMs);
+  }
+
+  paceDelay(){
+    const p = paceValue/100;
+    const minS = 45 - p*30; // 45s..15s
+    const maxS = 90 - p*55; // 90s..35s
+    return randRange(minS, maxS) * 1000;
+  }
+  retryDelay(){ return randRange(3000, 7000); }
+
+  chooseRole(){
+    return weightedPick(FORAGER_ROLES, r => roleWeights[r.key] || 0.1);
+  }
+
+  async searchDestination(dest){
+    const sort = (dest.sort || 'downloads desc').replace(' ', '+');
+    const q = encodeURIComponent('mediatype:(audio) AND (' + dest.query + ')');
+    const url = 'https://archive.org/advancedsearch.php?q=' + q +
+      '&fl[]=identifier&fl[]=title&rows=40&page=1&output=json&sort[]=' + sort;
+    const res = await fetchWithTimeout(url, {}, 15000);
+    if(!res.ok) throw new Error('search failed (' + res.status + ')');
+    const json = await res.json();
+    return (json.response && json.response.docs) || [];
+  }
+  async fetchMetadata(identifier){
+    const res = await fetchWithTimeout('https://archive.org/metadata/' + encodeURIComponent(identifier), {}, 15000);
+    if(!res.ok) throw new Error('metadata failed (' + res.status + ')');
+    return res.json();
+  }
+  pickAudioFiles(meta){
+    const files = meta.files || [];
+    const good = files.filter(f=>{
+      if(!f.format) return false;
+      const fmt = f.format.toLowerCase();
+      const ok = fmt.includes('mp3') || fmt.includes('ogg vorbis');
+      const size = parseInt(f.size||'0',10);
+      return ok && size>0 && size<12*1024*1024;
+    });
+    good.sort((a,b)=> parseInt(a.size,10)-parseInt(b.size,10));
+    return good.slice(0,3);
+  }
+  async downloadAudio(identifier, filename){
+    const url = 'https://archive.org/download/' + encodeURIComponent(identifier) + '/' + encodeURIComponent(filename);
+    const res = await fetchWithTimeout(url, {}, 25000);
+    if(!res.ok) throw new Error('download failed (' + res.status + ')');
+    return res.arrayBuffer();
+  }
+
+  _failed(){ renderStats(this.engine.residentCount(), activeForagerCount()); this._scheduleNext(this.retryDelay()); }
+  _done(){ renderStats(this.engine.residentCount(), activeForagerCount()); this._scheduleNext(this.paceDelay()); }
+
+  async expedition(){
+    if(this.busy){ this._scheduleNext(4000); return; }
+    this.busy = true;
+    const ctx = this.engine.ctx;
+    try{
+      const role = this.chooseRole();
+      const dest = this.strategy(this.engine);
+      stats.collected += 0; // visited, not yet collected
+      this.recentlyVisited.push(dest.label);
+      if(this.recentlyVisited.length > 4) this.recentlyVisited.shift();
+      ticker(this.name + ' wonders: ' + dest.label);
+
+      let docs;
+      try{ docs = await this.searchDestination(dest); }
+      catch(e){ log(this.name, 'lost the signal chasing "' + dest.label + '" (' + e.message + ').', true); this._failed(); return; }
+
+      if(!docs.length){
+        log(this.name, 'found nothing for "' + dest.label + '" this time.', true);
+        this._failed(); return;
+      }
+
+      const pool = docs.slice(0, Math.min(20, docs.length)).slice();
+      const candidates = [];
+      while(candidates.length < Math.min(3, pool.length)){
+        candidates.push(pool.splice(Math.floor(Math.random()*pool.length),1)[0]);
+      }
+
+      let decoded = null, chosenDoc = null;
+      for(const doc of candidates){
+        let meta;
+        try{ meta = await this.fetchMetadata(doc.identifier); }
+        catch(e){ continue; }
+        const files = this.pickAudioFiles(meta);
+        if(!files.length) continue;
+        for(const file of files){
+          let arrayBuf;
+          try{ arrayBuf = await this.downloadAudio(doc.identifier, file.name); }
+          catch(e){ continue; }
+          try{ decoded = await ctx.decodeAudioData(arrayBuf.slice(0)); }
+          catch(e){ continue; }
+          chosenDoc = doc; break;
+        }
+        if(decoded) break;
+      }
+
+      if(!decoded){
+        log(this.name, 'came back from "' + dest.label + '" empty-handed.', true);
+        this._failed(); return;
+      }
+
+      const mono = downmixToMono(ctx, decoded);
+      const [minLen, maxLen] = role.grainRange;
+      const grainDur = clamp(randRange(minLen, maxLen), 0.03, Math.max(0.05, mono.duration-0.1));
+      const maxStart = Math.max(0, mono.duration - grainDur - 0.05);
+      const startAt = randRange(0, maxStart);
+      const grain = extractGrain(ctx, mono, startAt, grainDur);
+      stats.collected++;
+
+      const rms = measureRMS(grain);
+      if(rms < 0.002){
+        log('discard', 'a grain from "' + dest.label + '" &mdash; too quiet to matter.', true);
+        this._done(); return;
+      }
+
+      const transformName = chooseTransformForRole(role, this.traits.adventurousness);
+      let processed;
+      try{ processed = await TRANSFORMS[transformName](ctx.sampleRate, grain); }
+      catch(e){ console.error(e); log('discard', 'a grain resisted transformation (' + e.message + ').', true); this._failed(); return; }
+
+      // pre-gate: normalize before it ever reaches the mix
+      const normGain = computeNormalizationGain(processed);
+      if(normGain <= 0){
+        log('discard', 'a ' + transformName + ' grain from "' + dest.label + '" &mdash; came out silent.', true);
+        this._done(); return;
+      }
+
+      const discardChance = 0.08;
+      if(Math.random() < discardChance){
+        log('discard', 'a ' + transformName + ' grain from "' + dest.label + '" &mdash; didn\'t take.', true);
+        this._done(); return;
+      }
+
+      const takeRoot = Math.random() < 0.4;
+      const baseLevel = randRange(0.45, 0.7) * normGain;
+      const label = role.label + ' &middot; ' + transformName + ' from "' + dest.label + '"';
+      this.engine.introduce(processed, { takeRoot, level: baseLevel, label, sourceQuestion: dest, forager: this.name });
+      log(this.name, (takeRoot ? 'a ' + transformName + ' fragment takes root: ' : 'passing through: ') + dest.label);
+      ticker('Just found: ' + dest.label);
+
+      this._done();
+    } finally {
+      this.busy = false;
+    }
+  }
+}
+
+function activeForagerCount(){
+  return foragers.filter(f=> f.running).length;
+}
+
+/* ============================================================
+   APP WIRING
+   ============================================================ */
+
+let ctx, engine;
+const foragers = [];
+let wakeLock = null;
+
+async function requestWakeLock(){
+  try{
+    if('wakeLock' in navigator){
+      wakeLock = await navigator.wakeLock.request('screen');
+      document.getElementById('wakelock-note').textContent = 'Screen will stay awake while this tab is open, to help keep audio running.';
+      document.addEventListener('visibilitychange', async ()=>{
+        if(wakeLock === null && document.visibilityState === 'visible'){
+          try{ wakeLock = await navigator.wakeLock.request('screen'); }catch(e){}
+        }
+      });
+    } else {
+      document.getElementById('wakelock-note').textContent = 'This browser can\'t keep the screen awake automatically — locking your phone will likely pause the sound.';
+    }
+  }catch(e){
+    document.getElementById('wakelock-note').textContent = 'Couldn\'t keep the screen awake &mdash; locking your phone will likely pause the sound.';
+  }
+}
+
+document.getElementById('begin-btn').addEventListener('click', async ()=>{
+  ctx = new (window.AudioContext || window.webkitAudioContext)();
+  engine = new CollageEngine(ctx);
+  engine.onResidentsChanged = ()=>{
+    renderStats(engine.residentCount(), activeForagerCount());
+    renderGrainMixer();
+  };
+
+  document.getElementById('overlay').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  document.getElementById('status').textContent = 'foraging';
+  document.getElementById('status').classList.add('active');
+  log('begin', 'the foragers set out.');
+
+  requestWakeLock();
+
+  [
+    ['the Namer', themeQuestion],
+    ['the Forgotten-Finder', obscurityQuestion],
+    ['the Antiquarian', eraQuestion],
+    ['the Collector', collectionQuestion],
+    ['the Echo', echoQuestion]
+  ].forEach(([name, strategy])=>{
+    const f = new Forager(engine, name, strategy);
+    foragers.push(f);
+    f.start();
+  });
+  renderStats(0, activeForagerCount());
+
+  ['role-rhythm','role-ambiance','role-stretch','role-texture'].forEach(id=>{
+    const key = id.replace('role-','');
+    document.getElementById(id).addEventListener('input', (e)=>{
+      const v = parseInt(e.target.value,10);
+      roleWeights[key] = v;
+      document.getElementById('v-'+id).textContent = v + '%';
+    });
+  });
+
+  document.getElementById('pace').addEventListener('input', (e)=>{
+    const v = parseInt(e.target.value,10);
+    paceValue = v;
+    document.getElementById('v-pace').textContent = v<20?'unhurried':(v<50?'steady':(v<80?'busy':'relentless'));
+  });
+  document.getElementById('space').addEventListener('input', (e)=>{
+    const v = parseInt(e.target.value,10);
+    engine.setParam('space', v);
+    document.getElementById('v-space').textContent = v + '%';
+  });
+  document.getElementById('volume').addEventListener('input', (e)=>{
+    const v = parseInt(e.target.value,10);
+    engine.setParam('volume', v);
+    document.getElementById('v-volume').textContent = v + '%';
+  });
+
+  let paused = false;
+  document.getElementById('pause-btn').addEventListener('click', ()=>{
+    paused = !paused;
+    const btn = document.getElementById('pause-btn');
+    const status = document.getElementById('status');
+    if(paused){
+      foragers.forEach(f=> f.stop());
+      btn.textContent = 'RESUME THE FORAGERS';
+      btn.classList.remove('active');
+      status.textContent = 'resting';
+      status.classList.remove('active');
+      log('pause', 'the foragers rest. what they\'ve found keeps playing.', true);
+    } else {
+      foragers.forEach(f=> f.start());
+      btn.textContent = 'PAUSE THE FORAGERS';
+      btn.classList.add('active');
+      status.textContent = 'foraging';
+      status.classList.add('active');
+      log('resume', 'the foragers set out again.', true);
+    }
+    renderStats(engine.residentCount(), activeForagerCount());
+  });
+
+  let muted = false;
+  document.getElementById('mute-btn').addEventListener('click', ()=>{
+    muted = !muted;
+    const btn = document.getElementById('mute-btn');
+    if(muted){ engine.silence(); btn.textContent = 'UNMUTE'; btn.classList.add('active'); }
+    else{ engine.unsilence(); btn.textContent = 'MUTE'; btn.classList.remove('active'); }
+  });
+}, { once:true });
+</script>
+</body>
+</html>
