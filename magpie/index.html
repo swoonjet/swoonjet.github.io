@@ -162,9 +162,9 @@
 
 <div id="overlay">
   <h1><svg viewBox="0 0 229 41"><use href="#magpie-wordmark"></use></svg></h1>
-  <p>No drone this time &mdash; just a collage of found sound that builds the longer you let it run.
-  Foragers wander Archive.org's open collections asking their own strange questions, bring back
-  fragments, transform them, and fold them into an ever-thickening texture. Made for a walk, headphones in.
+  <p>A collage of found sound that thickens the longer you let it run. Five magpies wander
+  Archive.org's open collections asking their own strange questions, carry fragments home,
+  transform them, and weave them into the texture. Made for a walk, headphones in.
   Needs your tap to start: audio can't begin on its own.</p>
   <button id="begin-btn">START LISTENING</button>
   <p class="note">Uses your connection to fetch real recordings from Archive.org. Keeping the screen on
@@ -177,21 +177,21 @@
     <span id="status">idle</span>
   </header>
 
-  <div id="ticker">Waiting for the first foragers to set out&hellip;</div>
+  <div id="ticker">Waiting for the first magpies to set out&hellip;</div>
   <div id="stat-row">
     <div><b id="s-collected">0</b>collected</div>
     <div><b id="s-resident">0</b>resident</div>
-    <div><b id="s-out">0</b>out foraging</div>
+    <div><b id="s-out">0</b>out gathering</div>
   </div>
 
   <div id="tab-bar">
-    <button class="chip tab-btn active" data-tab="forage">Forage</button>
+    <button class="chip tab-btn active" data-tab="forage">Gather</button>
     <button class="chip tab-btn" data-tab="grains">Grains</button>
   </div>
 
   <div id="tab-forage" class="tab-panel active">
     <section id="roles">
-      <h2>Guide the foragers</h2>
+      <h2>Guide the magpies</h2>
       <div class="role-grid">
         <div class="ctrl">
           <label>Rhythm <span class="val" id="v-role-rhythm">50%</span></label>
@@ -210,7 +210,7 @@
           <input type="range" id="role-texture" min="0" max="100" step="5" value="50">
         </div>
       </div>
-      <div class="ctrl-caption">each forager leans toward one of these when it decides what to bring back and how to treat it &mdash; turn one down to send fewer of that kind out</div>
+      <div class="ctrl-caption">each magpie leans toward one of these when it decides what to bring back and how to treat it &mdash; turn one down to send fewer of that kind out</div>
     </section>
 
     <section id="master">
@@ -233,12 +233,12 @@
   <div id="tab-grains" class="tab-panel">
     <section id="grain-mixer">
       <h2>In the collage now</h2>
-      <div id="grain-list"><div class="empty-note">Nothing collected yet &mdash; give the foragers a minute.</div></div>
+      <div id="grain-list"><div class="empty-note">Nothing collected yet &mdash; give the magpies a minute.</div></div>
     </section>
   </div>
 
   <div id="big-controls">
-    <button id="pause-btn" class="chip big-btn active">PAUSE THE FORAGERS</button>
+    <button id="pause-btn" class="chip big-btn active">PAUSE THE MAGPIES</button>
     <button id="mute-btn" class="chip big-btn">MUTE</button>
   </div>
 
@@ -463,7 +463,7 @@ function renderGrainMixer(){
   if(!wrap || !engine) return;
   const all = engine.residents.concat(engine.transients);
   if(!all.length){
-    wrap.innerHTML = '<div class="empty-note">Nothing collected yet &mdash; give the foragers a minute.</div>';
+    wrap.innerHTML = '<div class="empty-note">Nothing collected yet &mdash; give the magpies a minute.</div>';
     return;
   }
   wrap.innerHTML = '';
@@ -1333,9 +1333,9 @@ document.getElementById('begin-btn').addEventListener('click', async ()=>{
 
   document.getElementById('overlay').style.display = 'none';
   document.getElementById('app').style.display = 'block';
-  document.getElementById('status').textContent = 'foraging';
+  document.getElementById('status').textContent = 'gathering';
   document.getElementById('status').classList.add('active');
-  log('begin', 'the foragers set out.');
+  log('begin', 'the magpies set out.');
 
   requestWakeLock();
 
@@ -1384,18 +1384,18 @@ document.getElementById('begin-btn').addEventListener('click', async ()=>{
     const status = document.getElementById('status');
     if(paused){
       foragers.forEach(f=> f.stop());
-      btn.textContent = 'RESUME THE FORAGERS';
+      btn.textContent = 'RESUME THE MAGPIES';
       btn.classList.remove('active');
       status.textContent = 'resting';
       status.classList.remove('active');
-      log('pause', 'the foragers rest. what they\'ve found keeps playing.', true);
+      log('pause', 'the magpies rest. what they\'ve found keeps playing.', true);
     } else {
       foragers.forEach(f=> f.start());
-      btn.textContent = 'PAUSE THE FORAGERS';
+      btn.textContent = 'PAUSE THE MAGPIES';
       btn.classList.add('active');
-      status.textContent = 'foraging';
+      status.textContent = 'gathering';
       status.classList.add('active');
-      log('resume', 'the foragers set out again.', true);
+      log('resume', 'the magpies set out again.', true);
     }
     renderStats(engine.residentCount(), activeForagerCount());
   });
