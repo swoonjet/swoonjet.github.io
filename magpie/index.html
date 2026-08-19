@@ -80,6 +80,16 @@
   }
   #stat-row b{ color: var(--ink); font-family: var(--mono); font-weight:500; font-size:0.95rem; margin-right:0.3rem; }
 
+  /* Live levels — a parallel analyser tap, ink-on-paper only, no accent.
+     Visible regardless of which tab is active, since "what's playing" is
+     not tab-specific. */
+  #viz-panel{ display:flex; align-items:flex-end; gap:0.9rem; margin-bottom:1.6rem; }
+  #viz-canvas{ flex:1; width:100%; height:40px; display:block; }
+  #viz-level{
+    font-family: var(--mono); font-size:0.68rem; color: var(--ink-45);
+    width:3.4rem; text-align:right; flex-shrink:0; padding-bottom:0.2rem;
+  }
+
   section{ margin-top:1.8rem; }
   section h2{
     font-size:0.62rem; letter-spacing:0.14em; text-transform:uppercase;
@@ -128,9 +138,10 @@
   .tab-panel.active{ display:block; }
 
   #grain-list .empty-note{ font-size:0.78rem; color: var(--ink-45); padding:0.6rem 0; line-height:1.5; }
-  .grain-row{ padding:1.1rem 0; }
+  .grain-row{ padding:1.1rem 0; opacity:1; transition: opacity 400ms ease; }
   .grain-row + .grain-row{ margin-top:0.2rem; }
   .grain-row:first-child{ padding-top:0.2rem; }
+  .grain-row.grain-row-leaving{ opacity:0; pointer-events:none; }
   .grain-label{ font-size:0.82rem; margin-bottom:0.8rem; line-height:1.4; color: var(--ink-70); }
   .grain-label .marker{ color: var(--ink); margin-right:0.4rem; }
   .grain-label .passing{ color: var(--ink-45); }
@@ -162,12 +173,11 @@
 
 <div id="overlay">
   <h1><svg viewBox="0 0 229 41"><use href="#magpie-wordmark"></use></svg></h1>
-  <p>A collage of found sound that thickens the longer you let it run. Five magpies wander
-  Archive.org's open collections asking their own strange questions, carry fragments home,
-  transform them, and weave them into the texture. Made for a walk, headphones in.
+  <p>A collage of found sound that thickens the longer you let it run. Five magpies are out
+  looking for interesting things, and folding whatever they find into the texture.
   Needs your tap to start: audio can't begin on its own.</p>
   <button id="begin-btn">START LISTENING</button>
-  <p class="note">Uses your connection to fetch real recordings from Archive.org. Keeping the screen on
+  <p class="note">Uses your connection to fetch real recordings from the open web. Keeping the screen on
   will help keep audio running &mdash; phones often pause background tabs.</p>
 </div>
 
@@ -182,6 +192,11 @@
     <div><b id="s-collected">0</b>collected</div>
     <div><b id="s-resident">0</b>resident</div>
     <div><b id="s-out">0</b>out gathering</div>
+  </div>
+
+  <div id="viz-panel">
+    <canvas id="viz-canvas" width="336" height="40"></canvas>
+    <span id="viz-level">&mdash; dB</span>
   </div>
 
   <div id="tab-bar">
@@ -329,39 +344,58 @@ const QUESTION_TEMPLATES = [
 // swapping nouns into the same title-search template isn't real variety by
 // itself; the other four strategies actually search differently.
 const FIXED_THEMES = [
-  {label:'a cave', flavor:'dark', query:'title:(cave) OR title:(cavern)'},
-  {label:'a pipe organ', flavor:'dark', query:'title:("pipe organ")'},
-  {label:'shortwave radio', flavor:'dark', query:'title:(shortwave) AND title:(radio)'},
-  {label:'a storm', flavor:'noisy', query:'title:(rain) OR title:(thunderstorm)'},
-  {label:'the coast', flavor:'quiet', query:'title:(ocean) OR title:(waves) OR title:(coast)'},
-  {label:'a forest', flavor:'bright', query:'title:(forest) OR title:(birdsong) OR title:(rainforest)'},
-  {label:'old vinyl', flavor:'quiet', query:'title:(vinyl) AND (title:(crackle) OR title:(surface noise))'},
-  {label:'a marketplace', flavor:'noisy', query:'title:(marketplace) OR title:(street market) OR title:(crowd)'},
-  {label:'bells and chimes', flavor:'bright', query:'title:(bells) OR title:(chimes) OR title:(carillon)'}
+  {label:'a cave', flavor:'dark', query:'title:(cave) OR title:(cavern)', terms:['cave','cavern']},
+  {label:'a pipe organ', flavor:'dark', query:'title:("pipe organ")', terms:['pipe organ']},
+  {label:'shortwave radio', flavor:'dark', query:'title:(shortwave) AND title:(radio)', terms:['shortwave radio']},
+  {label:'a storm', flavor:'noisy', query:'title:(rain) OR title:(thunderstorm)', terms:['rain','thunderstorm']},
+  {label:'the coast', flavor:'quiet', query:'title:(ocean) OR title:(waves) OR title:(coast)', terms:['ocean','coast']},
+  {label:'a forest', flavor:'bright', query:'title:(forest) OR title:(birdsong) OR title:(rainforest)', terms:['forest','birdsong']},
+  {label:'old vinyl', flavor:'quiet', query:'title:(vinyl) AND (title:(crackle) OR title:(surface noise))', terms:['vinyl crackle']},
+  {label:'a marketplace', flavor:'noisy', query:'title:(marketplace) OR title:(street market) OR title:(crowd)', terms:['marketplace','crowd']},
+  {label:'bells and chimes', flavor:'bright', query:'title:(bells) OR title:(chimes) OR title:(carillon)', terms:['bells','chimes']}
 ];
+
+// Some trips go to a different open collection entirely, rather than always
+// the same one — the terms above are plain-language so they work as a
+// free-text search regardless of which place ends up hosting a trip.
+function pickSource(dest, wikimediaChance){
+  const chance = wikimediaChance == null ? 0.4 : wikimediaChance;
+  const eligible = dest.terms && dest.terms.length;
+  return { source: (eligible && Math.random() < chance) ? 'wikimedia' : 'archive' };
+}
+
 function themeQuestion(){
-  if(Math.random() < 0.25) return pick(FIXED_THEMES);
+  if(Math.random() < 0.25){
+    const t = pick(FIXED_THEMES);
+    return Object.assign({}, t, pickSource(t));
+  }
   const b = {};
   for(const k in WORD_BANK) b[k] = pick(WORD_BANK[k]);
   const tpl = pick(QUESTION_TEMPLATES);
   const q = tpl(b);
-  const terms = q.terms.filter(Boolean);
-  const query = terms.map(t=> 'title:(' + t.replace(/^(a|an|the)\s+/i,'') + ')').join(' OR ');
-  return { label: q.text, flavor: pick(['bright','dark','noisy','quiet']), query };
+  const terms = q.terms.filter(Boolean).map(t=> t.replace(/^(a|an|the)\s+/i,''));
+  const query = terms.map(t=> 'title:(' + t + ')').join(' OR ');
+  const dest = { label: q.text, flavor: pick(['bright','dark','noisy','quiet']), query, terms };
+  return Object.assign(dest, pickSource(dest));
 }
 
 // strategy 2: OBSCURITY — ignores theme entirely. Sorts by fewest downloads
 // instead of most, actively hunting for things almost no one has ever
 // listened to. A real change in retrieval logic, not just vocabulary.
+// Wikimedia has no equivalent "least downloaded" sort, so trips there lean
+// on the same blunt, undifferentiated seed words to do the same job less
+// often, keeping this one mostly true to its own mechanic.
 const OBSCURITY_SEEDS = ['recording','sound','audio','field recording','tape','archive','session'];
 function obscurityQuestion(){
   const seed = pick(OBSCURITY_SEEDS);
-  return {
+  const dest = {
     label: 'something almost no one has listened to',
     flavor: pick(['dark','quiet']),
     query: 'title:(' + seed + ')',
-    sort: 'downloads asc'
+    sort: 'downloads asc',
+    terms: [seed]
   };
+  return Object.assign(dest, pickSource(dest, 0.3));
 }
 
 // strategy 3: ERA — also ignores theme. Searches a whole decade's worth of
@@ -458,51 +492,208 @@ function renderStats(residentCount, outCount){
 function toneValueToHz(pct){ return 300 * Math.pow(16000/300, pct/100); }
 function toneWord(pct){ return pct<35 ? 'dark' : (pct>70 ? 'bright' : 'even'); }
 
-function renderGrainMixer(){
+/* ------------------------------------------------------------
+   Grains-tab render — keyed diff/patch, not a full rebuild.
+   Foragers add/evict/release grains on their own schedule, totally
+   independent of whatever the person happens to be doing in this list
+   at that moment. The old version did a full innerHTML rebuild on every
+   change, which recreated every row (including whichever one a person
+   had a finger or cursor on), resetting drag state, stealing focus, and
+   shuffling rows out from under their hand — the "flip around" bug.
+   Fix has two parts:
+     1) row identity is keyed by grain id — an existing row is updated
+        in place (values only), never destroyed/recreated/replaced.
+     2) while the person is actively touching ANY control in the list,
+        the render pass is deferred wholesale (queued) instead of
+        applied, and flushed once they've let go plus a short grace
+        window — so nothing in the list can move or reset mid-gesture.
+   ------------------------------------------------------------ */
+
+const grainRows = new Map(); // grain id -> { row, labelDiv, volInput, volVal, toneInput, toneVal, muteBtn }
+let grainInteractionActive = false;
+let grainInteractionGraceTimer = null;
+let grainRenderPending = false;
+
+function markGrainInteractionStart(){
+  grainInteractionActive = true;
+  if(grainInteractionGraceTimer){ clearTimeout(grainInteractionGraceTimer); grainInteractionGraceTimer = null; }
+}
+function markGrainInteractionEnd(){
+  if(grainInteractionGraceTimer) clearTimeout(grainInteractionGraceTimer);
+  grainInteractionGraceTimer = setTimeout(()=>{
+    grainInteractionActive = false;
+    grainInteractionGraceTimer = null;
+    if(grainRenderPending){ grainRenderPending = false; applyGrainRender(); }
+  }, 500);
+}
+// Global net: wherever a drag/click actually lets go, even if the pointer
+// ended up outside the row it started on, count it as released.
+document.addEventListener('pointerup', markGrainInteractionEnd, true);
+document.addEventListener('pointercancel', markGrainInteractionEnd, true);
+
+function updateGrainLabel(labelDiv, g){
+  const marker = g.kind === 'resident' ? '&#9679;' : '&#9675;';
+  const suffix = g.kind === 'resident' ? '' : ' <span class="passing">(passing through)</span>';
+  const markerColor = FORAGER_INKS[g.forager] || 'var(--ink)';
+  labelDiv.innerHTML = '<span class="marker" style="color:' + markerColor + '">' + marker + '</span>' + g.label + suffix;
+}
+
+function buildGrainRow(g){
+  const row = document.createElement('div');
+  row.className = 'grain-row';
+  row.dataset.grainId = String(g.id);
+
+  const labelDiv = document.createElement('div');
+  labelDiv.className = 'grain-label';
+  row.appendChild(labelDiv);
+
+  const volRow = document.createElement('div');
+  volRow.className = 'grain-ctrl-row';
+  volRow.innerHTML = '<span class="g-tag">volume</span><input type="range" class="g-vol" min="0" max="150" step="5"><span class="g-val"></span>';
+  row.appendChild(volRow);
+  const volInput = volRow.querySelector('.g-vol');
+  const volVal = volRow.querySelector('.g-val');
+
+  const toneRow = document.createElement('div');
+  toneRow.className = 'grain-ctrl-row';
+  toneRow.innerHTML = '<span class="g-tag">tone</span><input type="range" class="g-tone" min="0" max="100" step="5"><span class="g-val g-tone-val"></span>';
+  row.appendChild(toneRow);
+  const toneInput = toneRow.querySelector('.g-tone');
+  const toneVal = toneRow.querySelector('.g-tone-val');
+
+  const btnRow = document.createElement('div');
+  btnRow.className = 'grain-btn-row';
+  btnRow.innerHTML = '<button class="chip g-mute-btn"></button><button class="chip g-release-btn">Let go</button>';
+  row.appendChild(btnRow);
+  const muteBtn = btnRow.querySelector('.g-mute-btn');
+  const releaseBtn = btnRow.querySelector('.g-release-btn');
+
+  const id = g.id;
+  updateGrainLabel(labelDiv, g);
+  const vol = g._volPct != null ? g._volPct : 100;
+  const tone = g._tonePct != null ? g._tonePct : 100;
+  volInput.value = vol; volVal.textContent = vol + '%';
+  toneInput.value = tone; toneVal.textContent = toneWord(tone);
+  muteBtn.textContent = g.muted ? 'Unmute' : 'Mute';
+  muteBtn.classList.toggle('active', !!g.muted);
+
+  volInput.addEventListener('input', e=>{
+    const v = parseInt(e.target.value,10);
+    engine.setGrainVolume(id, v);
+    volVal.textContent = v + '%';
+  });
+  toneInput.addEventListener('input', e=>{
+    const v = parseInt(e.target.value,10);
+    const gr = engine._findGrain(id);
+    if(gr) gr._tonePct = v;
+    engine.setGrainTone(id, toneValueToHz(v));
+    toneVal.textContent = toneWord(v);
+  });
+  muteBtn.addEventListener('click', ()=>{
+    const updated = engine.toggleGrainMute(id);
+    if(!updated) return;
+    muteBtn.textContent = updated.muted ? 'Unmute' : 'Mute';
+    muteBtn.classList.toggle('active', updated.muted);
+  });
+  releaseBtn.addEventListener('click', ()=>{
+    engine.release(id);
+  });
+
+  // Interaction lock — any pointerdown/focus/input on a control in this row
+  // marks the whole list "actively engaged" so a render pass triggered by
+  // some OTHER grain arriving/leaving can't touch this row (or anyone
+  // else's) until the person is done with it.
+  [volInput, toneInput, muteBtn, releaseBtn].forEach(el=>{
+    el.addEventListener('pointerdown', markGrainInteractionStart);
+  });
+  [volInput, toneInput].forEach(el=>{
+    el.addEventListener('input', markGrainInteractionStart);
+    el.addEventListener('change', markGrainInteractionEnd);
+  });
+  row.addEventListener('focusin', markGrainInteractionStart);
+  row.addEventListener('focusout', markGrainInteractionEnd);
+
+  return { row, labelDiv, volInput, volVal, toneInput, toneVal, muteBtn, releaseBtn };
+}
+
+function updateGrainRow(entry, g){
+  // In-place value sync only — control elements themselves are never
+  // touched/replaced here. Skip syncing a slider the user currently has
+  // focus on so a background sync can't stomp a value mid-drag (belt and
+  // suspenders — the interaction gate above should already prevent this
+  // function from running at all while that's happening).
+  updateGrainLabel(entry.labelDiv, g);
+  const vol = g._volPct != null ? g._volPct : 100;
+  const tone = g._tonePct != null ? g._tonePct : 100;
+  if(document.activeElement !== entry.volInput){
+    entry.volInput.value = vol;
+    entry.volVal.textContent = vol + '%';
+  }
+  if(document.activeElement !== entry.toneInput){
+    entry.toneInput.value = tone;
+    entry.toneVal.textContent = toneWord(tone);
+  }
+  const muteLabel = g.muted ? 'Unmute' : 'Mute';
+  if(entry.muteBtn.textContent !== muteLabel){
+    entry.muteBtn.textContent = muteLabel;
+    entry.muteBtn.classList.toggle('active', !!g.muted);
+  }
+}
+
+function applyGrainRender(){
   const wrap = document.getElementById('grain-list');
   if(!wrap || !engine) return;
-  const all = engine.residents.concat(engine.transients);
+  const all = engine.residents.concat(engine.transients).slice().reverse();
+  const liveIds = new Set(all.map(g=> g.id));
+
+  // Remove rows for grains that are actually gone (released, evicted, or a
+  // transient that finished) — a brief fade, not an instant yank.
+  grainRows.forEach((entry, id)=>{
+    if(liveIds.has(id)) return;
+    grainRows.delete(id);
+    const row = entry.row;
+    if(!row.parentNode) return;
+    row.classList.add('grain-row-leaving');
+    let done = false;
+    const finish = ()=>{ if(done) return; done = true; if(row.parentNode) row.parentNode.removeChild(row); };
+    row.addEventListener('transitionend', finish, { once:true });
+    setTimeout(finish, 450);
+  });
+
   if(!all.length){
-    wrap.innerHTML = '<div class="empty-note">Nothing collected yet &mdash; give the magpies a minute.</div>';
+    if(!wrap.querySelector('.empty-note')){
+      const note = document.createElement('div');
+      note.className = 'empty-note';
+      note.textContent = 'Nothing collected yet — give the magpies a minute.';
+      wrap.appendChild(note);
+    }
     return;
   }
-  wrap.innerHTML = '';
-  all.slice().reverse().forEach(g=>{
-    const row = document.createElement('div');
-    row.className = 'grain-row';
-    const vol = g._volPct != null ? g._volPct : 100;
-    const tone = g._tonePct != null ? g._tonePct : 100;
-    const marker = g.kind === 'resident' ? '&#9679;' : '&#9675;';
-    const suffix = g.kind === 'resident' ? '' : ' <span class="passing">(passing through)</span>';
-    const markerColor = FORAGER_INKS[g.forager] || 'var(--ink)';
-    row.innerHTML =
-      '<div class="grain-label"><span class="marker" style="color:' + markerColor + '">' + marker + '</span>' + g.label + suffix + '</div>' +
-      '<div class="grain-ctrl-row"><span class="g-tag">volume</span><input type="range" class="g-vol" min="0" max="150" step="5" value="' + vol + '"><span class="g-val">' + vol + '%</span></div>' +
-      '<div class="grain-ctrl-row"><span class="g-tag">tone</span><input type="range" class="g-tone" min="0" max="100" step="5" value="' + tone + '"><span class="g-val g-tone-val">' + toneWord(tone) + '</span></div>' +
-      '<div class="grain-btn-row"><button class="chip g-mute-btn' + (g.muted?' active':'') + '">' + (g.muted?'Unmute':'Mute') + '</button><button class="chip g-release-btn">Let go</button></div>';
+  const emptyNote = wrap.querySelector('.empty-note');
+  if(emptyNote) emptyNote.remove();
 
-    row.querySelector('.g-vol').addEventListener('input', e=>{
-      const v = parseInt(e.target.value,10);
-      engine.setGrainVolume(g.id, v);
-      row.querySelector('.g-val').textContent = v + '%';
-    });
-    row.querySelector('.g-tone').addEventListener('input', e=>{
-      const v = parseInt(e.target.value,10);
-      g._tonePct = v;
-      engine.setGrainTone(g.id, toneValueToHz(v));
-      row.querySelector('.g-tone-val').textContent = toneWord(v);
-    });
-    row.querySelector('.g-mute-btn').addEventListener('click', ()=>{
-      const updated = engine.toggleGrainMute(g.id);
-      const btn = row.querySelector('.g-mute-btn');
-      btn.textContent = updated.muted ? 'Unmute' : 'Mute';
-      btn.classList.toggle('active', updated.muted);
-    });
-    row.querySelector('.g-release-btn').addEventListener('click', ()=>{
-      engine.release(g.id);
-    });
-    wrap.appendChild(row);
+  // Add rows for genuinely new grains, update existing ones in place, and
+  // only reposition when a row's slot has actually changed (insertBefore on
+  // a node already in the right spot is a no-op check, not a forced move).
+  let prevEl = null;
+  all.forEach(g=>{
+    let entry = grainRows.get(g.id);
+    if(!entry){
+      entry = buildGrainRow(g);
+      grainRows.set(g.id, entry);
+    } else {
+      updateGrainRow(entry, g);
+    }
+    const row = entry.row;
+    const desiredNext = prevEl ? prevEl.nextSibling : wrap.firstChild;
+    if(row !== desiredNext) wrap.insertBefore(row, desiredNext);
+    prevEl = row;
   });
+}
+
+function renderGrainMixer(){
+  if(grainInteractionActive){ grainRenderPending = true; return; }
+  applyGrainRender();
 }
 
 document.querySelectorAll('.tab-btn').forEach(btn=>{
@@ -514,6 +705,96 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
     if(btn.dataset.tab === 'grains') renderGrainMixer();
   });
 });
+
+/* ============================================================
+   LIVE LEVELS — a real-time read of the actual mix, not decoration.
+   Taps engine.analyser (a parallel fork off finalClip, wired in
+   CollageEngine._build — the signal path to ctx.destination itself is
+   untouched). Frequency bars for a compact spectrogram-style read, plus
+   a simple RMS-derived dB number, both rendered ink-on-paper only —
+   monochrome opacity steps, no accent, no rainbow spectrum.
+
+   Product call on mute vs. pause, since neither is a literal "audio
+   stopped" state in this app:
+     - MUTE ramps masterGain to 0, and the analyser tap sits AFTER
+       masterGain — so muting genuinely reads as near-silence here. No
+       special-casing needed; the meter is just telling the truth about
+       the real signal.
+     - PAUSE (the "PAUSE THE MAGPIES" button) only stops foragers from
+       going out; existing residents keep playing by explicit design
+       ("what they've found keeps playing" — see the pause log line).
+       So audio is NOT stale/frozen during pause, and freezing the
+       visualization then would be the dishonest state, not the honest
+       one. The loop keeps animating through forager-pause and only goes
+       quiet when the signal itself does (mute, or genuine silence).
+   ============================================================ */
+
+const vizCanvas = document.getElementById('viz-canvas');
+const vizLevelEl = document.getElementById('viz-level');
+let vizCtx2d = null, vizFreqData = null, vizTimeData = null, vizRAF = null;
+
+function setupVizCanvas(){
+  if(!vizCanvas) return;
+  const dpr = window.devicePixelRatio || 1;
+  const rect = vizCanvas.getBoundingClientRect();
+  const w = Math.max(1, Math.round(rect.width * dpr));
+  const h = Math.max(1, Math.round((rect.height || 40) * dpr));
+  if(vizCanvas.width !== w) vizCanvas.width = w;
+  if(vizCanvas.height !== h) vizCanvas.height = h;
+  vizCtx2d = vizCanvas.getContext('2d');
+  vizCtx2d.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+
+function drawViz(){
+  vizRAF = requestAnimationFrame(drawViz);
+  if(!engine || !engine.analyser || !vizCtx2d || !vizCanvas) return;
+  const w = vizCanvas.clientWidth || vizCanvas.width;
+  const h = vizCanvas.clientHeight || vizCanvas.height;
+
+  engine.analyser.getByteFrequencyData(vizFreqData);
+  engine.analyser.getByteTimeDomainData(vizTimeData);
+
+  vizCtx2d.clearRect(0, 0, w, h);
+  const barCount = 28;
+  const bins = vizFreqData.length;
+  const step = Math.max(1, Math.floor(bins / barCount));
+  const gap = 2;
+  const barW = Math.max(1, (w - gap * (barCount - 1)) / barCount);
+  for(let i=0; i<barCount; i++){
+    let sum = 0, n = 0;
+    for(let j=0; j<step; j++){
+      const idx = i*step + j;
+      if(idx < bins){ sum += vizFreqData[idx]; n++; }
+    }
+    const norm = n ? (sum/n)/255 : 0;
+    const barH = Math.max(1, norm * h);
+    const alpha = Math.min(0.85, 0.08 + norm * 0.75);
+    vizCtx2d.fillStyle = 'rgba(22,21,15,' + alpha.toFixed(3) + ')';
+    vizCtx2d.fillRect(i*(barW+gap), h - barH, barW, barH);
+  }
+
+  let sumSq = 0;
+  for(let i=0; i<vizTimeData.length; i++){
+    const v = (vizTimeData[i] - 128) / 128;
+    sumSq += v*v;
+  }
+  const rms = Math.sqrt(sumSq / vizTimeData.length);
+  if(rms > 0.0008){
+    const db = Math.max(-60, 20 * Math.log10(rms));
+    vizLevelEl.textContent = Math.round(db) + ' dB';
+  } else {
+    vizLevelEl.textContent = '— dB';
+  }
+}
+
+function startViz(){
+  if(!vizCanvas || !engine || !engine.analyser) return;
+  vizFreqData = new Uint8Array(engine.analyser.frequencyBinCount);
+  vizTimeData = new Uint8Array(engine.analyser.fftSize);
+  setupVizCanvas();
+  window.addEventListener('resize', setupVizCanvas);
+  if(vizRAF == null) drawViz();
+}
 
 /* ============================================================
    GRAIN NORMALIZATION — a pre-gate so no incoming grain lands way
@@ -631,6 +912,16 @@ class CollageEngine{
     this.compressor.connect(this.masterGain);
     this.masterGain.connect(this.finalClip);
     this.finalClip.connect(ctx.destination);
+
+    // Analysis-only tap, parallel to the real signal path — finalClip already
+    // feeds ctx.destination above; this is an additional fork off the same
+    // node, not a rewire, so gain staging is untouched. Sitting AFTER
+    // masterGain means muting (which ramps masterGain to 0) genuinely shows
+    // up as near-silence here too, so the meter always reflects real output.
+    this.analyser = ctx.createAnalyser();
+    this.analyser.fftSize = 512;
+    this.analyser.smoothingTimeConstant = 0.75;
+    this.finalClip.connect(this.analyser);
 
     this._applyParams();
   }
@@ -896,20 +1187,33 @@ async function transformFreeze(sampleRate, grain){
   const src = grain.getChannelData(0);
   const dst = loopBuf.getChannelData(0);
   for(let i=0;i<sliceLen;i++) dst[i] = src[start+i] || 0;
-  const fadeLen = Math.min(Math.floor(sliceLen/4), Math.floor(sampleRate*0.005));
-  for(let i=0;i<fadeLen;i++){ const g=i/fadeLen; dst[i]*=g; dst[sliceLen-1-i]*=g; }
+  // Looping a slice this short (20-70ms) repeats at 14-50Hz — audio-rate enough
+  // that the loop itself becomes a pitched, harmonically rich tone. A fade this
+  // brief left a hard corner at the seam every cycle, which read as a sharp,
+  // buzzy sawtooth edge once it repeated. A longer equal-power crossfade —
+  // covering much of the slice for the shortest ones — smooths that corner away.
+  const fadeLen = Math.min(Math.floor(sliceLen*0.35), Math.floor(sampleRate*0.02));
+  for(let i=0;i<fadeLen;i++){
+    const g = Math.sin((i/fadeLen) * Math.PI/2);
+    dst[i] *= g; dst[sliceLen-1-i] *= g;
+  }
   const bufSrc = off.createBufferSource();
   bufSrc.buffer = loopBuf; bufSrc.loop = true;
   const lfo = off.createOscillator();
   lfo.type='sine'; lfo.frequency.value = randRange(0.05,0.2);
   const lfoDepth = off.createGain(); lfoDepth.gain.value = randRange(4,14);
   lfo.connect(lfoDepth); lfoDepth.connect(bufSrc.detune);
+  // The vibrato drift itself is the good part — this just files down the
+  // buzzy upper harmonics the short loop generates, so the wobble reads as
+  // soft and breathy rather than sharp and abrasive.
+  const soften = off.createBiquadFilter();
+  soften.type = 'lowpass'; soften.frequency.value = randRange(2200, 3600); soften.Q.value = 0.3;
   const env = off.createGain();
   env.gain.setValueAtTime(0,0);
   env.gain.linearRampToValueAtTime(0.85, Math.min(1.5, renderSeconds*0.3));
   env.gain.setValueAtTime(0.85, Math.max(0, renderSeconds-1.5));
   env.gain.linearRampToValueAtTime(0, renderSeconds);
-  bufSrc.connect(env); env.connect(off.destination);
+  bufSrc.connect(soften); soften.connect(env); env.connect(off.destination);
   bufSrc.start(0); bufSrc.stop(renderSeconds);
   lfo.start(0); lfo.stop(renderSeconds);
   return off.startRendering();
@@ -1126,6 +1430,106 @@ function chooseTransformForRole(role, adventurousness){
 const roleWeights = { rhythm:50, ambiance:50, stretch:50, texture:50 };
 let paceValue = 50;
 
+/* ============================================================
+   SOURCES — where a magpie actually looks. Archive.org was the
+   original and stays the default, but a chunk of trips (theme and
+   obscurity searches, whichever destination the Echo happens to
+   revisit) go to Wikimedia Commons instead, picked per-expedition by
+   pickSource() above. Both expose the same three-step shape (search
+   → candidateFiles → download) so expedition() doesn't need to know
+   which one it's talking to.
+   ============================================================ */
+
+const SOURCES = {
+  archive: {
+    async search(dest){
+      const sort = (dest.sort || 'downloads desc').replace(' ', '+');
+      const q = encodeURIComponent('mediatype:(audio) AND (' + dest.query + ')');
+      const url = 'https://archive.org/advancedsearch.php?q=' + q +
+        '&fl[]=identifier&fl[]=title&rows=40&page=1&output=json&sort[]=' + sort;
+      const res = await fetchWithTimeout(url, {}, 15000);
+      if(!res.ok) throw new Error('search failed (' + res.status + ')');
+      const json = await res.json();
+      const docs = (json.response && json.response.docs) || [];
+      return docs.map(d => ({ id: d.identifier, title: d.title }));
+    },
+    async candidateFiles(doc){
+      const res = await fetchWithTimeout('https://archive.org/metadata/' + encodeURIComponent(doc.id), {}, 15000);
+      if(!res.ok) throw new Error('metadata failed (' + res.status + ')');
+      const meta = await res.json();
+      const files = meta.files || [];
+      const good = files.filter(f=>{
+        if(!f.format) return false;
+        const fmt = f.format.toLowerCase();
+        const ok = fmt.includes('mp3') || fmt.includes('ogg vorbis');
+        const size = parseInt(f.size||'0',10);
+        return ok && size>0 && size<12*1024*1024;
+      });
+      good.sort((a,b)=> parseInt(a.size,10)-parseInt(b.size,10));
+      return good.slice(0,3).map(f => ({
+        url: 'https://archive.org/download/' + encodeURIComponent(doc.id) + '/' + encodeURIComponent(f.name)
+      }));
+    },
+    async download(file){
+      const res = await fetchWithTimeout(file.url, {}, 25000);
+      if(!res.ok) throw new Error('download failed (' + res.status + ')');
+      return res.arrayBuffer();
+    }
+  },
+  wikimedia: {
+    async search(dest){
+      const terms = (dest.terms && dest.terms.length) ? dest.terms.join(' ') : dest.label;
+      const q = encodeURIComponent('filetype:audio ' + terms);
+      const url = 'https://commons.wikimedia.org/w/api.php?action=query&list=search&srnamespace=6' +
+        '&format=json&srlimit=30&srsearch=' + q + '&origin=*';
+      const res = await fetchWithTimeout(url, {}, 15000);
+      if(!res.ok) throw new Error('search failed (' + res.status + ')');
+      const json = await res.json();
+      const results = (json.query && json.query.search) || [];
+      return results.map(r => ({ id: r.title, title: r.title.replace(/^File:/,'').replace(/\.[a-zA-Z0-9]+$/,'') }));
+    },
+    async candidateFiles(doc){
+      const url = 'https://commons.wikimedia.org/w/api.php?action=query&titles=' + encodeURIComponent(doc.id) +
+        '&prop=imageinfo&iiprop=url|size|mime&format=json&origin=*';
+      const res = await fetchWithTimeout(url, {}, 15000);
+      if(!res.ok) throw new Error('metadata failed (' + res.status + ')');
+      const json = await res.json();
+      const pages = (json.query && json.query.pages) || {};
+      const page = Object.values(pages)[0];
+      const info = page && page.imageinfo && page.imageinfo[0];
+      if(!info || !info.url) return [];
+      const mime = (info.mime || '').toLowerCase();
+      const okMime = mime.includes('ogg') || mime.includes('mpeg') || mime.includes('mp3') || mime.includes('wav');
+      const size = info.size || 0;
+      if(!okMime || size<=0 || size>12*1024*1024) return [];
+      return [{ url: info.url }];
+    },
+    async download(file){
+      const res = await fetchWithTimeout(file.url, {}, 25000);
+      if(!res.ok) throw new Error('download failed (' + res.status + ')');
+      return res.arrayBuffer();
+    }
+  }
+};
+
+/* ============================================================
+   GRAIN RATING — a rough acoustic proxy for "is this one working,"
+   not a taste model. Peak-to-RMS (crest factor) on the PROCESSED
+   grain: too low reads as flat/dead, too high reads as spiky and
+   harsh (exactly the buzzy-edge problem loop-based transforms can
+   produce). Feeds fate decisions below instead of a flat coin-flip.
+   ============================================================ */
+
+function computeGrainRating(buffer){
+  const { peak, rms } = measurePeakRMS(buffer);
+  if(rms < 0.0001) return 0;
+  const crest = peak / rms;
+  const idealLow = 3, idealHigh = 9;
+  if(crest < idealLow) return clamp(crest/idealLow, 0, 1);
+  if(crest > idealHigh) return clamp(1 - (crest-idealHigh)/12, 0, 1);
+  return 1;
+}
+
 class Forager{
   constructor(engine, name, strategy){
     this.engine = engine;
@@ -1160,40 +1564,6 @@ class Forager{
     return weightedPick(FORAGER_ROLES, r => roleWeights[r.key] || 0.1);
   }
 
-  async searchDestination(dest){
-    const sort = (dest.sort || 'downloads desc').replace(' ', '+');
-    const q = encodeURIComponent('mediatype:(audio) AND (' + dest.query + ')');
-    const url = 'https://archive.org/advancedsearch.php?q=' + q +
-      '&fl[]=identifier&fl[]=title&rows=40&page=1&output=json&sort[]=' + sort;
-    const res = await fetchWithTimeout(url, {}, 15000);
-    if(!res.ok) throw new Error('search failed (' + res.status + ')');
-    const json = await res.json();
-    return (json.response && json.response.docs) || [];
-  }
-  async fetchMetadata(identifier){
-    const res = await fetchWithTimeout('https://archive.org/metadata/' + encodeURIComponent(identifier), {}, 15000);
-    if(!res.ok) throw new Error('metadata failed (' + res.status + ')');
-    return res.json();
-  }
-  pickAudioFiles(meta){
-    const files = meta.files || [];
-    const good = files.filter(f=>{
-      if(!f.format) return false;
-      const fmt = f.format.toLowerCase();
-      const ok = fmt.includes('mp3') || fmt.includes('ogg vorbis');
-      const size = parseInt(f.size||'0',10);
-      return ok && size>0 && size<12*1024*1024;
-    });
-    good.sort((a,b)=> parseInt(a.size,10)-parseInt(b.size,10));
-    return good.slice(0,3);
-  }
-  async downloadAudio(identifier, filename){
-    const url = 'https://archive.org/download/' + encodeURIComponent(identifier) + '/' + encodeURIComponent(filename);
-    const res = await fetchWithTimeout(url, {}, 25000);
-    if(!res.ok) throw new Error('download failed (' + res.status + ')');
-    return res.arrayBuffer();
-  }
-
   _failed(){ renderStats(this.engine.residentCount(), activeForagerCount()); this._scheduleNext(this.retryDelay()); }
   _done(){ renderStats(this.engine.residentCount(), activeForagerCount()); this._scheduleNext(this.paceDelay()); }
 
@@ -1209,8 +1579,10 @@ class Forager{
       if(this.recentlyVisited.length > 4) this.recentlyVisited.shift();
       ticker(this.name + ' wonders: ' + dest.label);
 
+      const source = SOURCES[dest.source] || SOURCES.archive;
+
       let docs;
-      try{ docs = await this.searchDestination(dest); }
+      try{ docs = await source.search(dest); }
       catch(e){ log(this.name, 'lost the signal chasing "' + dest.label + '" (' + e.message + ').', true); this._failed(); return; }
 
       if(!docs.length){
@@ -1226,14 +1598,13 @@ class Forager{
 
       let decoded = null, chosenDoc = null;
       for(const doc of candidates){
-        let meta;
-        try{ meta = await this.fetchMetadata(doc.identifier); }
+        let files;
+        try{ files = await source.candidateFiles(doc); }
         catch(e){ continue; }
-        const files = this.pickAudioFiles(meta);
         if(!files.length) continue;
         for(const file of files){
           let arrayBuf;
-          try{ arrayBuf = await this.downloadAudio(doc.identifier, file.name); }
+          try{ arrayBuf = await source.download(file); }
           catch(e){ continue; }
           try{ decoded = await ctx.decodeAudioData(arrayBuf.slice(0)); }
           catch(e){ continue; }
@@ -1273,14 +1644,19 @@ class Forager{
         this._done(); return;
       }
 
-      const discardChance = 0.08;
+      // rating-driven fate: a harsher/spikier grain (or a flat, over-compressed
+      // one) is more likely to get let go here; a well-shaped one is both less
+      // likely to be discarded and more likely to take root than the old flat
+      // coin-flips gave it.
+      const rating = computeGrainRating(processed);
+      const discardChance = clamp(0.22 - rating*0.18, 0.03, 0.22);
       if(Math.random() < discardChance){
         log('discard', 'a ' + transformName + ' grain from "' + dest.label + '" &mdash; didn\'t take.', true);
         this._done(); return;
       }
 
-      const takeRoot = Math.random() < 0.4;
-      const baseLevel = randRange(0.45, 0.7) * normGain;
+      const takeRoot = Math.random() < clamp(0.18 + rating*0.42, 0.12, 0.7);
+      const baseLevel = randRange(0.45, 0.7) * normGain * (0.85 + rating*0.3);
       const label = role.label + ' &middot; ' + transformName + ' from "' + dest.label + '"';
       this.engine.introduce(processed, { takeRoot, level: baseLevel, label, sourceQuestion: dest, forager: this.name });
       log(this.name, (takeRoot ? 'a ' + transformName + ' fragment takes root: ' : 'passing through: ') + dest.label);
@@ -1337,6 +1713,7 @@ document.getElementById('begin-btn').addEventListener('click', async ()=>{
   document.getElementById('status').classList.add('active');
   log('begin', 'the magpies set out.');
 
+  startViz();
   requestWakeLock();
 
   [
