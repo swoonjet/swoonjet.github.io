@@ -152,17 +152,20 @@
   .tab-panel.active{ display:block; }
 
   #grain-list .empty-note{ font-size:0.78rem; color: var(--ink-45); padding:0.6rem 0; line-height:1.5; }
-  .grain-row{ padding:1.1rem 0; opacity:1; transition: opacity 400ms ease; }
+  /* Collapses smoothly on the way out (max-height/padding/margin, not just
+     opacity) so the row is already visually zero-height by the time it's
+     actually removed from the DOM — an instant snap to a shorter list is
+     its own kind of "jumping," even with stable ordering elsewhere. */
+  .grain-row{
+    padding:1.1rem 0; opacity:1; max-height:40rem; overflow:hidden;
+    transition: opacity 400ms ease, max-height 400ms ease, padding 400ms ease, margin-top 400ms ease;
+  }
   .grain-row + .grain-row{ margin-top:0.2rem; }
   .grain-row:first-child{ padding-top:0.2rem; }
-  .grain-row.grain-row-leaving{ opacity:0; pointer-events:none; }
+  .grain-row.grain-row-leaving{ opacity:0; max-height:0; padding-top:0; padding-bottom:0; margin-top:0; pointer-events:none; }
   .grain-label{ font-size:0.82rem; margin-bottom:0.6rem; line-height:1.4; color: var(--ink-70); }
   .grain-label .marker{ color: var(--ink); margin-right:0.4rem; }
   .grain-label .passing{ color: var(--ink-45); }
-  /* A live read of this one sound, not decoration — same honest-meter
-     principle as the master viz above, just per grain. Dim track always
-     visible (so a silent grain still marks its place in the list), fills
-     in the grain's own identity ink as it actually plays. */
   /* A tiny version of the main live-level EQ (see #viz-canvas) — same
      log-spaced multi-band read, just per grain and much smaller, so a
      grain's bars actually sit in the part of the spectrum it occupies
@@ -174,6 +177,10 @@
   .grain-ctrl-row input[type=range]{ flex:1; }
   .grain-ctrl-row .g-val{ font-size:0.7rem; color: var(--ink-45); font-family: var(--mono); width:2.8rem; text-align:right; flex-shrink:0; }
   .grain-ctrl-row .g-filter-btn{ flex-shrink:0; width:2rem; padding:0.35rem 0; font-size:0.6rem; letter-spacing:0.03em; text-align:center; }
+  .grain-ctrl-row .g-effect-btn{ flex:1; }
+  /* Flyout — Size + Effect, tucked away since most grains just play out
+     unattended; opened per grain via the More chip in its button row. */
+  .grain-flyout{ margin-bottom:0.4rem; }
   .grain-btn-row{ display:flex; gap:0.5rem; margin-top:0.8rem; }
   .grain-btn-row button{ flex:1; padding:0.55rem; font-size:0.65rem; }
 
@@ -198,9 +205,8 @@
 
 <div id="overlay">
   <h1><svg viewBox="0 0 229 41"><use href="#magpie-wordmark"></use></svg></h1>
-  <p>A collage of found sound that thickens the longer you let it run. Five magpies are out
-  looking for interesting things, and weaving whatever they find into the nest.
-  Needs your tap to start: audio can't begin on its own.</p>
+  <p>A collage of found sound. Five magpies are out
+  looking for interesting things, and weaving whatever they find into the nest.</p>
   <button id="begin-btn">START LISTENING</button>
   <p class="note">Uses your connection to fetch real recordings from the open web. Keeping the screen on
   will help keep audio running &mdash; phones often pause background tabs.</p>
@@ -561,6 +567,22 @@ const FILTER_TYPES = ['lowpass','highpass','bandpass'];
 const FILTER_TYPE_LABELS = { lowpass:'LP', highpass:'HP', bandpass:'BP' };
 function nextFilterType(t){ return FILTER_TYPES[(FILTER_TYPES.indexOf(t)+1) % FILTER_TYPES.length]; }
 
+// Effect toggle for the Grains-tab flyout — cycles through the same 8
+// transforms a forager can pick from, but as a person's own free override
+// on one already-kept grain (see CollageEngine.regenerateGrainSource).
+// References TRANSFORMS only at call time (declared further down), which
+// is fine since function declarations are hoisted and this is never
+// called before the page has finished loading.
+const TRANSFORM_LABELS = {
+  freeze:'Freeze', stretch:'Stretch', resonate:'Resonate', granulate:'Granulate',
+  convolveSelf:'Convolve', reverse:'Reverse', cascade:'Cascade', pulse:'Pulse'
+};
+function nextTransformName(name){
+  const keys = Object.keys(TRANSFORMS);
+  const i = keys.indexOf(name);
+  return keys[(i+1) % keys.length];
+}
+
 /* ------------------------------------------------------------
    Grains-tab render — keyed diff/patch, not a full rebuild.
    Foragers add/evict/release grains on their own schedule, totally
@@ -639,16 +661,34 @@ function buildGrainRow(g){
   const toneVal = toneRow.querySelector('.g-tone-val');
   const filterBtn = toneRow.querySelector('.g-filter-btn');
 
+  // Size + Effect live in a flyout, tucked behind More — resident-only,
+  // same reasoning as Lock: a transient has no rawGrain stored (see
+  // CollageEngine.introduce) and is gone in a few seconds regardless.
+  let flyoutDiv = null, sizeInput = null, sizeVal = null, effectBtn = null;
+  if(g.kind === 'resident'){
+    flyoutDiv = document.createElement('div');
+    flyoutDiv.className = 'grain-flyout';
+    flyoutDiv.style.display = 'none';
+    flyoutDiv.innerHTML =
+      '<div class="grain-ctrl-row"><span class="g-tag">size</span><input type="range" class="g-size" min="10" max="95" step="1"><span class="g-val g-size-val"></span></div>' +
+      '<div class="grain-ctrl-row"><span class="g-tag">effect</span><button class="chip g-effect-btn" type="button"></button></div>';
+    row.appendChild(flyoutDiv);
+    sizeInput = flyoutDiv.querySelector('.g-size');
+    sizeVal = flyoutDiv.querySelector('.g-size-val');
+    effectBtn = flyoutDiv.querySelector('.g-effect-btn');
+  }
+
   const btnRow = document.createElement('div');
   btnRow.className = 'grain-btn-row';
-  // Lock only makes sense for a resident (a transient is never scheduled to
-  // fade — it just finishes on its own in a few seconds regardless).
+  // Lock/More only make sense for a resident (a transient is never
+  // scheduled to fade, and has no Size/Effect flyout to open).
   btnRow.innerHTML = '<button class="chip g-mute-btn"></button>' +
-    (g.kind === 'resident' ? '<button class="chip g-lock-btn"></button>' : '') +
+    (g.kind === 'resident' ? '<button class="chip g-lock-btn"></button><button class="chip g-more-btn">More</button>' : '') +
     '<button class="chip g-release-btn">Let go</button>';
   row.appendChild(btnRow);
   const muteBtn = btnRow.querySelector('.g-mute-btn');
   const lockBtn = btnRow.querySelector('.g-lock-btn');
+  const moreBtn = btnRow.querySelector('.g-more-btn');
   const releaseBtn = btnRow.querySelector('.g-release-btn');
 
   const id = g.id;
@@ -664,6 +704,13 @@ function buildGrainRow(g){
   if(lockBtn){
     lockBtn.textContent = g.locked ? 'Locked' : 'Lock';
     lockBtn.classList.toggle('active', !!g.locked);
+  }
+  if(sizeInput){
+    const sizePct = g._sizePct != null ? g._sizePct : 70;
+    sizeInput.value = sizePct; sizeVal.textContent = sizePct + '%';
+  }
+  if(effectBtn){
+    effectBtn.textContent = TRANSFORM_LABELS[g._transformName] || 'Freeze';
   }
 
   volInput.addEventListener('input', e=>{
@@ -693,6 +740,34 @@ function buildGrainRow(g){
       updateGrainLabel(labelDiv, updated);
     });
   }
+  if(moreBtn){
+    moreBtn.addEventListener('click', ()=>{
+      const open = flyoutDiv.style.display !== 'none';
+      flyoutDiv.style.display = open ? 'none' : 'block';
+      moreBtn.textContent = open ? 'More' : 'Less';
+      moreBtn.classList.toggle('active', !open);
+    });
+  }
+  if(sizeInput){
+    // Only the displayed value updates while dragging — a re-render is a
+    // new AudioBufferSourceNode (see regenerateGrainSource), not a cheap
+    // AudioParam ramp like Volume/Tone, so it fires on release, not per tick.
+    sizeInput.addEventListener('input', e=>{
+      sizeVal.textContent = e.target.value + '%';
+    });
+    sizeInput.addEventListener('change', e=>{
+      engine.regenerateGrainSource(id, { sizePct: parseInt(e.target.value,10) });
+    });
+  }
+  if(effectBtn){
+    effectBtn.addEventListener('click', ()=>{
+      const gr = engine._findGrain(id);
+      const current = (gr && gr._transformName) || 'freeze';
+      const next = nextTransformName(current);
+      effectBtn.textContent = TRANSFORM_LABELS[next];
+      engine.regenerateGrainSource(id, { transformName: next });
+    });
+  }
   releaseBtn.addEventListener('click', ()=>{
     engine.release(id);
   });
@@ -709,17 +784,17 @@ function buildGrainRow(g){
   // marks the whole list "actively engaged" so a render pass triggered by
   // some OTHER grain arriving/leaving can't touch this row (or anyone
   // else's) until the person is done with it.
-  [volInput, toneInput, muteBtn, lockBtn, releaseBtn, filterBtn].filter(Boolean).forEach(el=>{
+  [volInput, toneInput, muteBtn, lockBtn, moreBtn, releaseBtn, filterBtn, sizeInput, effectBtn].filter(Boolean).forEach(el=>{
     el.addEventListener('pointerdown', markGrainInteractionStart);
   });
-  [volInput, toneInput].forEach(el=>{
+  [volInput, toneInput, sizeInput].filter(Boolean).forEach(el=>{
     el.addEventListener('input', markGrainInteractionStart);
     el.addEventListener('change', markGrainInteractionEnd);
   });
   row.addEventListener('focusin', markGrainInteractionStart);
   row.addEventListener('focusout', markGrainInteractionEnd);
 
-  return { row, labelDiv, meterCanvas, meterCtx: null, meterRgb, volInput, volVal, toneInput, toneVal, muteBtn, lockBtn, releaseBtn, filterBtn };
+  return { row, labelDiv, meterCanvas, meterCtx: null, meterRgb, volInput, volVal, toneInput, toneVal, muteBtn, lockBtn, moreBtn, flyoutDiv, sizeInput, sizeVal, effectBtn, releaseBtn, filterBtn };
 }
 
 function updateGrainRow(entry, g){
@@ -755,12 +830,33 @@ function updateGrainRow(entry, g){
       entry.lockBtn.classList.toggle('active', !!g.locked);
     }
   }
+  // Flyout open/closed is pure UI state, not part of g — never touched here.
+  if(entry.effectBtn){
+    const effectLabel = TRANSFORM_LABELS[g._transformName] || 'Freeze';
+    if(entry.effectBtn.textContent !== effectLabel) entry.effectBtn.textContent = effectLabel;
+  }
+  if(entry.sizeInput && document.activeElement !== entry.sizeInput){
+    const sizePct = g._sizePct != null ? g._sizePct : 70;
+    entry.sizeInput.value = sizePct;
+    entry.sizeVal.textContent = sizePct + '%';
+  }
 }
 
 function applyGrainRender(){
   const wrap = document.getElementById('grain-list');
   if(!wrap || !engine) return;
-  const all = engine.residents.concat(engine.transients).slice().reverse();
+  // Residents first, then transients, NEITHER reversed — this used to be
+  // `.reverse()`d for a newest-first read, but engine.residents/.transients
+  // are already stable, append-only arrays (new ones pushed at the end,
+  // removals splice out whoever left without reordering the survivors), so
+  // rendering them as-is means a row only ever moves when something ABOVE
+  // it in the list actually leaves — never just because something else
+  // arrived. Transients specifically come last because they churn every
+  // few seconds; putting them first (the old order) meant a resident's
+  // on-screen position bobbed up and down constantly from transient
+  // traffic alone, which is exactly what made the controls hard to hold
+  // onto — residents are what people actually reach into the flyout for.
+  const all = engine.residents.concat(engine.transients);
   const liveIds = new Set(all.map(g=> g.id));
 
   // Remove rows for grains that are actually gone (released, evicted, or a
@@ -1270,13 +1366,21 @@ class CollageEngine{
 
   // loops only a crossfaded inner segment of a transform's render, since the
   // transform's own one-shot fade-in/out would otherwise create a periodic
-  // swell-then-silence pulse when looped whole.
-  _makeLoopableCore(buffer){
+  // swell-then-silence pulse when looped whole. corePct (0-1, default 0.7)
+  // is the person-facing "Size" control — how much of the render each loop
+  // cycle covers, centered in the buffer.
+  _makeLoopableCore(buffer, corePct){
+    const pct = clamp(corePct == null ? 0.7 : corePct, 0.05, 0.97);
     const ctx = this.ctx;
     const sr = buffer.sampleRate;
     const total = buffer.length;
-    const start = Math.floor(total*0.15);
-    const end = Math.floor(total*0.85);
+    const start = Math.floor(total * (1-pct)/2);
+    const end = Math.floor(total * ((1-pct)/2 + pct));
+    // Never shorter than ~0.5s no matter how small a Size gets dialed —
+    // looping under a few hundred ms is exactly the audio-rate pitched-loop
+    // artifact this project deliberately eliminated from transformFreeze
+    // (see its own comment); Size changes how much of a render loops, not
+    // how short a loop is allowed to get.
     const coreLen = Math.max(Math.floor(sr*0.5), end-start);
     const out = ctx.createBuffer(1, coreLen, sr);
     const src = buffer.getChannelData(0);
@@ -1421,6 +1525,77 @@ class CollageEngine{
     g.filt.Q.setTargetAtTime(type === 'bandpass' ? 1.1 : 0.4, this.ctx.currentTime, 0.05);
   }
 
+  // Re-renders a resident's own already-kept sound from scratch — a
+  // different Effect (transform) on the SAME raw source snippet, a
+  // different Size (how much of that transform's render gets looped), or
+  // both — without touching anything downstream of the source (volume,
+  // tone, pan, lock, mute all live on nodes after it and are untouched).
+  // Resident-only: a transient has no rawGrain stored and is gone in a few
+  // seconds anyway. Async because the transform itself renders offline;
+  // guarded against overlapping calls so a second click/drag while one is
+  // still rendering is just a no-op rather than a race.
+  async regenerateGrainSource(id, opts){
+    const g = this.residents.find(r=>r.id===id);
+    if(!g || g._regenerating || !g.rawGrain) return null;
+    g._regenerating = true;
+    try{
+      const transformName = (opts && opts.transformName) || g._transformName;
+      const sizePct = (opts && opts.sizePct != null) ? opts.sizePct : g._sizePct;
+      let processed;
+      try{ processed = await TRANSFORMS[transformName](this.ctx.sampleRate, g.rawGrain); }
+      catch(e){ return null; }
+      const normGain = computeNormalizationGain(processed);
+      if(normGain <= 0) return null; // came out silent this time — leave the grain as it was
+      const rating = computeGrainRating(processed);
+      // Same formula the original arrival used — a manual Effect/Size swap
+      // is treated as this specific, already-kept grain arriving again.
+      const newLevel = randRange(0.45, 0.7) * normGain * (0.85 + rating*0.3);
+      const core = this._makeLoopableCore(processed, sizePct/100);
+
+      const ctx = this.ctx;
+      const newSrc = ctx.createBufferSource();
+      newSrc.buffer = core;
+      newSrc.loop = true;
+      newSrc.playbackRate.value = g.source.playbackRate.value;
+
+      // A brief dip-and-recover around the actual swap, same reasoning as
+      // every other envelope move in this engine — a hard cut to a new
+      // buffer would click.
+      const t = ctx.currentTime;
+      const fade = 0.05;
+      g.gain.gain.cancelScheduledValues(t);
+      g.gain.gain.setValueAtTime(g.gain.gain.value, t);
+      g.gain.gain.linearRampToValueAtTime(0, t+fade);
+
+      const oldSrc = g.source;
+      setTimeout(()=>{
+        try{ oldSrc.stop(); }catch(e){}
+        // The vibrato oscillator/depth are long-running and shared across a
+        // grain's whole lifetime — reconnect them to the new source's
+        // detune rather than building a fresh pair.
+        g.vibratoDepth.disconnect();
+        g.vibratoDepth.connect(newSrc.detune);
+        newSrc.connect(g.gain);
+        newSrc.start(this.ctx.currentTime);
+        g.source = newSrc;
+        g._transformName = transformName;
+        g._sizePct = sizePct;
+        const t2 = this.ctx.currentTime;
+        g.gain.gain.cancelScheduledValues(t2);
+        g.gain.gain.setValueAtTime(0, t2);
+        g.gain.gain.linearRampToValueAtTime(newLevel, t2+0.4);
+        if(this.onResidentsChanged) this.onResidentsChanged();
+      }, fade*1000 + 10);
+
+      return g;
+    } finally {
+      // Cleared just after the swap actually lands (fade + a small margin),
+      // not immediately — so a rapid second call can't race the setTimeout
+      // above and grab a source that's about to be replaced out from under it.
+      setTimeout(()=>{ g._regenerating = false; }, 200);
+    }
+  }
+
   // let a person send a specific grain away early, resident or passing
   // through &mdash; the manual counterpart to cap eviction / natural fade-out.
   release(id){
@@ -1512,7 +1687,7 @@ class CollageEngine{
       src.loop = true;
       env.gain.linearRampToValueAtTime(level, now+fadeIn);
       src.start(now);
-      const resident = { id, kind:'resident', source:src, vibrato, gain:env, filt, padEq, duckGain, swellGain, userGain, pan, analyser, meterBuf, label: opts.label || 'unnamed grain', startedAt: now, sourceQuestion: opts.sourceQuestion, forager: opts.forager, panTimer:null, swellTimer:null, fadeTimer:null, muted:false, locked:false, _volPct:100, _tonePct:hzToTonePct(defaultToneHz), _filterType:'lowpass' };
+      const resident = { id, kind:'resident', source:src, vibrato, vibratoDepth, gain:env, filt, padEq, duckGain, swellGain, userGain, pan, analyser, meterBuf, label: opts.label || 'unnamed grain', startedAt: now, sourceQuestion: opts.sourceQuestion, forager: opts.forager, panTimer:null, swellTimer:null, fadeTimer:null, muted:false, locked:false, rawGrain: opts.rawGrain || null, _transformName: opts.transformName || 'freeze', _sizePct:70, _regenerating:false, _volPct:100, _tonePct:hzToTonePct(defaultToneHz), _filterType:'lowpass' };
       this.residents.push(resident);
       this._schedulePanDrift(pan.pan, resident);
       this._scheduleSwell(swellGain.gain, resident);
@@ -2163,7 +2338,7 @@ class Forager{
       // instead, same as the grain's own label already does.
       const sourceDesc = describeSource(chosenDoc) || dest.label;
       const label = roleLabelCap + ': ' + sourceDesc;
-      const grainObj = this.engine.introduce(processed, { takeRoot, level: baseLevel, label, sourceQuestion: dest, forager: this.name });
+      const grainObj = this.engine.introduce(processed, { takeRoot, level: baseLevel, label, sourceQuestion: dest, forager: this.name, rawGrain: grain, transformName });
       // Rare, unforced easter egg: not something the person triggers, just
       // something that's occasionally already true — a fetched item's own
       // title happens to name a corvid. Deliberately narrow (real corvid
