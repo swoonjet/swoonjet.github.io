@@ -1824,6 +1824,13 @@ function computeGrainRating(buffer){
   return 1;
 }
 
+// Session-wide memory of which documents have already been pulled, shared
+// across all five foragers — without this, a long session (this app is
+// built to run for a while) can plausibly land on the exact same recording
+// twice with nothing remembering it happened. Capped, not exhaustive: the
+// goal is avoiding short-term repeats, not tracking the whole session.
+const recentDocIds = [];
+
 class Forager{
   constructor(engine, name, strategy){
     this.engine = engine;
@@ -1833,6 +1840,7 @@ class Forager{
     this.busy = false;
     this.timer = null;
     this.recentlyVisited = [];
+    this.consecutiveFailures = 0;
     this.traits = { adventurousness: randRange(0.3,0.6) };
   }
 
@@ -1852,14 +1860,22 @@ class Forager{
     const maxS = 90 - p*55; // 90s..35s
     return randRange(minS, maxS) * 1000;
   }
-  retryDelay(){ return randRange(3000, 7000); }
+  // Backs off further the longer a bad streak continues — a real external
+  // API (archive.org, Commons) deserves better than getting hammered at a
+  // flat 3-7s no matter how many times in a row it's already failed. Resets
+  // the moment a trip actually succeeds (see _done()).
+  retryDelay(){
+    const streak = Math.min(this.consecutiveFailures, 5);
+    const base = 3000 * Math.pow(1.8, streak);
+    return randRange(base, base*1.6);
+  }
 
   chooseRole(){
     return weightedPick(FORAGER_ROLES, r => roleWeights[r.key] || 0.1);
   }
 
-  _failed(){ renderStats(this.engine.residentCount(), activeForagerCount()); this._scheduleNext(this.retryDelay()); }
-  _done(){ renderStats(this.engine.residentCount(), activeForagerCount()); this._scheduleNext(this.paceDelay()); }
+  _failed(){ this.consecutiveFailures++; renderStats(this.engine.residentCount(), activeForagerCount()); this._scheduleNext(this.retryDelay()); }
+  _done(){ this.consecutiveFailures = 0; renderStats(this.engine.residentCount(), activeForagerCount()); this._scheduleNext(this.paceDelay()); }
 
   async expedition(){
     if(this.busy){ this._scheduleNext(4000); return; }
@@ -1867,8 +1883,15 @@ class Forager{
     const ctx = this.engine.ctx;
     try{
       const role = this.chooseRole();
-      const dest = this.strategy(this.engine);
-      stats.collected += 0; // visited, not yet collected
+      // Reroll (bounded, so a small pool like the Collector's 6 named
+      // collections doesn't loop forever) if the strategy landed on
+      // somewhere this forager just visited.
+      let dest = this.strategy(this.engine);
+      let rerolls = 0;
+      while(this.recentlyVisited.includes(dest.label) && rerolls < 3){
+        dest = this.strategy(this.engine);
+        rerolls++;
+      }
       this.recentlyVisited.push(dest.label);
       if(this.recentlyVisited.length > 4) this.recentlyVisited.shift();
       ticker(this.name + ' wonders: ' + dest.label);
@@ -1892,6 +1915,7 @@ class Forager{
 
       let decoded = null, chosenDoc = null;
       for(const doc of candidates){
+        if(recentDocIds.includes(doc.id)) continue;
         let files;
         try{ files = await source.candidateFiles(doc); }
         catch(e){ continue; }
@@ -1911,6 +1935,9 @@ class Forager{
         log(this.name, 'came back from "' + dest.label + '" empty-handed.', true);
         this._failed(); return;
       }
+
+      recentDocIds.push(chosenDoc.id);
+      if(recentDocIds.length > 80) recentDocIds.shift();
 
       const mono = downmixToMono(ctx, decoded);
       const [minLen, maxLen] = role.grainRange;
@@ -1993,6 +2020,24 @@ let ctx, engine;
 const foragers = [];
 let wakeLock = null;
 
+// Dial state persistence — Twigs/Lining/Strands/Shine, Pace, Space, and
+// Volume all reset to their hardcoded defaults on every fresh visit
+// otherwise. One small JSON blob, read once on begin and rewritten on
+// every slider move.
+const DIAL_KEY = 'magpie-dials-v1';
+function loadDials(){
+  try{
+    const raw = localStorage.getItem(DIAL_KEY);
+    return raw ? JSON.parse(raw) : null;
+  }catch(e){ return null; }
+}
+function saveDials(partial){
+  try{
+    const current = loadDials() || {};
+    localStorage.setItem(DIAL_KEY, JSON.stringify(Object.assign(current, partial)));
+  }catch(e){}
+}
+
 async function requestWakeLock(){
   try{
     if('wakeLock' in navigator){
@@ -2029,6 +2074,21 @@ document.getElementById('begin-btn').addEventListener('click', async ()=>{
   startGrainMeters();
   requestWakeLock();
 
+  // Best-effort mitigation for the known "iOS suspends Web Audio in the
+  // background" limitation: a context that's already running from a real
+  // user gesture generally does NOT need a fresh gesture to resume, so
+  // whenever the tab becomes visible again, try to wake it back up rather
+  // than silently staying suspended until something else happens to touch
+  // it. Doesn't fix a fully backgrounded/locked phone (nothing fires here
+  // until the tab is actually foregrounded again), but covers the common
+  // brief-background case — a notification, switching apps for a moment —
+  // that Wake Lock alone doesn't address.
+  document.addEventListener('visibilitychange', ()=>{
+    if(document.visibilityState === 'visible' && ctx && ctx.state === 'suspended'){
+      ctx.resume().catch(()=>{});
+    }
+  });
+
   [
     ['the Namer', themeQuestion],
     ['the Finder', obscurityQuestion],
@@ -2042,12 +2102,39 @@ document.getElementById('begin-btn').addEventListener('click', async ()=>{
   });
   renderStats(0, activeForagerCount());
 
+  const savedDials = loadDials();
+  if(savedDials){
+    if(savedDials.roleWeights){
+      Object.assign(roleWeights, savedDials.roleWeights);
+      ['rhythm','ambiance','stretch','texture'].forEach(key=>{
+        const input = document.getElementById('role-'+key);
+        if(input){ input.value = roleWeights[key]; document.getElementById('v-role-'+key).textContent = roleWeights[key] + '%'; }
+      });
+    }
+    if(savedDials.pace != null){
+      paceValue = savedDials.pace;
+      document.getElementById('pace').value = paceValue;
+      document.getElementById('v-pace').textContent = paceValue<20?'unhurried':(paceValue<50?'steady':(paceValue<80?'busy':'relentless'));
+    }
+    if(savedDials.space != null){
+      document.getElementById('space').value = savedDials.space;
+      document.getElementById('v-space').textContent = savedDials.space + '%';
+      engine.setParam('space', savedDials.space);
+    }
+    if(savedDials.volume != null){
+      document.getElementById('volume').value = savedDials.volume;
+      document.getElementById('v-volume').textContent = savedDials.volume + '%';
+      engine.setParam('volume', savedDials.volume);
+    }
+  }
+
   ['role-rhythm','role-ambiance','role-stretch','role-texture'].forEach(id=>{
     const key = id.replace('role-','');
     document.getElementById(id).addEventListener('input', (e)=>{
       const v = parseInt(e.target.value,10);
       roleWeights[key] = v;
       document.getElementById('v-'+id).textContent = v + '%';
+      saveDials({ roleWeights: Object.assign({}, roleWeights) });
     });
   });
 
@@ -2055,16 +2142,19 @@ document.getElementById('begin-btn').addEventListener('click', async ()=>{
     const v = parseInt(e.target.value,10);
     paceValue = v;
     document.getElementById('v-pace').textContent = v<20?'unhurried':(v<50?'steady':(v<80?'busy':'relentless'));
+    saveDials({ pace: v });
   });
   document.getElementById('space').addEventListener('input', (e)=>{
     const v = parseInt(e.target.value,10);
     engine.setParam('space', v);
     document.getElementById('v-space').textContent = v + '%';
+    saveDials({ space: v });
   });
   document.getElementById('volume').addEventListener('input', (e)=>{
     const v = parseInt(e.target.value,10);
     engine.setParam('volume', v);
     document.getElementById('v-volume').textContent = v + '%';
+    saveDials({ volume: v });
   });
 
   let paused = false;
@@ -2104,8 +2194,12 @@ document.getElementById('begin-btn').addEventListener('click', async ()=>{
   // whatever MediaRecorder's own container is (webm/opus in Chrome) — no
   // client-side re-encoding needed, and this is a real deployed page, not
   // a sandboxed artifact, so a genuine <a download> click works fine here.
-  let mediaRecorder = null, recordChunks = [], recordStart = 0;
+  let mediaRecorder = null, recordChunks = [], recordStart = 0, recordTimerInterval = null;
   const recordBtn = document.getElementById('record-btn');
+  function formatElapsed(sec){
+    const m = Math.floor(sec/60), s = sec%60;
+    return m + ':' + String(s).padStart(2,'0');
+  }
   recordBtn.addEventListener('click', ()=>{
     if(!mediaRecorder || mediaRecorder.state === 'inactive'){
       const dest = engine.ctx.createMediaStreamDestination();
@@ -2116,6 +2210,7 @@ document.getElementById('begin-btn').addEventListener('click', async ()=>{
       mediaRecorder.ondataavailable = e => { if(e.data.size>0) recordChunks.push(e.data); };
       mediaRecorder.onstop = () => {
         engine.finalClip.disconnect(dest);
+        clearInterval(recordTimerInterval); recordTimerInterval = null;
         const durationSec = Math.round(engine.ctx.currentTime - recordStart);
         const blob = new Blob(recordChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
         const ext = (blob.type.includes('ogg')) ? 'ogg' : 'webm';
@@ -2128,8 +2223,12 @@ document.getElementById('begin-btn').addEventListener('click', async ()=>{
         log('recorded', 'saved a ' + durationSec + 's clip of the collage.', false, { durationSec });
       };
       mediaRecorder.start();
-      recordBtn.textContent = 'STOP & SAVE CLIP';
+      recordBtn.textContent = 'STOP & SAVE · 0:00';
       recordBtn.classList.add('recording');
+      recordTimerInterval = setInterval(()=>{
+        const elapsed = Math.round(engine.ctx.currentTime - recordStart);
+        recordBtn.textContent = 'STOP & SAVE · ' + formatElapsed(elapsed);
+      }, 500);
     } else {
       mediaRecorder.stop();
       recordBtn.textContent = 'RECORD A CLIP';
