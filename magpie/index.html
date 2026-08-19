@@ -2156,7 +2156,13 @@ class Forager{
       const takeRoot = Math.random() < clamp(0.18 + rating*0.42, 0.12, 0.7);
       const baseLevel = randRange(0.45, 0.7) * normGain * (0.85 + rating*0.3);
       const roleLabelCap = role.label.charAt(0).toUpperCase() + role.label.slice(1);
-      const label = roleLabelCap + ': ' + (describeSource(chosenDoc) || dest.label);
+      // The real recording, once one's actually been found — dest.label is
+      // only the search destination (a theme/era/collection), which is the
+      // SAME text for every grain that comes out of it. Everything below
+      // that reports on an actual arrival (not the search itself) uses this
+      // instead, same as the grain's own label already does.
+      const sourceDesc = describeSource(chosenDoc) || dest.label;
+      const label = roleLabelCap + ': ' + sourceDesc;
       const grainObj = this.engine.introduce(processed, { takeRoot, level: baseLevel, label, sourceQuestion: dest, forager: this.name });
       // Rare, unforced easter egg: not something the person triggers, just
       // something that's occasionally already true — a fetched item's own
@@ -2166,7 +2172,7 @@ class Forager{
       const kindred = chosenDoc && /\b(magpies?|crows?|ravens?|rooks?|jackdaws?|corvids?|jays?)\b/i.test(chosenDoc.title || '');
       const arrivalText = kindred
         ? this.name + ' knows this one &mdash; a kindred sound in "' + (chosenDoc.title||'').replace(/^File:/,'').trim() + '."'
-        : (takeRoot ? 'a ' + transformName + ' fragment weaves in: ' : 'just glimpsed: ') + dest.label;
+        : (takeRoot ? 'a ' + transformName + ' fragment weaves in: ' : 'just glimpsed: ') + sourceDesc;
       log(this.name, arrivalText, false, {
         grainId: grainObj ? grainObj.id : null,
         kind: takeRoot ? 'resident' : 'transient',
@@ -2177,7 +2183,7 @@ class Forager{
         rating: +rating.toFixed(3),
         kindred: !!kindred
       });
-      ticker('Brought back: ' + dest.label);
+      ticker('Brought back: ' + sourceDesc);
 
       this._done();
     } finally {
