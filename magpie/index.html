@@ -155,6 +155,7 @@
   .grain-ctrl-row span.g-tag{ font-size:0.65rem; color: var(--ink-45); width:3.4rem; flex-shrink:0; text-transform:uppercase; letter-spacing:0.06em; }
   .grain-ctrl-row input[type=range]{ flex:1; }
   .grain-ctrl-row .g-val{ font-size:0.7rem; color: var(--ink-45); font-family: var(--mono); width:2.8rem; text-align:right; flex-shrink:0; }
+  .grain-ctrl-row .g-filter-btn{ flex-shrink:0; width:2rem; padding:0.35rem 0; font-size:0.6rem; letter-spacing:0.03em; text-align:center; }
   .grain-btn-row{ display:flex; gap:0.5rem; margin-top:0.8rem; }
   .grain-btn-row button{ flex:1; padding:0.55rem; font-size:0.65rem; }
 
@@ -180,7 +181,7 @@
 <div id="overlay">
   <h1><svg viewBox="0 0 229 41"><use href="#magpie-wordmark"></use></svg></h1>
   <p>A collage of found sound that thickens the longer you let it run. Five magpies are out
-  looking for interesting things, and folding whatever they find into the texture.
+  looking for interesting things, and weaving whatever they find into the nest.
   Needs your tap to start: audio can't begin on its own.</p>
   <button id="begin-btn">START LISTENING</button>
   <p class="note">Uses your connection to fetch real recordings from the open web. Keeping the screen on
@@ -196,7 +197,7 @@
   <div id="ticker">Waiting for the first magpies to set out&hellip;</div>
   <div id="stat-row">
     <div><b id="s-collected">0</b>collected</div>
-    <div><b id="s-resident">0</b>resident</div>
+    <div><b id="s-resident">0</b>woven in</div>
     <div><b id="s-out">0</b>out gathering</div>
   </div>
 
@@ -215,19 +216,19 @@
       <h2>Guide the magpies</h2>
       <div class="role-grid">
         <div class="ctrl">
-          <label>Rhythm <span class="val" id="v-role-rhythm">50%</span></label>
+          <label>Twigs <span class="val" id="v-role-rhythm">50%</span></label>
           <input type="range" id="role-rhythm" min="0" max="100" step="5" value="50">
         </div>
         <div class="ctrl">
-          <label>Ambiance <span class="val" id="v-role-ambiance">50%</span></label>
+          <label>Lining <span class="val" id="v-role-ambiance">50%</span></label>
           <input type="range" id="role-ambiance" min="0" max="100" step="5" value="50">
         </div>
         <div class="ctrl">
-          <label>Stretch <span class="val" id="v-role-stretch">50%</span></label>
+          <label>Strands <span class="val" id="v-role-stretch">50%</span></label>
           <input type="range" id="role-stretch" min="0" max="100" step="5" value="50">
         </div>
         <div class="ctrl">
-          <label>Texture <span class="val" id="v-role-texture">50%</span></label>
+          <label>Shine <span class="val" id="v-role-texture">50%</span></label>
           <input type="range" id="role-texture" min="0" max="100" step="5" value="50">
         </div>
       </div>
@@ -533,6 +534,14 @@ function toneValueToHz(pct){ return 300 * Math.pow(16000/300, pct/100); }
 function hzToTonePct(hz){ return clamp(100 * Math.log(hz/300) / Math.log(16000/300), 0, 100); }
 function toneWord(pct){ return pct<35 ? 'dark' : (pct>70 ? 'bright' : 'even'); }
 
+// Filter-type toggle for the per-grain Tone control — same node (`filt`),
+// same slider/Hz math either way, just a different curve shape through it.
+// Cycled by a small chip button next to the slider rather than a whole new
+// control row (see buildGrainRow).
+const FILTER_TYPES = ['lowpass','highpass','bandpass'];
+const FILTER_TYPE_LABELS = { lowpass:'LP', highpass:'HP', bandpass:'BP' };
+function nextFilterType(t){ return FILTER_TYPES[(FILTER_TYPES.indexOf(t)+1) % FILTER_TYPES.length]; }
+
 /* ------------------------------------------------------------
    Grains-tab render — keyed diff/patch, not a full rebuild.
    Foragers add/evict/release grains on their own schedule, totally
@@ -574,7 +583,7 @@ document.addEventListener('pointercancel', markGrainInteractionEnd, true);
 
 function updateGrainLabel(labelDiv, g){
   const marker = g.kind === 'resident' ? '&#9679;' : '&#9675;';
-  const suffix = g.kind === 'resident' ? '' : ' <span class="passing">(passing through)</span>';
+  const suffix = g.kind === 'resident' ? '' : ' <span class="passing">(just glimpsed)</span>';
   const markerColor = FORAGER_INKS[g.forager] || 'var(--ink)';
   labelDiv.innerHTML = '<span class="marker" style="color:' + markerColor + '">' + marker + '</span>' + g.label + suffix;
 }
@@ -604,10 +613,11 @@ function buildGrainRow(g){
 
   const toneRow = document.createElement('div');
   toneRow.className = 'grain-ctrl-row';
-  toneRow.innerHTML = '<span class="g-tag">tone</span><input type="range" class="g-tone" min="0" max="100" step="5"><span class="g-val g-tone-val"></span>';
+  toneRow.innerHTML = '<span class="g-tag">tone</span><input type="range" class="g-tone" min="0" max="100" step="5"><span class="g-val g-tone-val"></span><button class="chip g-filter-btn" type="button" title="filter shape: low / high / band pass"></button>';
   row.appendChild(toneRow);
   const toneInput = toneRow.querySelector('.g-tone');
   const toneVal = toneRow.querySelector('.g-tone-val');
+  const filterBtn = toneRow.querySelector('.g-filter-btn');
 
   const btnRow = document.createElement('div');
   btnRow.className = 'grain-btn-row';
@@ -622,6 +632,8 @@ function buildGrainRow(g){
   const tone = g._tonePct != null ? g._tonePct : 100;
   volInput.value = vol; volVal.textContent = vol + '%';
   toneInput.value = tone; toneVal.textContent = toneWord(tone);
+  if(!g._filterType) g._filterType = 'lowpass';
+  filterBtn.textContent = FILTER_TYPE_LABELS[g._filterType];
   muteBtn.textContent = g.muted ? 'Unmute' : 'Mute';
   muteBtn.classList.toggle('active', !!g.muted);
 
@@ -646,12 +658,20 @@ function buildGrainRow(g){
   releaseBtn.addEventListener('click', ()=>{
     engine.release(id);
   });
+  filterBtn.addEventListener('click', ()=>{
+    const gr = engine._findGrain(id);
+    const current = (gr && gr._filterType) || 'lowpass';
+    const next = nextFilterType(current);
+    if(gr) gr._filterType = next;
+    engine.setGrainFilterType(id, next);
+    filterBtn.textContent = FILTER_TYPE_LABELS[next];
+  });
 
   // Interaction lock — any pointerdown/focus/input on a control in this row
   // marks the whole list "actively engaged" so a render pass triggered by
   // some OTHER grain arriving/leaving can't touch this row (or anyone
   // else's) until the person is done with it.
-  [volInput, toneInput, muteBtn, releaseBtn].forEach(el=>{
+  [volInput, toneInput, muteBtn, releaseBtn, filterBtn].forEach(el=>{
     el.addEventListener('pointerdown', markGrainInteractionStart);
   });
   [volInput, toneInput].forEach(el=>{
@@ -661,7 +681,7 @@ function buildGrainRow(g){
   row.addEventListener('focusin', markGrainInteractionStart);
   row.addEventListener('focusout', markGrainInteractionEnd);
 
-  return { row, labelDiv, meterFill, volInput, volVal, toneInput, toneVal, muteBtn, releaseBtn };
+  return { row, labelDiv, meterFill, volInput, volVal, toneInput, toneVal, muteBtn, releaseBtn, filterBtn };
 }
 
 function updateGrainRow(entry, g){
@@ -680,6 +700,10 @@ function updateGrainRow(entry, g){
   if(document.activeElement !== entry.toneInput){
     entry.toneInput.value = tone;
     entry.toneVal.textContent = toneWord(tone);
+  }
+  const filterLabel = FILTER_TYPE_LABELS[g._filterType || 'lowpass'];
+  if(entry.filterBtn && entry.filterBtn.textContent !== filterLabel){
+    entry.filterBtn.textContent = filterLabel;
   }
   const muteLabel = g.muted ? 'Unmute' : 'Mute';
   if(entry.muteBtn.textContent !== muteLabel){
@@ -928,6 +952,13 @@ class CollageEngine{
     this.residentCap = 16;
     this._nextId = 1;
     this.onResidentsChanged = null;
+    // One shared reference duration for the whole session — a slow "bar
+    // length," not a tempo grid anything locks to. Every grain's swell (see
+    // introduce()/_scheduleSwell) is timed relative to THIS, with its own
+    // phase and length jitter layered on top, so they breathe independently
+    // around a common sense of pace rather than either ignoring it entirely
+    // or all locking into the same visible pulse.
+    this.measureSeconds = randRange(7, 10);
     this._build();
   }
 
@@ -1161,6 +1192,31 @@ class CollageEngine{
     step();
   }
 
+  // Temporal counterpart to the spectral (padEq) and stereo (widener/pan)
+  // separation above: a slow gain breathe, independent of userGain/filt/
+  // pan, so grains rarely collide in frequency, pan position, OR time all
+  // at once. Timed off the shared this.measureSeconds, but each grain's
+  // own cycle length is jittered around it AND its first cycle starts at a
+  // random phase — a fixed length or a synced start would just trade the
+  // old fast-chop artifact for a slow, synchronized pulse across the whole
+  // mix, which is its own kind of mechanical.
+  _scheduleSwell(gainParam, holder){
+    const ctx = this.ctx;
+    const base = this.measureSeconds;
+    const step = () => {
+      const now = ctx.currentTime;
+      const cycleLen = base * randRange(0.75, 1.35);
+      const low = randRange(0.55, 0.8);
+      const riseFrac = randRange(0.35, 0.65);
+      gainParam.cancelScheduledValues(now);
+      gainParam.setValueAtTime(gainParam.value, now);
+      gainParam.linearRampToValueAtTime(1.0, now + cycleLen*riseFrac);
+      gainParam.linearRampToValueAtTime(low, now + cycleLen);
+      holder.swellTimer = setTimeout(step, cycleLen*1000);
+    };
+    holder.swellTimer = setTimeout(step, randRange(0, base)*1000);
+  }
+
   _findGrain(id){
     return this.residents.find(r=>r.id===id) || this.transients.find(r=>r.id===id);
   }
@@ -1183,12 +1239,25 @@ class CollageEngine{
     return g;
   }
 
-  // a simple lowpass "tone" per grain — darker or brighter than the rest of
-  // the collage, independent of whichever transform it arrived through.
+  // a simple "tone" per grain — darker or brighter than the rest of the
+  // collage, independent of whichever transform it arrived through. Shape
+  // (lowpass/highpass/bandpass) is a separate toggle on the same node, see
+  // setGrainFilterType below.
   setGrainTone(id, hz){
     const g = this._findGrain(id);
     if(!g) return;
     g.filt.frequency.setTargetAtTime(hz, this.ctx.currentTime, 0.05);
+  }
+
+  // Filter-shape toggle for the same per-grain Tone node — lowpass (the
+  // original/default), highpass, or bandpass. Bandpass gets a touch more Q
+  // than the other two so it actually reads as a band rather than just a
+  // softer slope off the same cutoff.
+  setGrainFilterType(id, type){
+    const g = this._findGrain(id);
+    if(!g) return;
+    g.filt.type = type;
+    g.filt.Q.setTargetAtTime(type === 'bandpass' ? 1.1 : 0.4, this.ctx.currentTime, 0.05);
   }
 
   // let a person send a specific grain away early, resident or passing
@@ -1204,6 +1273,7 @@ class CollageEngine{
     }
     if(!g) return;
     if(g.panTimer) clearTimeout(g.panTimer);
+    if(g.swellTimer) clearTimeout(g.swellTimer);
     const t = ctx.currentTime;
     g.gain.gain.cancelScheduledValues(t);
     g.gain.gain.setValueAtTime(g.gain.gain.value, t);
@@ -1211,7 +1281,7 @@ class CollageEngine{
     try{ g.source.stop(t+1.4); }catch(e){}
     try{ g.vibrato.stop(t+1.4); }catch(e){}
     if(this.onResidentsChanged) this.onResidentsChanged();
-    log('released', g.label + ' let go by hand.', true, { grainId: g.id, forager: g.forager, kind: g.kind, label: g.label, reason: 'manual' });
+    log('fell loose', g.label + ' let go by hand.', true, { grainId: g.id, forager: g.forager, kind: g.kind, label: g.label, reason: 'manual' });
   }
 
   introduce(buffer, opts){
@@ -1250,6 +1320,13 @@ class CollageEngine{
     // did before, this just rides underneath it.
     const padEq = ctx.createBiquadFilter(); padEq.type = 'peaking'; padEq.Q.value = 1.2; padEq.gain.value = -2.5;
     const duckGain = ctx.createGain(); duckGain.gain.value = 1;
+    // The temporal counterpart to padEq (frequency) and pan (stereo
+    // position) — a slow, independent breathe so a grain's own loudness
+    // rarely peaks in sync with its neighbors either. Deliberately its own
+    // node, not folded into duckGain (that's a short, reactive dip only on
+    // a NEW arrival) or userGain (the person's own manual fader) — this
+    // runs continuously underneath both.
+    const swellGain = ctx.createGain(); swellGain.gain.value = 1;
     const userGain = ctx.createGain(); userGain.gain.value = 1;
     // Extreme, separated placement rather than a flat spread across the
     // whole field — see extremePan()'s own note on why uniform isn't enough.
@@ -1259,7 +1336,7 @@ class CollageEngine{
     // tab — doesn't touch the real signal path, just listens in on it.
     const analyser = ctx.createAnalyser(); analyser.fftSize = 128;
     const meterBuf = new Uint8Array(analyser.fftSize);
-    src.connect(env); env.connect(filt); filt.connect(padEq); padEq.connect(duckGain); duckGain.connect(userGain); userGain.connect(pan); pan.connect(this.masterBus);
+    src.connect(env); env.connect(filt); filt.connect(padEq); padEq.connect(duckGain); duckGain.connect(swellGain); swellGain.connect(userGain); userGain.connect(pan); pan.connect(this.masterBus);
     userGain.connect(analyser);
 
     const level = opts.level || 0.5;
@@ -1271,19 +1348,21 @@ class CollageEngine{
       src.loop = true;
       env.gain.linearRampToValueAtTime(level, now+fadeIn);
       src.start(now);
-      const resident = { id, kind:'resident', source:src, vibrato, gain:env, filt, padEq, duckGain, userGain, pan, analyser, meterBuf, label: opts.label || 'unnamed grain', startedAt: now, sourceQuestion: opts.sourceQuestion, forager: opts.forager, panTimer:null, muted:false, _volPct:100, _tonePct:hzToTonePct(defaultToneHz) };
+      const resident = { id, kind:'resident', source:src, vibrato, gain:env, filt, padEq, duckGain, swellGain, userGain, pan, analyser, meterBuf, label: opts.label || 'unnamed grain', startedAt: now, sourceQuestion: opts.sourceQuestion, forager: opts.forager, panTimer:null, swellTimer:null, muted:false, _volPct:100, _tonePct:hzToTonePct(defaultToneHz), _filterType:'lowpass' };
       this.residents.push(resident);
       this._schedulePanDrift(pan.pan, resident);
+      this._scheduleSwell(swellGain.gain, resident);
       if(this.residents.length > this.residentCap){
         const oldest = this.residents.shift();
         if(oldest.panTimer) clearTimeout(oldest.panTimer);
+        if(oldest.swellTimer) clearTimeout(oldest.swellTimer);
         const t = ctx.currentTime;
         oldest.gain.gain.cancelScheduledValues(t);
         oldest.gain.gain.setValueAtTime(oldest.gain.gain.value, t);
         oldest.gain.gain.linearRampToValueAtTime(0, t+4);
         oldest.source.stop(t+4.2);
         try{ oldest.vibrato.stop(t+4.2); }catch(e){}
-        log('fades', oldest.label + ' fades out of the collage.', true, { grainId: oldest.id, forager: oldest.forager, kind: 'resident', label: oldest.label, reason: 'cap-eviction' });
+        log('fell loose', oldest.label + ' drifts loose from the nest.', true, { grainId: oldest.id, forager: oldest.forager, kind: 'resident', label: oldest.label, reason: 'cap-eviction' });
       }
       if(this.onResidentsChanged) this.onResidentsChanged();
       return resident;
@@ -1309,8 +1388,15 @@ class CollageEngine{
       // complementary EQ glides alongside the same pan move.
       padEq.frequency.setValueAtTime(padEq.frequency.value, now);
       padEq.frequency.linearRampToValueAtTime(this._padEqFreqForPan(panTarget), now+dur);
+      // One-shot swell sized to its own short life rather than the shared
+      // measure — too brief to meaningfully complete even one real cycle of
+      // it, but still shouldn't sit flat while everything around it breathes.
+      const swellPeakFrac = randRange(0.3, 0.6);
+      swellGain.gain.setValueAtTime(randRange(0.6, 0.85), now);
+      swellGain.gain.linearRampToValueAtTime(1.0, now + dur*swellPeakFrac);
+      swellGain.gain.linearRampToValueAtTime(randRange(0.55, 0.8), now + dur);
 
-      const transient = { id, kind:'transient', source:src, vibrato, gain:env, filt, padEq, duckGain, userGain, pan, analyser, meterBuf, label: opts.label || 'unnamed grain', startedAt: now, sourceQuestion: opts.sourceQuestion, forager: opts.forager, muted:false, _volPct:100, _tonePct:hzToTonePct(defaultToneHz) };
+      const transient = { id, kind:'transient', source:src, vibrato, gain:env, filt, padEq, duckGain, swellGain, userGain, pan, analyser, meterBuf, label: opts.label || 'unnamed grain', startedAt: now, sourceQuestion: opts.sourceQuestion, forager: opts.forager, muted:false, _volPct:100, _tonePct:hzToTonePct(defaultToneHz), _filterType:'lowpass' };
       this.transients.push(transient);
       if(this.onResidentsChanged) this.onResidentsChanged();
       src.onended = () => {
@@ -1371,46 +1457,65 @@ function measureZCR(buffer){
   return crossings/d.length;
 }
 
-async function transformFreeze(sampleRate, grain){
-  const sliceMs = randRange(20,70);
-  const sliceLen = Math.max(8, Math.floor(sampleRate*sliceMs/1000));
-  const maxStart = Math.max(0, grain.length - sliceLen);
-  const start = randInt(0, maxStart);
-  const renderSeconds = randRange(3,6);
-  const off = new OfflineAudioContext(1, Math.ceil(sampleRate*renderSeconds), sampleRate);
-  const loopBuf = off.createBuffer(1, sliceLen, sampleRate);
-  const src = grain.getChannelData(0);
-  const dst = loopBuf.getChannelData(0);
-  for(let i=0;i<sliceLen;i++) dst[i] = src[start+i] || 0;
-  // Looping a slice this short (20-70ms) repeats at 14-50Hz — audio-rate enough
-  // that the loop itself becomes a pitched, harmonically rich tone. A fade this
-  // brief left a hard corner at the seam every cycle, which read as a sharp,
-  // buzzy sawtooth edge once it repeated. A longer equal-power crossfade —
-  // covering much of the slice for the shortest ones — smooths that corner away.
-  const fadeLen = Math.min(Math.floor(sliceLen*0.35), Math.floor(sampleRate*0.02));
-  for(let i=0;i<fadeLen;i++){
-    const g = Math.sin((i/fadeLen) * Math.PI/2);
-    dst[i] *= g; dst[sliceLen-1-i] *= g;
+// Equal-power attack/release for a transform's overall envelope. A linear
+// ramp has a hard corner right where it meets silence at both ends — a
+// discontinuity in slope, not just level — and that corner is exactly what
+// reads as clicked-in rather than round. A sin/cos quarter-cycle has zero
+// slope at the silent end instead. Replaces the linear ramps every
+// transform below used to shape its render.
+function equalPowerCurve(rising, steps){
+  steps = steps || 24;
+  const curve = new Float32Array(steps);
+  for(let i=0;i<steps;i++){
+    const x = i/(steps-1);
+    curve[i] = rising ? Math.sin(x*Math.PI/2) : Math.cos(x*Math.PI/2);
   }
-  const bufSrc = off.createBufferSource();
-  bufSrc.buffer = loopBuf; bufSrc.loop = true;
-  const lfo = off.createOscillator();
-  lfo.type='sine'; lfo.frequency.value = randRange(0.05,0.2);
-  const lfoDepth = off.createGain(); lfoDepth.gain.value = randRange(4,14);
-  lfo.connect(lfoDepth); lfoDepth.connect(bufSrc.detune);
-  // The vibrato drift itself is the good part — this just files down the
-  // buzzy upper harmonics the short loop generates, so the wobble reads as
-  // soft and breathy rather than sharp and abrasive.
+  return curve;
+}
+function scheduleSoftEnvelope(param, peak, t0, attack, sustainUntil, release){
+  param.setValueCurveAtTime(equalPowerCurve(true).map(v=>v*peak), t0, attack);
+  param.setValueAtTime(peak, sustainUntil);
+  param.setValueCurveAtTime(equalPowerCurve(false).map(v=>v*peak), sustainUntil, release);
+}
+
+// Long-window granular sustain. This used to loop a 20-70ms slice — a
+// repeat rate of 14-50Hz, which is audio-rate no matter how the seam is
+// crossfaded or filtered afterward: the loop itself IS a pitched,
+// harmonically rich tone by construction, and its own LFO/detune only ever
+// wobbled that pitch, it never removed it. Softening that shape further
+// wasn't the fix; the shape itself had to go. This instead overlaps long
+// (400-900ms) windows of the source at IRREGULAR intervals — no fixed hop,
+// so there is no periodic component left for the ear to lock onto as a
+// pitch. No LFO, no detune, no vibrato of any rate here anymore.
+async function transformFreeze(sampleRate, grain){
+  const renderSeconds = randRange(4, 7);
+  const off = new OfflineAudioContext(1, Math.ceil(sampleRate*renderSeconds), sampleRate);
+  const outEnv = off.createGain(); outEnv.gain.value = 0;
   const soften = off.createBiquadFilter();
-  soften.type = 'lowpass'; soften.frequency.value = randRange(2200, 3600); soften.Q.value = 0.3;
-  const env = off.createGain();
-  env.gain.setValueAtTime(0,0);
-  env.gain.linearRampToValueAtTime(0.85, Math.min(1.5, renderSeconds*0.3));
-  env.gain.setValueAtTime(0.85, Math.max(0, renderSeconds-1.5));
-  env.gain.linearRampToValueAtTime(0, renderSeconds);
-  bufSrc.connect(soften); soften.connect(env); env.connect(off.destination);
-  bufSrc.start(0); bufSrc.stop(renderSeconds);
-  lfo.start(0); lfo.stop(renderSeconds);
+  soften.type = 'lowpass'; soften.frequency.value = randRange(1400, 2400); soften.Q.value = 0.3;
+  soften.connect(outEnv); outEnv.connect(off.destination);
+
+  const grainLen = clamp(grain.duration, 0.05, 1);
+  const winLen = clamp(randRange(0.4, 0.9), 0.05, grainLen);
+  const fade = winLen * 0.4;
+  let t = 0;
+  while(t < renderSeconds - 0.05){
+    const src = off.createBufferSource();
+    src.buffer = grain;
+    const g = off.createGain();
+    g.gain.setValueCurveAtTime(equalPowerCurve(true), t, fade);
+    g.gain.setValueAtTime(1, t+winLen-fade);
+    g.gain.setValueCurveAtTime(equalPowerCurve(false), t+winLen-fade, fade);
+    const offsetInGrain = Math.random()*Math.max(0.001, grainLen-Math.min(winLen,grainLen));
+    src.connect(g); g.connect(soften);
+    try{ src.start(t, offsetInGrain, Math.min(winLen, grainLen-offsetInGrain)); }catch(e){ src.start(t); }
+    // Irregular spacing is the actual fix, not a stylistic choice — a fixed
+    // hop here would just trade one periodicity (the old audio-rate loop)
+    // for a slower one (a granular "putter"). Jittering it keeps the
+    // texture from ever settling into a repeat rate at all.
+    t += winLen * randRange(0.35, 0.7);
+  }
+  scheduleSoftEnvelope(outEnv.gain, 0.85, 0, Math.min(1.8, renderSeconds*0.3), Math.max(0, renderSeconds-1.8), 1.8);
   return off.startRendering();
 }
 
@@ -1421,49 +1526,42 @@ async function transformStretch(sampleRate, grain){
   const src = off.createBufferSource();
   src.buffer = grain; src.playbackRate.value = rate;
   const filt = off.createBiquadFilter();
-  filt.type='lowpass'; filt.frequency.value = 2200; filt.Q.value=0.5;
-  const env = off.createGain();
-  env.gain.setValueAtTime(0,0);
-  env.gain.linearRampToValueAtTime(0.9, renderSeconds*0.18);
-  env.gain.setValueAtTime(0.9, renderSeconds*0.75);
-  env.gain.linearRampToValueAtTime(0, renderSeconds);
+  filt.type='lowpass'; filt.frequency.value = 1700; filt.Q.value=0.5;
+  const env = off.createGain(); env.gain.value = 0;
   src.connect(filt); filt.connect(env); env.connect(off.destination);
   src.start(0);
+  scheduleSoftEnvelope(env.gain, 0.9, 0, renderSeconds*0.18, renderSeconds*0.75, renderSeconds*0.25);
   return off.startRendering();
 }
 
+// Static spectral resonance only now — three parallel bandpass bands still
+// give the formant-like coloring this is named for. The delay+feedback
+// loop that used to sit after each band is gone outright, not just turned
+// down: a sub-20ms feedback delay IS a comb filter, which is audio-rate
+// ringing by definition, no matter its gain.
 async function transformResonate(sampleRate, grain){
   const renderSeconds = randRange(4,6.5);
   const off = new OfflineAudioContext(1, Math.ceil(sampleRate*renderSeconds), sampleRate);
   const src = off.createBufferSource();
   src.buffer = grain; src.playbackRate.value = randRange(0.4,0.85);
-  const outEnv = off.createGain();
-  outEnv.gain.setValueAtTime(0,0);
-  outEnv.gain.linearRampToValueAtTime(0.8, renderSeconds*0.2);
-  outEnv.gain.setValueAtTime(0.8, renderSeconds*0.7);
-  outEnv.gain.linearRampToValueAtTime(0, renderSeconds);
+  const outEnv = off.createGain(); outEnv.gain.value = 0;
   outEnv.connect(off.destination);
   [randRange(120,300), randRange(300,700), randRange(700,1500)].forEach(f=>{
     const bp = off.createBiquadFilter();
     bp.type='bandpass'; bp.frequency.value=f; bp.Q.value=randRange(8,18);
-    const delay = off.createDelay(0.2); delay.delayTime.value = randRange(0.006,0.02);
-    const fb = off.createGain(); fb.gain.value = randRange(0.72,0.88);
-    src.connect(bp); bp.connect(delay); delay.connect(fb); fb.connect(delay);
-    delay.connect(outEnv); bp.connect(outEnv);
+    src.connect(bp); bp.connect(outEnv);
   });
   src.start(0);
+  scheduleSoftEnvelope(outEnv.gain, 0.8, 0, renderSeconds*0.2, renderSeconds*0.7, renderSeconds*0.3);
   return off.startRendering();
 }
 
 async function transformGranulate(sampleRate, grain){
   const renderSeconds = randRange(3,5);
   const off = new OfflineAudioContext(1, Math.ceil(sampleRate*renderSeconds), sampleRate);
-  const outEnv = off.createGain();
-  outEnv.gain.setValueAtTime(0,0);
-  outEnv.gain.linearRampToValueAtTime(0.75, renderSeconds*0.15);
-  outEnv.gain.setValueAtTime(0.75, renderSeconds*0.8);
-  outEnv.gain.linearRampToValueAtTime(0, renderSeconds);
-  outEnv.connect(off.destination);
+  const outEnv = off.createGain(); outEnv.gain.value = 0;
+  const warmth = off.createBiquadFilter(); warmth.type = 'lowpass'; warmth.frequency.value = 3200; warmth.Q.value = 0.3;
+  warmth.connect(outEnv); outEnv.connect(off.destination);
   const n = randInt(18,45);
   const grainLen = clamp(grain.duration, 0.01, 1);
   for(let i=0;i<n;i++){
@@ -1472,13 +1570,14 @@ async function transformGranulate(sampleRate, grain){
     const g = off.createGain();
     const t = Math.random()*renderSeconds*0.85;
     const dur = randRange(0.02,0.09);
-    g.gain.setValueAtTime(0, t);
-    g.gain.linearRampToValueAtTime(randRange(0.3,0.7), t+dur*0.4);
-    g.gain.linearRampToValueAtTime(0, t+dur);
+    const peak = randRange(0.3,0.7);
+    g.gain.setValueCurveAtTime(equalPowerCurve(true).map(v=>v*peak), t, dur*0.4);
+    g.gain.setValueCurveAtTime(equalPowerCurve(false).map(v=>v*peak), t+dur*0.4, dur*0.6);
     const offsetInGrain = Math.random()*Math.max(0.001, grainLen-0.02);
-    src.connect(g); g.connect(outEnv);
+    src.connect(g); g.connect(warmth);
     try{ src.start(t, offsetInGrain, Math.min(dur*2, grainLen-offsetInGrain)); }catch(e){ src.start(t); }
   }
+  scheduleSoftEnvelope(outEnv.gain, 0.75, 0, renderSeconds*0.15, renderSeconds*0.8, renderSeconds*0.2);
   return off.startRendering();
 }
 
@@ -1492,14 +1591,11 @@ async function transformConvolveSelf(sampleRate, grain){
   for(let i=0;i<d.length;i++) d[i] = Math.random()*2-1;
   const burst = off.createBufferSource(); burst.buffer = burstBuf;
   const bp = off.createBiquadFilter();
-  bp.type='bandpass'; bp.frequency.value = randRange(200,2000); bp.Q.value = randRange(0.5,2);
-  const env = off.createGain();
-  env.gain.setValueAtTime(0,0);
-  env.gain.linearRampToValueAtTime(0.9, renderSeconds*0.1);
-  env.gain.setValueAtTime(0.9, renderSeconds*0.65);
-  env.gain.linearRampToValueAtTime(0, renderSeconds);
+  bp.type='bandpass'; bp.frequency.value = randRange(150,1400); bp.Q.value = randRange(0.5,2);
+  const env = off.createGain(); env.gain.value = 0;
   burst.connect(bp); bp.connect(conv); conv.connect(env); env.connect(off.destination);
   burst.start(0);
+  scheduleSoftEnvelope(env.gain, 0.9, 0, renderSeconds*0.1, renderSeconds*0.65, renderSeconds*0.35);
   return off.startRendering();
 }
 
@@ -1514,14 +1610,11 @@ async function transformReverse(sampleRate, grain){
   const bufSrc = off.createBufferSource();
   bufSrc.buffer = rev; bufSrc.playbackRate.value = rate;
   const filt = off.createBiquadFilter();
-  filt.type='lowpass'; filt.frequency.value = 2500; filt.Q.value = 0.6;
-  const env = off.createGain();
-  env.gain.setValueAtTime(0,0);
-  env.gain.linearRampToValueAtTime(0.85, renderSeconds*0.2);
-  env.gain.setValueAtTime(0.85, renderSeconds*0.7);
-  env.gain.linearRampToValueAtTime(0, renderSeconds);
+  filt.type='lowpass'; filt.frequency.value = 1700; filt.Q.value = 0.6;
+  const env = off.createGain(); env.gain.value = 0;
   bufSrc.connect(filt); filt.connect(env); env.connect(off.destination);
   bufSrc.start(0);
+  scheduleSoftEnvelope(env.gain, 0.85, 0, renderSeconds*0.2, renderSeconds*0.7, renderSeconds*0.3);
   return off.startRendering();
 }
 
@@ -1530,11 +1623,7 @@ async function transformCascade(sampleRate, grain){
   const off = new OfflineAudioContext(1, Math.ceil(sampleRate*renderSeconds), sampleRate);
   const src = off.createBufferSource();
   src.buffer = grain; src.playbackRate.value = randRange(0.5, 1.0);
-  const outEnv = off.createGain();
-  outEnv.gain.setValueAtTime(0,0);
-  outEnv.gain.linearRampToValueAtTime(0.8, renderSeconds*0.1);
-  outEnv.gain.setValueAtTime(0.8, renderSeconds*0.5);
-  outEnv.gain.linearRampToValueAtTime(0, renderSeconds);
+  const outEnv = off.createGain(); outEnv.gain.value = 0;
   outEnv.connect(off.destination);
   src.connect(outEnv);
   const taps = 4;
@@ -1542,11 +1631,12 @@ async function transformCascade(sampleRate, grain){
     const delay = off.createDelay(2.0);
     delay.delayTime.value = 0.18 + i*randRange(0.12,0.2);
     const filt = off.createBiquadFilter();
-    filt.type = 'lowpass'; filt.frequency.value = 3000 - i*600;
+    filt.type = 'lowpass'; filt.frequency.value = 2200 - i*500;
     const g = off.createGain(); g.gain.value = 0.6 * Math.pow(0.65, i);
     src.connect(delay); delay.connect(filt); filt.connect(g); g.connect(outEnv);
   }
   src.start(0);
+  scheduleSoftEnvelope(outEnv.gain, 0.8, 0, renderSeconds*0.1, renderSeconds*0.5, renderSeconds*0.5);
   return off.startRendering();
 }
 
@@ -1555,28 +1645,27 @@ async function transformCascade(sampleRate, grain){
 async function transformPulse(sampleRate, grain){
   const renderSeconds = randRange(3, 5);
   const off = new OfflineAudioContext(1, Math.ceil(sampleRate*renderSeconds), sampleRate);
-  const outEnv = off.createGain();
-  outEnv.gain.setValueAtTime(0,0);
-  outEnv.gain.linearRampToValueAtTime(0.8, 0.3);
-  outEnv.gain.setValueAtTime(0.8, renderSeconds-0.6);
-  outEnv.gain.linearRampToValueAtTime(0, renderSeconds);
+  const outEnv = off.createGain(); outEnv.gain.value = 0;
   outEnv.connect(off.destination);
   const pulseLen = randRange(0.05, 0.12);
-  const gap = pulseLen * pick([1, 1.5, 2, 3]);
+  // Wider AND less regular gaps than before — the old fixed multiplier
+  // [1,1.5,2,3] kept pulses dense/even enough to read as a mechanical chop.
+  // A per-pulse jittered gap on top of a wider base ratio breaks that up.
+  const gapBase = pulseLen * randRange(2.5, 6);
   const grainLen = clamp(grain.duration, 0.02, 1);
   let t = 0;
   while(t < renderSeconds - pulseLen){
     const src = off.createBufferSource();
     src.buffer = grain; src.playbackRate.value = randRange(0.9,1.3);
     const g = off.createGain();
-    g.gain.setValueAtTime(0, t);
-    g.gain.linearRampToValueAtTime(1, t+pulseLen*0.3);
-    g.gain.linearRampToValueAtTime(0, t+pulseLen);
+    g.gain.setValueCurveAtTime(equalPowerCurve(true), t, pulseLen*0.4);
+    g.gain.setValueCurveAtTime(equalPowerCurve(false), t+pulseLen*0.4, pulseLen*0.6);
     const offsetInGrain = Math.random()*Math.max(0.001, grainLen-pulseLen);
     src.connect(g); g.connect(outEnv);
     try{ src.start(t, offsetInGrain, pulseLen*1.5); }catch(e){ src.start(t); }
-    t += pulseLen + gap;
+    t += pulseLen + gapBase*randRange(0.75, 1.35);
   }
+  scheduleSoftEnvelope(outEnv.gain, 0.8, 0, 0.4, Math.max(0.4, renderSeconds-0.7), 0.7);
   return off.startRendering();
 }
 
@@ -1598,13 +1687,13 @@ const TRANSFORMS = {
    ============================================================ */
 
 const FORAGER_ROLES = [
-  { key:'rhythm',   label:'rhythm',   grainRange:[0.04,0.22],
+  { key:'rhythm',   label:'twigs',   grainRange:[0.04,0.22],
     weights:{ pulse:3, granulate:2, cascade:1.5, reverse:1, freeze:0.6, resonate:0.6, stretch:0.15, convolveSelf:0.3 } },
-  { key:'ambiance', label:'ambiance', grainRange:[0.6,2.2],
+  { key:'ambiance', label:'lining', grainRange:[0.6,2.2],
     weights:{ stretch:2.5, freeze:1.8, convolveSelf:1.8, resonate:1, cascade:0.6, granulate:0.3, reverse:0.4, pulse:0.1 } },
-  { key:'stretch',  label:'stretch',  grainRange:[0.3,1.6],
+  { key:'stretch',  label:'strands',  grainRange:[0.3,1.6],
     weights:{ stretch:3.5, reverse:1.4, freeze:1, convolveSelf:0.7, resonate:0.5, cascade:0.4, granulate:0.3, pulse:0.15 } },
-  { key:'texture',  label:'texture',  grainRange:[0.05,0.4],
+  { key:'texture',  label:'shine',  grainRange:[0.05,0.4],
     weights:{ granulate:2.2, resonate:2, cascade:1.2, convolveSelf:1, freeze:0.7, reverse:0.6, stretch:0.3, pulse:0.5 } }
 ];
 
@@ -1823,19 +1912,19 @@ class Forager{
 
       const rms = measureRMS(grain);
       if(rms < 0.002){
-        log('discard', 'a grain from "' + dest.label + '" &mdash; too quiet to matter.', true);
+        log('fell loose', 'a grain from "' + dest.label + '" &mdash; too quiet to matter.', true);
         this._done(); return;
       }
 
       const transformName = chooseTransformForRole(role, this.traits.adventurousness);
       let processed;
       try{ processed = await TRANSFORMS[transformName](ctx.sampleRate, grain); }
-      catch(e){ console.error(e); log('discard', 'a grain resisted transformation (' + e.message + ').', true); this._failed(); return; }
+      catch(e){ console.error(e); log('fell loose', 'a grain resisted transformation (' + e.message + ').', true); this._failed(); return; }
 
       // pre-gate: normalize before it ever reaches the mix
       const normGain = computeNormalizationGain(processed);
       if(normGain <= 0){
-        log('discard', 'a ' + transformName + ' grain from "' + dest.label + '" &mdash; came out silent.', true);
+        log('fell loose', 'a ' + transformName + ' grain from "' + dest.label + '" &mdash; came out silent.', true);
         this._done(); return;
       }
 
@@ -1846,7 +1935,7 @@ class Forager{
       const rating = computeGrainRating(processed);
       const discardChance = clamp(0.22 - rating*0.18, 0.03, 0.22);
       if(Math.random() < discardChance){
-        log('discard', 'a ' + transformName + ' grain from "' + dest.label + '" &mdash; didn\'t take.', true);
+        log('fell loose', 'a ' + transformName + ' grain from "' + dest.label + '" &mdash; didn\'t take.', true);
         this._done(); return;
       }
 
@@ -1854,7 +1943,7 @@ class Forager{
       const baseLevel = randRange(0.45, 0.7) * normGain * (0.85 + rating*0.3);
       const label = role.label + ' &middot; ' + transformName + ' from "' + dest.label + '"';
       const grainObj = this.engine.introduce(processed, { takeRoot, level: baseLevel, label, sourceQuestion: dest, forager: this.name });
-      log(this.name, (takeRoot ? 'a ' + transformName + ' fragment takes root: ' : 'passing through: ') + dest.label, false, {
+      log(this.name, (takeRoot ? 'a ' + transformName + ' fragment weaves in: ' : 'just glimpsed: ') + dest.label, false, {
         grainId: grainObj ? grainObj.id : null,
         kind: takeRoot ? 'resident' : 'transient',
         transform: transformName,
@@ -1863,7 +1952,7 @@ class Forager{
         destLabel: dest.label,
         rating: +rating.toFixed(3)
       });
-      ticker('Just found: ' + dest.label);
+      ticker('Brought back: ' + dest.label);
 
       this._done();
     } finally {
@@ -1969,7 +2058,7 @@ document.getElementById('begin-btn').addEventListener('click', async ()=>{
       btn.classList.remove('active');
       status.textContent = 'resting';
       status.classList.remove('active');
-      log('pause', 'the magpies rest. what they\'ve found keeps playing.', true);
+      log('pause', 'the magpies rest. what\'s already woven in keeps playing.', true);
     } else {
       foragers.forEach(f=> f.start());
       btn.textContent = 'PAUSE THE MAGPIES';
