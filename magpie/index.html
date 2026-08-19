@@ -142,9 +142,15 @@
   .grain-row + .grain-row{ margin-top:0.2rem; }
   .grain-row:first-child{ padding-top:0.2rem; }
   .grain-row.grain-row-leaving{ opacity:0; pointer-events:none; }
-  .grain-label{ font-size:0.82rem; margin-bottom:0.8rem; line-height:1.4; color: var(--ink-70); }
+  .grain-label{ font-size:0.82rem; margin-bottom:0.6rem; line-height:1.4; color: var(--ink-70); }
   .grain-label .marker{ color: var(--ink); margin-right:0.4rem; }
   .grain-label .passing{ color: var(--ink-45); }
+  /* A live read of this one sound, not decoration — same honest-meter
+     principle as the master viz above, just per grain. Dim track always
+     visible (so a silent grain still marks its place in the list), fills
+     in the grain's own identity ink as it actually plays. */
+  .grain-meter{ height:4px; background: var(--ink-10); margin-bottom:0.9rem; overflow:hidden; }
+  .grain-meter i{ display:block; height:100%; width:100%; background: var(--ink); transform-origin:left center; transform:scaleX(0); }
   .grain-ctrl-row{ display:flex; align-items:center; gap:0.7rem; margin-bottom:0.4rem; }
   .grain-ctrl-row span.g-tag{ font-size:0.65rem; color: var(--ink-45); width:3.4rem; flex-shrink:0; text-transform:uppercase; letter-spacing:0.06em; }
   .grain-ctrl-row input[type=range]{ flex:1; }
@@ -277,6 +283,26 @@ function randInt(a,b){ return Math.floor(randRange(a,b+1)); }
 function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
 function clamp(v,a,b){ return Math.max(a, Math.min(b,v)); }
 function aOrAn(word){ return /^[aeiou]/i.test(word) ? 'an' : 'a'; }
+
+// Biased toward the extremes rather than uniform across the whole range —
+// a flat randRange(-1,1) still puts plenty of mass near center, which reads
+// as vague rather than separated. This picks a side first, then how far out.
+function extremePan(){ return pick([-1,1]) * randRange(0.55, 1.0); }
+
+// For an ONGOING drift (see _schedulePanDrift): a glide is a straight ramp
+// from wherever it is now, so a target on the opposite side necessarily
+// spends real, audible time crossing back through the middle — exactly the
+// "vague, not separated" center-mass extremePan() itself was built to
+// avoid. Mostly stays on the current side (a move between two extreme
+// points on the same side barely touches the middle at all); occasionally
+// still swaps sides outright for a real, deliberate hard-pan sweep rather
+// than never crossing.
+function extremePanNear(currentPan, sameSideChance){
+  const chance = sameSideChance == null ? 0.7 : sameSideChance;
+  const currentSide = currentPan >= 0 ? 1 : -1;
+  const side = Math.random() < chance ? currentSide : -currentSide;
+  return side * randRange(0.55, 1.0);
+}
 
 function weightedPick(items, weightFn){
   const weights = items.map(weightFn);
@@ -454,19 +480,30 @@ function echoQuestion(engine){
 // palette (ink/blue/moss/ochre/slate — vermilion held back as the accent,
 // same rule as there: red means trouble, never identity). Picked to fit:
 // the Namer gets the base ink (it's the original/default mechanism), the
-// Forgotten-Finder gets slate (quiet, muted), the Antiquarian gets ochre
-// (aged, sepia), the Collector gets blue (curatorial), the Echo gets moss
-// (something already-planted deepening).
+// Finder gets slate (quiet, muted), the Elder gets ochre (aged, sepia),
+// the Collector gets blue (curatorial), the Echo gets moss (something
+// already-planted deepening). Names kept plain, one word each, on purpose.
 const FORAGER_INKS = {
   'the Namer': '#16150f',
-  'the Forgotten-Finder': '#5c616b',
-  'the Antiquarian': '#9e7312',
+  'the Finder': '#5c616b',
+  'the Elder': '#9e7312',
   'the Collector': '#1a3da8',
   'the Echo': '#386647'
 };
 
+// The journal AS DATA, not just a scrolling paragraph — every log() call
+// pushes a real object here (tag/text/timestamp plus whatever structured
+// fields the caller knows, e.g. grainId/transform/role/rating/source for
+// an actual grain event) before it ever touches the DOM. The rendered
+// #log div below is just one view of this array; `journal` itself is what
+// answers "what actually happened," queryable straight from devtools.
+const journal = [];
 const logEl = document.getElementById('log');
-function log(tag, text, faded){
+function log(tag, text, faded, meta){
+  const entry = Object.assign({ tag, text, faded: !!faded, at: Date.now() }, meta || {});
+  journal.push(entry);
+  if(journal.length > 500) journal.shift();
+
   const div = document.createElement('div');
   div.className = 'entry' + (faded ? ' faded' : '');
   const tagColor = FORAGER_INKS[tag] || (tag === 'error' ? 'var(--accent)' : null);
@@ -490,6 +527,10 @@ function renderStats(residentCount, outCount){
 // rather than bunching everything into the top 10% the way a linear map
 // from 0-100% to 300-16000Hz would.
 function toneValueToHz(pct){ return 300 * Math.pow(16000/300, pct/100); }
+// inverse of the above, so a grain's actual starting filter frequency (now
+// dark by default, see introduce()) shows up correctly on its Tone slider
+// instead of the slider claiming 100%/bright while the sound is dark.
+function hzToTonePct(hz){ return clamp(100 * Math.log(hz/300) / Math.log(16000/300), 0, 100); }
 function toneWord(pct){ return pct<35 ? 'dark' : (pct>70 ? 'bright' : 'even'); }
 
 /* ------------------------------------------------------------
@@ -546,6 +587,13 @@ function buildGrainRow(g){
   const labelDiv = document.createElement('div');
   labelDiv.className = 'grain-label';
   row.appendChild(labelDiv);
+
+  const meterDiv = document.createElement('div');
+  meterDiv.className = 'grain-meter';
+  meterDiv.innerHTML = '<i></i>';
+  row.appendChild(meterDiv);
+  const meterFill = meterDiv.querySelector('i');
+  meterFill.style.background = FORAGER_INKS[g.forager] || 'var(--ink)';
 
   const volRow = document.createElement('div');
   volRow.className = 'grain-ctrl-row';
@@ -613,7 +661,7 @@ function buildGrainRow(g){
   row.addEventListener('focusin', markGrainInteractionStart);
   row.addEventListener('focusout', markGrainInteractionEnd);
 
-  return { row, labelDiv, volInput, volVal, toneInput, toneVal, muteBtn, releaseBtn };
+  return { row, labelDiv, meterFill, volInput, volVal, toneInput, toneVal, muteBtn, releaseBtn };
 }
 
 function updateGrainRow(entry, g){
@@ -694,6 +742,40 @@ function applyGrainRender(){
 function renderGrainMixer(){
   if(grainInteractionActive){ grainRenderPending = true; return; }
   applyGrainRender();
+}
+
+// Individual sound meters — each grain's own analyser (wired in
+// CollageEngine.introduce, a parallel tap off its userGain so it can never
+// affect the real signal path), read on every frame and painted straight
+// onto that grain's row via the same row-identity map applyGrainRender
+// uses. Deliberately its own loop, separate from renderGrainMixer/
+// applyGrainRender: those only run when a grain is actually added/removed/
+// changed, this runs every frame a grain is playing — mixing the two would
+// mean either re-rendering the whole list 60x/sec (re-triggering the
+// interaction-lock machinery for nothing) or meters that only update on
+// unrelated list changes.
+let grainMeterRAF = null;
+function grainMeterLevel(g){
+  if(!g.analyser) return 0;
+  g.analyser.getByteTimeDomainData(g.meterBuf);
+  let sum = 0;
+  for(let i=0;i<g.meterBuf.length;i++){ const v=(g.meterBuf[i]-128)/128; sum += v*v; }
+  const rms = Math.sqrt(sum/g.meterBuf.length);
+  return clamp(rms*3.5, 0, 1);
+}
+function drawGrainMeters(){
+  grainMeterRAF = requestAnimationFrame(drawGrainMeters);
+  if(!engine) return;
+  const tabEl = document.getElementById('tab-grains');
+  if(!tabEl || !tabEl.classList.contains('active')) return;
+  engine.residents.concat(engine.transients).forEach(g=>{
+    const entry = grainRows.get(g.id);
+    if(!entry || !entry.meterFill) return;
+    entry.meterFill.style.transform = 'scaleX(' + grainMeterLevel(g).toFixed(3) + ')';
+  });
+}
+function startGrainMeters(){
+  if(grainMeterRAF == null) drawGrainMeters();
 }
 
 document.querySelectorAll('.tab-btn').forEach(btn=>{
@@ -877,6 +959,55 @@ class CollageEngine{
     return curve;
   }
 
+  // Mastering-style Mid/Side stereo widener, inserted as a single bus-level
+  // block between masterGain and finalClip. Standard M/S matrix: encoding
+  // Mid=(L+R)*0.5 and Side=(L-R)*0.5, then decoding L'=Mid+Side, R'=Mid-Side,
+  // is an exact identity if Side is left untouched — the matrix itself adds
+  // no coloration. We only reshape Side: a highpass strips it below ~180Hz
+  // BEFORE recombining, so at low frequencies Side≈0 and L'≈R'≈Mid — both
+  // output channels carry identical bass, which is the actual mono-safety
+  // guarantee (identical signal on L/R sums constructively, it can never
+  // cancel). A gentle high-shelf then lifts the remaining highs in Side,
+  // widening the top end without ever touching how bass sums to mono.
+  _buildWidener(){
+    const ctx = this.ctx;
+    const splitter = ctx.createChannelSplitter(2);
+
+    const lToMid = ctx.createGain(); lToMid.gain.value = 0.5;
+    const rToMid = ctx.createGain(); rToMid.gain.value = 0.5;
+    const mid = ctx.createGain(); mid.gain.value = 1;
+    splitter.connect(lToMid, 0); splitter.connect(rToMid, 1);
+    lToMid.connect(mid); rToMid.connect(mid);
+
+    const lToSide = ctx.createGain(); lToSide.gain.value = 0.5;
+    const rToSideNeg = ctx.createGain(); rToSideNeg.gain.value = -0.5;
+    const side = ctx.createGain(); side.gain.value = 1;
+    splitter.connect(lToSide, 0); splitter.connect(rToSideNeg, 1);
+    lToSide.connect(side); rToSideNeg.connect(side);
+
+    // bass-safety: Side carries nothing below ~180Hz once this runs.
+    const sideHighpass = ctx.createBiquadFilter();
+    sideHighpass.type = 'highpass'; sideHighpass.frequency.value = 180; sideHighpass.Q.value = 0.7;
+    // gentle high-shelf widening on what's left of Side.
+    const sideShelf = ctx.createBiquadFilter();
+    sideShelf.type = 'highshelf'; sideShelf.frequency.value = 3000; sideShelf.gain.value = 3.5;
+    side.connect(sideHighpass); sideHighpass.connect(sideShelf);
+
+    const lSum = ctx.createGain(); lSum.gain.value = 1; // L' = Mid + Side
+    mid.connect(lSum); sideShelf.connect(lSum);
+
+    const sideInv = ctx.createGain(); sideInv.gain.value = -1;
+    sideShelf.connect(sideInv);
+    const rSum = ctx.createGain(); rSum.gain.value = 1; // R' = Mid - Side
+    mid.connect(rSum); sideInv.connect(rSum);
+
+    const merger = ctx.createChannelMerger(2);
+    lSum.connect(merger, 0, 0);
+    rSum.connect(merger, 0, 1);
+
+    this.widener = { input: splitter, output: merger, sideHighpass, sideShelf };
+  }
+
   _build(){
     const ctx = this.ctx;
 
@@ -903,6 +1034,8 @@ class CollageEngine{
     this.masterGain = ctx.createGain();
     this.masterGain.gain.value = this.params.volume/100;
 
+    this._buildWidener();
+
     this.finalClip = ctx.createWaveShaper();
     this.finalClip.curve = this._softLimitCurve(0.85);
     this.finalClip.oversample = 'none';
@@ -910,20 +1043,31 @@ class CollageEngine{
     this.dryGain.connect(this.compressor);
     this.wetGain.connect(this.compressor);
     this.compressor.connect(this.masterGain);
-    this.masterGain.connect(this.finalClip);
+    this.masterGain.connect(this.widener.input);
+    this.widener.output.connect(this.finalClip);
     this.finalClip.connect(ctx.destination);
 
     // Analysis-only tap, parallel to the real signal path — finalClip already
     // feeds ctx.destination above; this is an additional fork off the same
     // node, not a rewire, so gain staging is untouched. Sitting AFTER
-    // masterGain means muting (which ramps masterGain to 0) genuinely shows
-    // up as near-silence here too, so the meter always reflects real output.
+    // masterGain (and after the widener) means muting (which ramps
+    // masterGain to 0) genuinely shows up as near-silence here too, so the
+    // meter always reflects real — now widened — output.
     this.analyser = ctx.createAnalyser();
     this.analyser.fftSize = 512;
     this.analyser.smoothingTimeConstant = 0.75;
     this.finalClip.connect(this.analyser);
 
     this._applyParams();
+  }
+
+  // Maps a pan position (-1..1) to a frequency (500..4000Hz, log-spaced)
+  // for the per-grain complementary EQ below — grains drifted toward
+  // opposite sides land their dip at different points in the spectrum
+  // instead of all competing in the same band.
+  _padEqFreqForPan(pan){
+    const t = (clamp(pan,-1,1)+1)/2;
+    return 500 * Math.pow(8, t);
   }
 
   _applyParams(){
@@ -998,12 +1142,20 @@ class CollageEngine{
   _schedulePanDrift(panParam, holder){
     const ctx = this.ctx;
     const step = () => {
-      const target = randRange(-0.85, 0.85);
+      const target = extremePanNear(panParam.value);
       const dur = randRange(6, 18);
       const now = ctx.currentTime;
       panParam.cancelScheduledValues(now);
       panParam.setValueAtTime(panParam.value, now);
       panParam.linearRampToValueAtTime(target, now+dur);
+      // complementary EQ rides the same glide, so it stays tied to pan
+      // position as the grain drifts rather than being fixed at birth.
+      if(holder.padEq){
+        const eqFreq = this._padEqFreqForPan(target);
+        holder.padEq.frequency.cancelScheduledValues(now);
+        holder.padEq.frequency.setValueAtTime(holder.padEq.frequency.value, now);
+        holder.padEq.frequency.linearRampToValueAtTime(eqFreq, now+dur);
+      }
       holder.panTimer = setTimeout(step, dur*1000);
     };
     step();
@@ -1057,8 +1209,9 @@ class CollageEngine{
     g.gain.gain.setValueAtTime(g.gain.gain.value, t);
     g.gain.gain.linearRampToValueAtTime(0, t+1.2);
     try{ g.source.stop(t+1.4); }catch(e){}
+    try{ g.vibrato.stop(t+1.4); }catch(e){}
     if(this.onResidentsChanged) this.onResidentsChanged();
-    log('released', g.label + ' let go by hand.', true);
+    log('released', g.label + ' let go by hand.', true, { grainId: g.id, forager: g.forager, kind: g.kind, label: g.label, reason: 'manual' });
   }
 
   introduce(buffer, opts){
@@ -1070,12 +1223,44 @@ class CollageEngine{
 
     const src = ctx.createBufferSource();
     src.buffer = playBuffer;
+    // Pitched well down (roughly -6 to -16 semitones) — the defining move of
+    // this whole pass: round, soft, farty rather than bright and precise.
+    src.playbackRate.value = randRange(0.4, 0.7);
+    // A slow, gentle wobble on EVERY grain now, not just the freeze
+    // transform's own internal one — vibrato as a whole-piece trait rather
+    // than one transform's signature.
+    const vibrato = ctx.createOscillator();
+    vibrato.type = 'sine'; vibrato.frequency.value = randRange(0.2, 0.7);
+    const vibratoDepth = ctx.createGain(); vibratoDepth.gain.value = randRange(20, 45);
+    vibrato.connect(vibratoDepth); vibratoDepth.connect(src.detune);
+    vibrato.start(now);
+
     const env = ctx.createGain(); env.gain.value = 0;
-    const filt = ctx.createBiquadFilter(); filt.type = 'lowpass'; filt.frequency.value = 16000; filt.Q.value = 0.4;
+    // Dark by default now — "low tone" is a base trait, not just something
+    // the manual Tone slider can reach for. The slider's own math/range is
+    // unchanged; only the grain's STARTING point moved down the same scale.
+    const defaultToneHz = randRange(700, 1800);
+    const filt = ctx.createBiquadFilter(); filt.type = 'lowpass'; filt.frequency.value = defaultToneHz; filt.Q.value = 0.4;
+    // Complementary separation EQ — a subtle, independent notch that tracks
+    // this grain's pan position (see _schedulePanDrift / the transient glide
+    // below), so grains drifted toward opposite sides carve slightly
+    // different pockets of the spectrum instead of piling into the same
+    // band. Deliberately a SEPARATE node from `filt` (the manual Tone
+    // control) so the two never fight — Tone keeps doing exactly what it
+    // did before, this just rides underneath it.
+    const padEq = ctx.createBiquadFilter(); padEq.type = 'peaking'; padEq.Q.value = 1.2; padEq.gain.value = -2.5;
     const duckGain = ctx.createGain(); duckGain.gain.value = 1;
     const userGain = ctx.createGain(); userGain.gain.value = 1;
-    const pan = ctx.createStereoPanner(); pan.pan.value = randRange(-0.8, 0.8);
-    src.connect(env); env.connect(filt); filt.connect(duckGain); duckGain.connect(userGain); userGain.connect(pan); pan.connect(this.masterBus);
+    // Extreme, separated placement rather than a flat spread across the
+    // whole field — see extremePan()'s own note on why uniform isn't enough.
+    const pan = ctx.createStereoPanner(); pan.pan.value = extremePan();
+    padEq.frequency.value = this._padEqFreqForPan(pan.pan.value);
+    // A cheap parallel tap for this grain's own live meter in the Grains
+    // tab — doesn't touch the real signal path, just listens in on it.
+    const analyser = ctx.createAnalyser(); analyser.fftSize = 128;
+    const meterBuf = new Uint8Array(analyser.fftSize);
+    src.connect(env); env.connect(filt); filt.connect(padEq); padEq.connect(duckGain); duckGain.connect(userGain); userGain.connect(pan); pan.connect(this.masterBus);
+    userGain.connect(analyser);
 
     const level = opts.level || 0.5;
     const fadeIn = opts.fadeIn || 0.6;
@@ -1086,7 +1271,7 @@ class CollageEngine{
       src.loop = true;
       env.gain.linearRampToValueAtTime(level, now+fadeIn);
       src.start(now);
-      const resident = { id, kind:'resident', source:src, gain:env, filt, duckGain, userGain, pan, label: opts.label || 'unnamed grain', startedAt: now, sourceQuestion: opts.sourceQuestion, forager: opts.forager, panTimer:null, muted:false, _volPct:100, _tonePct:100 };
+      const resident = { id, kind:'resident', source:src, vibrato, gain:env, filt, padEq, duckGain, userGain, pan, analyser, meterBuf, label: opts.label || 'unnamed grain', startedAt: now, sourceQuestion: opts.sourceQuestion, forager: opts.forager, panTimer:null, muted:false, _volPct:100, _tonePct:hzToTonePct(defaultToneHz) };
       this.residents.push(resident);
       this._schedulePanDrift(pan.pan, resident);
       if(this.residents.length > this.residentCap){
@@ -1097,25 +1282,35 @@ class CollageEngine{
         oldest.gain.gain.setValueAtTime(oldest.gain.gain.value, t);
         oldest.gain.gain.linearRampToValueAtTime(0, t+4);
         oldest.source.stop(t+4.2);
-        log('fades', oldest.label + ' fades out of the collage.', true);
+        try{ oldest.vibrato.stop(t+4.2); }catch(e){}
+        log('fades', oldest.label + ' fades out of the collage.', true, { grainId: oldest.id, forager: oldest.forager, kind: 'resident', label: oldest.label, reason: 'cap-eviction' });
       }
       if(this.onResidentsChanged) this.onResidentsChanged();
       return resident;
     } else {
-      const dur = buffer.duration;
+      // real elapsed time to play through the buffer once is longer than
+      // its native duration now that playback is slowed down — every
+      // envelope/stop/glide below has to use THIS, or the note gets cut
+      // off (or its fade finishes) before it's actually done sounding.
+      const dur = buffer.duration / src.playbackRate.value;
       const fadeOut = opts.fadeOut || Math.max(0.8, dur*0.25);
       env.gain.linearRampToValueAtTime(level*1.1, now+fadeIn);
       env.gain.setValueAtTime(level*1.1, now + Math.max(fadeIn, dur-fadeOut));
       env.gain.linearRampToValueAtTime(0, now+dur);
       src.start(now);
       src.stop(now+dur+0.1);
+      vibrato.stop(now+dur+0.15);
       // one slow glide across its short lifetime rather than a repeating
       // schedule — enough to feel like it's moving through space, not
       // parked, without needing cleanup on a timer that would outlive it.
+      const panTarget = extremePan();
       pan.pan.setValueAtTime(pan.pan.value, now);
-      pan.pan.linearRampToValueAtTime(randRange(-0.85, 0.85), now+dur);
+      pan.pan.linearRampToValueAtTime(panTarget, now+dur);
+      // complementary EQ glides alongside the same pan move.
+      padEq.frequency.setValueAtTime(padEq.frequency.value, now);
+      padEq.frequency.linearRampToValueAtTime(this._padEqFreqForPan(panTarget), now+dur);
 
-      const transient = { id, kind:'transient', source:src, gain:env, filt, duckGain, userGain, pan, label: opts.label || 'unnamed grain', startedAt: now, sourceQuestion: opts.sourceQuestion, forager: opts.forager, muted:false, _volPct:100, _tonePct:100 };
+      const transient = { id, kind:'transient', source:src, vibrato, gain:env, filt, padEq, duckGain, userGain, pan, analyser, meterBuf, label: opts.label || 'unnamed grain', startedAt: now, sourceQuestion: opts.sourceQuestion, forager: opts.forager, muted:false, _volPct:100, _tonePct:hzToTonePct(defaultToneHz) };
       this.transients.push(transient);
       if(this.onResidentsChanged) this.onResidentsChanged();
       src.onended = () => {
@@ -1658,8 +1853,16 @@ class Forager{
       const takeRoot = Math.random() < clamp(0.18 + rating*0.42, 0.12, 0.7);
       const baseLevel = randRange(0.45, 0.7) * normGain * (0.85 + rating*0.3);
       const label = role.label + ' &middot; ' + transformName + ' from "' + dest.label + '"';
-      this.engine.introduce(processed, { takeRoot, level: baseLevel, label, sourceQuestion: dest, forager: this.name });
-      log(this.name, (takeRoot ? 'a ' + transformName + ' fragment takes root: ' : 'passing through: ') + dest.label);
+      const grainObj = this.engine.introduce(processed, { takeRoot, level: baseLevel, label, sourceQuestion: dest, forager: this.name });
+      log(this.name, (takeRoot ? 'a ' + transformName + ' fragment takes root: ' : 'passing through: ') + dest.label, false, {
+        grainId: grainObj ? grainObj.id : null,
+        kind: takeRoot ? 'resident' : 'transient',
+        transform: transformName,
+        role: role.key,
+        source: dest.source || 'archive',
+        destLabel: dest.label,
+        rating: +rating.toFixed(3)
+      });
       ticker('Just found: ' + dest.label);
 
       this._done();
@@ -1714,12 +1917,13 @@ document.getElementById('begin-btn').addEventListener('click', async ()=>{
   log('begin', 'the magpies set out.');
 
   startViz();
+  startGrainMeters();
   requestWakeLock();
 
   [
     ['the Namer', themeQuestion],
-    ['the Forgotten-Finder', obscurityQuestion],
-    ['the Antiquarian', eraQuestion],
+    ['the Finder', obscurityQuestion],
+    ['the Elder', eraQuestion],
     ['the Collector', collectionQuestion],
     ['the Echo', echoQuestion]
   ].forEach(([name, strategy])=>{
