@@ -1943,14 +1943,24 @@ class Forager{
       const baseLevel = randRange(0.45, 0.7) * normGain * (0.85 + rating*0.3);
       const label = role.label + ' &middot; ' + transformName + ' from "' + dest.label + '"';
       const grainObj = this.engine.introduce(processed, { takeRoot, level: baseLevel, label, sourceQuestion: dest, forager: this.name });
-      log(this.name, (takeRoot ? 'a ' + transformName + ' fragment weaves in: ' : 'just glimpsed: ') + dest.label, false, {
+      // Rare, unforced easter egg: not something the person triggers, just
+      // something that's occasionally already true — a fetched item's own
+      // title happens to name a corvid. Deliberately narrow (real corvid
+      // words, not generic "bird"/"birdsong", which the forest theme already
+      // searches for often enough that it wouldn't read as rare anymore).
+      const kindred = chosenDoc && /\b(magpies?|crows?|ravens?|rooks?|jackdaws?|corvids?|jays?)\b/i.test(chosenDoc.title || '');
+      const arrivalText = kindred
+        ? this.name + ' knows this one &mdash; a kindred sound in "' + (chosenDoc.title||'').replace(/^File:/,'').trim() + '."'
+        : (takeRoot ? 'a ' + transformName + ' fragment weaves in: ' : 'just glimpsed: ') + dest.label;
+      log(this.name, arrivalText, false, {
         grainId: grainObj ? grainObj.id : null,
         kind: takeRoot ? 'resident' : 'transient',
         transform: transformName,
         role: role.key,
         source: dest.source || 'archive',
         destLabel: dest.label,
-        rating: +rating.toFixed(3)
+        rating: +rating.toFixed(3),
+        kindred: !!kindred
       });
       ticker('Brought back: ' + dest.label);
 
@@ -2078,6 +2088,80 @@ document.getElementById('begin-btn').addEventListener('click', async ()=>{
     else{ engine.unsilence(); btn.textContent = 'MUTE'; btn.classList.remove('active'); }
   });
 }, { once:true });
+
+/* ============================================================
+   EASTER EGGS — small and light, off to the side of the core
+   experience. Each guards against firing before engine/foragers
+   actually exist (i.e. before START LISTENING has been tapped).
+   ============================================================ */
+
+// Tap the wordmark 5x fast: a one-time "murder" — all five foragers head
+// out on the SAME beat instead of their normal staggered, independent
+// cadence. This bypasses each forager's own pending timer just once; every
+// expedition's own completion (_done/_failed) already reschedules that
+// forager on its normal independent pace afterward, so cadence settles
+// back out on its own with no extra bookkeeping needed here.
+(function(){
+  const wordmark = document.querySelector('#app header h1');
+  if(!wordmark) return;
+  let taps = [];
+  let cooldownUntil = 0;
+  wordmark.addEventListener('click', ()=>{
+    if(!engine || !foragers.length) return;
+    const now = Date.now();
+    taps.push(now);
+    taps = taps.filter(t=> now-t < 1400);
+    if(taps.length < 5) return;
+    taps = [];
+    if(now < cooldownUntil) return;
+    cooldownUntil = now + 20000;
+    log('murder', 'all five take wing at once &mdash; a proper murder of magpies.', false);
+    foragers.forEach(f=>{
+      if(f.timer) clearTimeout(f.timer);
+      f.expedition().catch(e=>{ console.error(e); log('error', f.name + ' hit a snag: ' + e.message, true); });
+    });
+  });
+})();
+
+// Long-press the Collected number: a brief peek at live counts that aren't
+// normally surfaced anywhere in the UI, for the curious. Shows, then
+// dismisses itself a couple seconds later — a flourish, not a real panel.
+(function(){
+  const statEl = document.getElementById('s-collected');
+  if(!statEl) return;
+  let pressTimer = null;
+  function showPeek(){
+    if(!engine || !ctx) return;
+    const panel = document.createElement('div');
+    panel.style.cssText = 'position:fixed;left:50%;top:16%;transform:translateX(-50%);' +
+      'background:var(--ink);color:var(--paper);font-family:var(--mono);font-size:0.72rem;' +
+      'line-height:1.8;padding:0.9rem 1.2rem;z-index:60;opacity:0;transition:opacity 300ms ease;' +
+      'white-space:pre;pointer-events:none;letter-spacing:0.02em;';
+    panel.textContent =
+      'woven in   ' + engine.residents.length + '\n' +
+      'glimpsed   ' + engine.transients.length + '\n' +
+      'out now    ' + activeForagerCount() + '\n' +
+      'measure    ' + engine.measureSeconds.toFixed(1) + 's\n' +
+      'ctx        ' + ctx.state + ' @ ' + Math.round(ctx.sampleRate) + 'Hz';
+    document.body.appendChild(panel);
+    requestAnimationFrame(()=>{ panel.style.opacity = '1'; });
+    setTimeout(()=>{
+      panel.style.opacity = '0';
+      setTimeout(()=> panel.remove(), 350);
+    }, 2200);
+  }
+  function start(){
+    cancel();
+    pressTimer = setTimeout(showPeek, 650);
+  }
+  function cancel(){
+    if(pressTimer){ clearTimeout(pressTimer); pressTimer = null; }
+  }
+  statEl.addEventListener('pointerdown', start);
+  statEl.addEventListener('pointerup', cancel);
+  statEl.addEventListener('pointercancel', cancel);
+  statEl.addEventListener('pointerleave', cancel);
+})();
 </script>
 </body>
 </html>
