@@ -131,6 +131,15 @@
 
   #big-controls{ display:flex; flex-direction:column; gap:0.6rem; margin-top:1.6rem; }
   .big-btn{ width:100%; padding:1rem; font-size:0.8rem; }
+  /* Recording is a state, so it reads as one — the accent, and the only
+     pulse in the interface, same rule as Earshot's own record control. */
+  #record-btn.recording{ background:none; border:1px solid var(--accent); color: var(--accent); }
+  #record-btn.recording::before{
+    content:""; display:inline-block; width:7px; height:7px; margin-right:8px;
+    background: var(--accent); border-radius:50%; vertical-align:middle;
+    animation: recordPulse 1.8s cubic-bezier(0.37,0,0.63,1) infinite;
+  }
+  @keyframes recordPulse{ 0%,100%{opacity:1;} 50%{opacity:0.25;} }
 
   #tab-bar{ display:flex; gap:0.5rem; margin-top:1.6rem; }
   .tab-btn{ flex:1; padding:0.6rem; }
@@ -262,6 +271,7 @@
   <div id="big-controls">
     <button id="pause-btn" class="chip big-btn active">PAUSE THE MAGPIES</button>
     <button id="mute-btn" class="chip big-btn">MUTE</button>
+    <button id="record-btn" class="chip big-btn">RECORD A CLIP</button>
   </div>
 
   <div id="wakelock-note"></div>
@@ -2086,6 +2096,45 @@ document.getElementById('begin-btn').addEventListener('click', async ()=>{
     const btn = document.getElementById('mute-btn');
     if(muted){ engine.silence(); btn.textContent = 'UNMUTE'; btn.classList.add('active'); }
     else{ engine.unsilence(); btn.textContent = 'MUTE'; btn.classList.remove('active'); }
+  });
+
+  // Record a clip of the real master output — taps engine.finalClip (the
+  // same pre-destination node the live-level viz taps), so it's exactly
+  // what's actually playing, ducking/mute/mix moves and all. Saved as
+  // whatever MediaRecorder's own container is (webm/opus in Chrome) — no
+  // client-side re-encoding needed, and this is a real deployed page, not
+  // a sandboxed artifact, so a genuine <a download> click works fine here.
+  let mediaRecorder = null, recordChunks = [], recordStart = 0;
+  const recordBtn = document.getElementById('record-btn');
+  recordBtn.addEventListener('click', ()=>{
+    if(!mediaRecorder || mediaRecorder.state === 'inactive'){
+      const dest = engine.ctx.createMediaStreamDestination();
+      engine.finalClip.connect(dest);
+      recordChunks = [];
+      recordStart = engine.ctx.currentTime;
+      mediaRecorder = new MediaRecorder(dest.stream);
+      mediaRecorder.ondataavailable = e => { if(e.data.size>0) recordChunks.push(e.data); };
+      mediaRecorder.onstop = () => {
+        engine.finalClip.disconnect(dest);
+        const durationSec = Math.round(engine.ctx.currentTime - recordStart);
+        const blob = new Blob(recordChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
+        const ext = (blob.type.includes('ogg')) ? 'ogg' : 'webm';
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        const stamp = new Date().toISOString().replace(/[:.]/g,'-');
+        a.href = url; a.download = 'magpie-clip-' + stamp + '.' + ext;
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(()=> URL.revokeObjectURL(url), 4000);
+        log('recorded', 'saved a ' + durationSec + 's clip of the collage.', false, { durationSec });
+      };
+      mediaRecorder.start();
+      recordBtn.textContent = 'STOP & SAVE CLIP';
+      recordBtn.classList.add('recording');
+    } else {
+      mediaRecorder.stop();
+      recordBtn.textContent = 'RECORD A CLIP';
+      recordBtn.classList.remove('recording');
+    }
   });
 }, { once:true });
 
