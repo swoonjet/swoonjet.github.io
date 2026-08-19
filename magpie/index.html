@@ -163,8 +163,12 @@
      principle as the master viz above, just per grain. Dim track always
      visible (so a silent grain still marks its place in the list), fills
      in the grain's own identity ink as it actually plays. */
-  .grain-meter{ height:4px; background: var(--ink-10); margin-bottom:0.9rem; overflow:hidden; }
-  .grain-meter i{ display:block; height:100%; width:100%; background: var(--ink); transform-origin:left center; transform:scaleX(0); }
+  /* A tiny version of the main live-level EQ (see #viz-canvas) — same
+     log-spaced multi-band read, just per grain and much smaller, so a
+     grain's bars actually sit in the part of the spectrum it occupies
+     instead of one bar scaling for overall loudness. */
+  .grain-meter{ height:10px; background: var(--ink-10); margin-bottom:0.9rem; overflow:hidden; }
+  .grain-meter canvas{ display:block; width:100%; height:100%; }
   .grain-ctrl-row{ display:flex; align-items:center; gap:0.7rem; margin-bottom:0.4rem; }
   .grain-ctrl-row span.g-tag{ font-size:0.65rem; color: var(--ink-45); width:3.4rem; flex-shrink:0; text-transform:uppercase; letter-spacing:0.06em; }
   .grain-ctrl-row input[type=range]{ flex:1; }
@@ -599,8 +603,9 @@ document.addEventListener('pointercancel', markGrainInteractionEnd, true);
 function updateGrainLabel(labelDiv, g){
   const marker = g.kind === 'resident' ? '&#9679;' : '&#9675;';
   const suffix = g.kind === 'resident' ? '' : ' <span class="passing">(just glimpsed)</span>';
+  const lockSuffix = g.locked ? ' <span class="passing">(locked)</span>' : '';
   const markerColor = FORAGER_INKS[g.forager] || 'var(--ink)';
-  labelDiv.innerHTML = '<span class="marker" style="color:' + markerColor + '">' + marker + '</span>' + g.label + suffix;
+  labelDiv.innerHTML = '<span class="marker" style="color:' + markerColor + '">' + marker + '</span>' + g.label + suffix + lockSuffix;
 }
 
 function buildGrainRow(g){
@@ -614,10 +619,10 @@ function buildGrainRow(g){
 
   const meterDiv = document.createElement('div');
   meterDiv.className = 'grain-meter';
-  meterDiv.innerHTML = '<i></i>';
+  meterDiv.innerHTML = '<canvas></canvas>';
   row.appendChild(meterDiv);
-  const meterFill = meterDiv.querySelector('i');
-  meterFill.style.background = FORAGER_INKS[g.forager] || 'var(--ink)';
+  const meterCanvas = meterDiv.querySelector('canvas');
+  const meterRgb = hexToRgbTriplet(FORAGER_INKS[g.forager] || '#16150f');
 
   const volRow = document.createElement('div');
   volRow.className = 'grain-ctrl-row';
@@ -636,9 +641,14 @@ function buildGrainRow(g){
 
   const btnRow = document.createElement('div');
   btnRow.className = 'grain-btn-row';
-  btnRow.innerHTML = '<button class="chip g-mute-btn"></button><button class="chip g-release-btn">Let go</button>';
+  // Lock only makes sense for a resident (a transient is never scheduled to
+  // fade — it just finishes on its own in a few seconds regardless).
+  btnRow.innerHTML = '<button class="chip g-mute-btn"></button>' +
+    (g.kind === 'resident' ? '<button class="chip g-lock-btn"></button>' : '') +
+    '<button class="chip g-release-btn">Let go</button>';
   row.appendChild(btnRow);
   const muteBtn = btnRow.querySelector('.g-mute-btn');
+  const lockBtn = btnRow.querySelector('.g-lock-btn');
   const releaseBtn = btnRow.querySelector('.g-release-btn');
 
   const id = g.id;
@@ -651,6 +661,10 @@ function buildGrainRow(g){
   filterBtn.textContent = FILTER_TYPE_LABELS[g._filterType];
   muteBtn.textContent = g.muted ? 'Unmute' : 'Mute';
   muteBtn.classList.toggle('active', !!g.muted);
+  if(lockBtn){
+    lockBtn.textContent = g.locked ? 'Locked' : 'Lock';
+    lockBtn.classList.toggle('active', !!g.locked);
+  }
 
   volInput.addEventListener('input', e=>{
     const v = parseInt(e.target.value,10);
@@ -670,6 +684,15 @@ function buildGrainRow(g){
     muteBtn.textContent = updated.muted ? 'Unmute' : 'Mute';
     muteBtn.classList.toggle('active', updated.muted);
   });
+  if(lockBtn){
+    lockBtn.addEventListener('click', ()=>{
+      const updated = engine.toggleGrainLock(id);
+      if(!updated) return;
+      lockBtn.textContent = updated.locked ? 'Locked' : 'Lock';
+      lockBtn.classList.toggle('active', updated.locked);
+      updateGrainLabel(labelDiv, updated);
+    });
+  }
   releaseBtn.addEventListener('click', ()=>{
     engine.release(id);
   });
@@ -686,7 +709,7 @@ function buildGrainRow(g){
   // marks the whole list "actively engaged" so a render pass triggered by
   // some OTHER grain arriving/leaving can't touch this row (or anyone
   // else's) until the person is done with it.
-  [volInput, toneInput, muteBtn, releaseBtn, filterBtn].forEach(el=>{
+  [volInput, toneInput, muteBtn, lockBtn, releaseBtn, filterBtn].filter(Boolean).forEach(el=>{
     el.addEventListener('pointerdown', markGrainInteractionStart);
   });
   [volInput, toneInput].forEach(el=>{
@@ -696,7 +719,7 @@ function buildGrainRow(g){
   row.addEventListener('focusin', markGrainInteractionStart);
   row.addEventListener('focusout', markGrainInteractionEnd);
 
-  return { row, labelDiv, meterFill, volInput, volVal, toneInput, toneVal, muteBtn, releaseBtn, filterBtn };
+  return { row, labelDiv, meterCanvas, meterCtx: null, meterRgb, volInput, volVal, toneInput, toneVal, muteBtn, lockBtn, releaseBtn, filterBtn };
 }
 
 function updateGrainRow(entry, g){
@@ -724,6 +747,13 @@ function updateGrainRow(entry, g){
   if(entry.muteBtn.textContent !== muteLabel){
     entry.muteBtn.textContent = muteLabel;
     entry.muteBtn.classList.toggle('active', !!g.muted);
+  }
+  if(entry.lockBtn){
+    const lockLabel = g.locked ? 'Locked' : 'Lock';
+    if(entry.lockBtn.textContent !== lockLabel){
+      entry.lockBtn.textContent = lockLabel;
+      entry.lockBtn.classList.toggle('active', !!g.locked);
+    }
   }
 }
 
@@ -783,25 +813,62 @@ function renderGrainMixer(){
   applyGrainRender();
 }
 
+function hexToRgbTriplet(hex){
+  const h = hex.replace('#','');
+  return parseInt(h.substring(0,2),16) + ',' + parseInt(h.substring(2,4),16) + ',' + parseInt(h.substring(4,6),16);
+}
+
 // Individual sound meters — each grain's own analyser (wired in
 // CollageEngine.introduce, a parallel tap off its userGain so it can never
 // affect the real signal path), read on every frame and painted straight
 // onto that grain's row via the same row-identity map applyGrainRender
-// uses. Deliberately its own loop, separate from renderGrainMixer/
-// applyGrainRender: those only run when a grain is actually added/removed/
-// changed, this runs every frame a grain is playing — mixing the two would
-// mean either re-rendering the whole list 60x/sec (re-triggering the
-// interaction-lock machinery for nothing) or meters that only update on
-// unrelated list changes.
+// uses. A tiny version of the main live-level EQ (see computeVizBands/
+// drawViz below) rather than a single overall-loudness fill: same
+// log-spaced band idea, just per grain, so a grain's bars actually land in
+// the part of the spectrum it occupies. All grain analysers share one
+// fftSize, so the band edges are computed once and reused, not per grain.
+// Deliberately its own loop, separate from renderGrainMixer/applyGrainRender:
+// those only run when a grain is actually added/removed/changed, this runs
+// every frame a grain is playing — mixing the two would mean either
+// re-rendering the whole list 60x/sec (re-triggering the interaction-lock
+// machinery for nothing) or meters that only update on unrelated changes.
 let grainMeterRAF = null;
-function grainMeterLevel(g){
-  if(!g.analyser) return 0;
-  g.analyser.getByteTimeDomainData(g.meterBuf);
-  let sum = 0;
-  for(let i=0;i<g.meterBuf.length;i++){ const v=(g.meterBuf[i]-128)/128; sum += v*v; }
-  const rms = Math.sqrt(sum/g.meterBuf.length);
-  return clamp(rms*3.5, 0, 1);
+let grainMeterBandEdges = null;
+const GRAIN_METER_BARS = 18;
+
+function drawOneGrainMeter(g, entry){
+  const canvas = entry.meterCanvas;
+  if(!canvas || !g.analyser) return;
+  if(!entry.meterCtx) entry.meterCtx = canvas.getContext('2d');
+  const ctx2d = entry.meterCtx;
+  const dpr = window.devicePixelRatio || 1;
+  const cw = canvas.clientWidth, ch = canvas.clientHeight;
+  if(!cw || !ch) return;
+  const wantW = Math.max(1, Math.round(cw*dpr)), wantH = Math.max(1, Math.round(ch*dpr));
+  if(canvas.width !== wantW || canvas.height !== wantH){
+    canvas.width = wantW; canvas.height = wantH;
+    ctx2d.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  g.analyser.getByteFrequencyData(g.meterBuf);
+  if(!grainMeterBandEdges || grainMeterBandEdges.length !== GRAIN_METER_BARS+1){
+    grainMeterBandEdges = computeVizBands(GRAIN_METER_BARS, g.analyser.fftSize, engine.ctx.sampleRate);
+  }
+  ctx2d.clearRect(0, 0, cw, ch);
+  const gap = 1;
+  const barW = Math.max(1, (cw - gap*(GRAIN_METER_BARS-1)) / GRAIN_METER_BARS);
+  for(let i=0; i<GRAIN_METER_BARS; i++){
+    const lo = grainMeterBandEdges[i];
+    const hi = Math.max(lo+1, grainMeterBandEdges[i+1]);
+    let sum = 0, n = 0;
+    for(let j=lo; j<hi; j++){ sum += g.meterBuf[j]; n++; }
+    const norm = n ? (sum/n)/255 : 0;
+    const barH = Math.max(1, norm*ch);
+    const alpha = Math.min(0.9, 0.15 + norm*0.75);
+    ctx2d.fillStyle = 'rgba(' + entry.meterRgb + ',' + alpha.toFixed(3) + ')';
+    ctx2d.fillRect(i*(barW+gap), ch-barH, barW, barH);
+  }
 }
+
 function drawGrainMeters(){
   grainMeterRAF = requestAnimationFrame(drawGrainMeters);
   if(!engine) return;
@@ -809,8 +876,8 @@ function drawGrainMeters(){
   if(!tabEl || !tabEl.classList.contains('active')) return;
   engine.residents.concat(engine.transients).forEach(g=>{
     const entry = grainRows.get(g.id);
-    if(!entry || !entry.meterFill) return;
-    entry.meterFill.style.transform = 'scaleX(' + grainMeterLevel(g).toFixed(3) + ')';
+    if(!entry) return;
+    drawOneGrainMeter(g, entry);
   });
 }
 function startGrainMeters(){
@@ -1274,6 +1341,33 @@ class CollageEngine{
     holder.swellTimer = setTimeout(step, randRange(0, base)*1000);
   }
 
+  // A resident under the cap could otherwise live for the entire session —
+  // the cap only forces turnover once residents.length actually exceeds it.
+  // This gives every resident its own natural lifespan (jittered, 3-7min,
+  // so they don't all age out together) unless a person has locked it via
+  // the Grains-tab toggle, which just defers the check rather than skipping
+  // it outright — a lock switched off later still eventually takes effect.
+  _scheduleNaturalFade(holder){
+    const ctx = this.ctx;
+    const check = () => {
+      if(holder.locked){ holder.fadeTimer = setTimeout(check, 20000); return; }
+      if(!this.residents.includes(holder)) return; // already gone (cap-evicted / let go by hand)
+      const idx = this.residents.indexOf(holder);
+      this.residents.splice(idx, 1);
+      if(holder.panTimer) clearTimeout(holder.panTimer);
+      if(holder.swellTimer) clearTimeout(holder.swellTimer);
+      const t = ctx.currentTime;
+      holder.gain.gain.cancelScheduledValues(t);
+      holder.gain.gain.setValueAtTime(holder.gain.gain.value, t);
+      holder.gain.gain.linearRampToValueAtTime(0, t+3);
+      try{ holder.source.stop(t+3.2); }catch(e){}
+      try{ holder.vibrato.stop(t+3.2); }catch(e){}
+      if(this.onResidentsChanged) this.onResidentsChanged();
+      log('fell loose', holder.label + ' fades out on its own after a while.', true, { grainId: holder.id, forager: holder.forager, kind:'resident', label: holder.label, reason:'natural-fade' });
+    };
+    holder.fadeTimer = setTimeout(check, randRange(180, 420)*1000);
+  }
+
   _findGrain(id){
     return this.residents.find(r=>r.id===id) || this.transients.find(r=>r.id===id);
   }
@@ -1293,6 +1387,16 @@ class CollageEngine{
     g.muted = !g.muted;
     const target = g.muted ? 0 : (g._volPct!=null ? g._volPct/100 : 1);
     g.userGain.gain.setTargetAtTime(target, this.ctx.currentTime, 0.05);
+    return g;
+  }
+
+  // Exempts a resident from its own natural fade (see _scheduleNaturalFade)
+  // — a person's way of saying "keep this one." Has no effect on transients
+  // (they're never scheduled to fade; they just finish on their own).
+  toggleGrainLock(id){
+    const g = this._findGrain(id);
+    if(!g) return g;
+    g.locked = !g.locked;
     return g;
   }
 
@@ -1331,6 +1435,7 @@ class CollageEngine{
     if(!g) return;
     if(g.panTimer) clearTimeout(g.panTimer);
     if(g.swellTimer) clearTimeout(g.swellTimer);
+    if(g.fadeTimer) clearTimeout(g.fadeTimer);
     const t = ctx.currentTime;
     g.gain.gain.cancelScheduledValues(t);
     g.gain.gain.setValueAtTime(g.gain.gain.value, t);
@@ -1391,8 +1496,10 @@ class CollageEngine{
     padEq.frequency.value = this._padEqFreqForPan(pan.pan.value);
     // A cheap parallel tap for this grain's own live meter in the Grains
     // tab — doesn't touch the real signal path, just listens in on it.
-    const analyser = ctx.createAnalyser(); analyser.fftSize = 128;
-    const meterBuf = new Uint8Array(analyser.fftSize);
+    // 256 (up from 128, still cheap even with many grains at once) gives
+    // the mini per-grain EQ enough bins to show real shape, not just noise.
+    const analyser = ctx.createAnalyser(); analyser.fftSize = 256;
+    const meterBuf = new Uint8Array(analyser.frequencyBinCount);
     src.connect(env); env.connect(filt); filt.connect(padEq); padEq.connect(duckGain); duckGain.connect(swellGain); swellGain.connect(userGain); userGain.connect(pan); pan.connect(this.masterBus);
     userGain.connect(analyser);
 
@@ -1405,14 +1512,16 @@ class CollageEngine{
       src.loop = true;
       env.gain.linearRampToValueAtTime(level, now+fadeIn);
       src.start(now);
-      const resident = { id, kind:'resident', source:src, vibrato, gain:env, filt, padEq, duckGain, swellGain, userGain, pan, analyser, meterBuf, label: opts.label || 'unnamed grain', startedAt: now, sourceQuestion: opts.sourceQuestion, forager: opts.forager, panTimer:null, swellTimer:null, muted:false, _volPct:100, _tonePct:hzToTonePct(defaultToneHz), _filterType:'lowpass' };
+      const resident = { id, kind:'resident', source:src, vibrato, gain:env, filt, padEq, duckGain, swellGain, userGain, pan, analyser, meterBuf, label: opts.label || 'unnamed grain', startedAt: now, sourceQuestion: opts.sourceQuestion, forager: opts.forager, panTimer:null, swellTimer:null, fadeTimer:null, muted:false, locked:false, _volPct:100, _tonePct:hzToTonePct(defaultToneHz), _filterType:'lowpass' };
       this.residents.push(resident);
       this._schedulePanDrift(pan.pan, resident);
       this._scheduleSwell(swellGain.gain, resident);
+      this._scheduleNaturalFade(resident);
       if(this.residents.length > this.residentCap){
         const oldest = this.residents.shift();
         if(oldest.panTimer) clearTimeout(oldest.panTimer);
         if(oldest.swellTimer) clearTimeout(oldest.swellTimer);
+        if(oldest.fadeTimer) clearTimeout(oldest.fadeTimer);
         const t = ctx.currentTime;
         oldest.gain.gain.cancelScheduledValues(t);
         oldest.gain.gain.setValueAtTime(oldest.gain.gain.value, t);
@@ -1798,6 +1907,10 @@ const SOURCES = {
       const res = await fetchWithTimeout('https://archive.org/metadata/' + encodeURIComponent(doc.id), {}, 15000);
       if(!res.ok) throw new Error('metadata failed (' + res.status + ')');
       const meta = await res.json();
+      // Same response already carries the item's own metadata (title/date)
+      // alongside its file list — stash it on the doc so the grain's label
+      // can show the real recording instead of just the search destination.
+      doc.meta = meta.metadata || {};
       const files = meta.files || [];
       const good = files.filter(f=>{
         if(!f.format) return false;
@@ -1852,6 +1965,23 @@ const SOURCES = {
     }
   }
 };
+
+// The grain's own label used to repeat the search destination ("a shelf of
+// old radio dramas") on every grain from that theme/collection, which reads
+// as repetitive fast — it's the SAME description for dozens of different
+// actual recordings. This surfaces the real item instead: its title, with
+// a year prefixed when the source actually reports one (archive.org's own
+// metadata does; Wikimedia's search result doesn't, so those just show the
+// title). No invented medium/genre text — only real metadata, or nothing.
+function describeSource(doc){
+  if(!doc) return null;
+  const title = (doc.title || '').trim().replace(/\s+/g,' ');
+  if(!title) return null;
+  const meta = doc.meta || {};
+  const dateField = meta.date || meta.year || '';
+  const year = (String(dateField).match(/\d{4}/) || [])[0];
+  return year ? (year + ' — ' + title) : title;
+}
 
 /* ============================================================
    GRAIN RATING — a rough acoustic proxy for "is this one working,"
@@ -2025,7 +2155,8 @@ class Forager{
 
       const takeRoot = Math.random() < clamp(0.18 + rating*0.42, 0.12, 0.7);
       const baseLevel = randRange(0.45, 0.7) * normGain * (0.85 + rating*0.3);
-      const label = role.label + ' &middot; ' + transformName + ' from "' + dest.label + '"';
+      const roleLabelCap = role.label.charAt(0).toUpperCase() + role.label.slice(1);
+      const label = roleLabelCap + ': ' + (describeSource(chosenDoc) || dest.label);
       const grainObj = this.engine.introduce(processed, { takeRoot, level: baseLevel, label, sourceQuestion: dest, forager: this.name });
       // Rare, unforced easter egg: not something the person triggers, just
       // something that's occasionally already true — a fetched item's own
