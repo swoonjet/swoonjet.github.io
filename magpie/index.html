@@ -85,10 +85,15 @@
      not tab-specific. */
   #viz-panel{ display:flex; align-items:flex-end; gap:0.9rem; margin-bottom:1.6rem; }
   #viz-canvas{ flex:1; width:100%; height:40px; display:block; }
+  /* Doubles as the EQ/decibels toggle — same numeric readout either way,
+     just a plain button instead of static text so it's clickable. */
   #viz-level{
+    appearance:none; background:none; border:0; cursor:pointer;
     font-family: var(--mono); font-size:0.68rem; color: var(--ink-45);
-    width:3.4rem; text-align:right; flex-shrink:0; padding-bottom:0.2rem;
+    width:3.4rem; text-align:right; flex-shrink:0; padding:0 0 0.2rem 0;
   }
+  #viz-level:hover{ color: var(--ink-70); }
+  #viz-level.active{ color: var(--ink); }
 
   section{ margin-top:1.8rem; }
   section h2{
@@ -212,7 +217,7 @@
 
   <div id="viz-panel">
     <canvas id="viz-canvas" width="336" height="40"></canvas>
-    <span id="viz-level">&mdash; dB</span>
+    <button id="viz-level" type="button" title="Switch between the EQ spectrum and a decibel meter">&mdash; dB</button>
   </div>
 
   <div id="tab-bar">
@@ -848,6 +853,28 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
 const vizCanvas = document.getElementById('viz-canvas');
 const vizLevelEl = document.getElementById('viz-level');
 let vizCtx2d = null, vizFreqData = null, vizTimeData = null, vizRAF = null;
+// 'eq' (default): a real log-spaced spectrum. 'db': a single level-meter
+// strip. Toggled by clicking the numeric readout itself — see startViz().
+let vizMode = 'eq';
+let vizBandEdges = null;
+
+// Log-spaced FFT-bin edges across roughly the audible range, one per bar.
+// A LINEAR split of frequency bins (the old approach) puts most of this
+// piece's own energy — grains pitched down, dark by default — into the
+// first bar or two, which just reads as a single pulsing blob rather than
+// a spectrum. Log spacing is what every real EQ/analyzer display uses for
+// exactly this reason: it gives the low end room to actually show shape.
+function computeVizBands(barCount, fftSize, sampleRate){
+  const bins = fftSize/2;
+  const nyquist = sampleRate/2;
+  const minHz = 40, maxHz = Math.min(nyquist, 12000);
+  const edges = [];
+  for(let i=0;i<=barCount;i++){
+    const hz = minHz * Math.pow(maxHz/minHz, i/barCount);
+    edges.push(clamp(Math.round(hz/nyquist*bins), 0, bins-1));
+  }
+  return edges;
+}
 
 function setupVizCanvas(){
   if(!vizCanvas) return;
@@ -869,37 +896,48 @@ function drawViz(){
 
   engine.analyser.getByteFrequencyData(vizFreqData);
   engine.analyser.getByteTimeDomainData(vizTimeData);
-
   vizCtx2d.clearRect(0, 0, w, h);
-  const barCount = 28;
-  const bins = vizFreqData.length;
-  const step = Math.max(1, Math.floor(bins / barCount));
-  const gap = 2;
-  const barW = Math.max(1, (w - gap * (barCount - 1)) / barCount);
-  for(let i=0; i<barCount; i++){
-    let sum = 0, n = 0;
-    for(let j=0; j<step; j++){
-      const idx = i*step + j;
-      if(idx < bins){ sum += vizFreqData[idx]; n++; }
-    }
-    const norm = n ? (sum/n)/255 : 0;
-    const barH = Math.max(1, norm * h);
-    const alpha = Math.min(0.85, 0.08 + norm * 0.75);
-    vizCtx2d.fillStyle = 'rgba(22,21,15,' + alpha.toFixed(3) + ')';
-    vizCtx2d.fillRect(i*(barW+gap), h - barH, barW, barH);
-  }
 
+  // The dB number itself feeds the numeric readout in EITHER mode, and is
+  // the whole picture in 'db' mode — same real RMS read either way, just
+  // two different views of it.
   let sumSq = 0;
   for(let i=0; i<vizTimeData.length; i++){
     const v = (vizTimeData[i] - 128) / 128;
     sumSq += v*v;
   }
   const rms = Math.sqrt(sumSq / vizTimeData.length);
-  if(rms > 0.0008){
-    const db = Math.max(-60, 20 * Math.log10(rms));
-    vizLevelEl.textContent = Math.round(db) + ' dB';
-  } else {
-    vizLevelEl.textContent = '— dB';
+  const silent = rms <= 0.0008;
+  const db = silent ? -60 : Math.max(-60, 20 * Math.log10(rms));
+  vizLevelEl.textContent = silent ? '— dB' : (Math.round(db) + ' dB');
+
+  if(vizMode === 'db'){
+    const norm = clamp((db + 60) / 60, 0, 1);
+    vizCtx2d.fillStyle = 'rgba(22,21,15,0.1)';
+    vizCtx2d.fillRect(0, 0, w, h);
+    const barH = Math.max(1, norm * h);
+    const alpha = Math.min(0.85, 0.2 + norm * 0.65);
+    vizCtx2d.fillStyle = 'rgba(22,21,15,' + alpha.toFixed(3) + ')';
+    vizCtx2d.fillRect(0, h - barH, w, barH);
+    return;
+  }
+
+  const barCount = 36;
+  if(!vizBandEdges || vizBandEdges.length !== barCount+1){
+    vizBandEdges = computeVizBands(barCount, engine.analyser.fftSize, engine.ctx.sampleRate);
+  }
+  const gap = 1.5;
+  const barW = Math.max(1, (w - gap * (barCount - 1)) / barCount);
+  for(let i=0; i<barCount; i++){
+    const lo = vizBandEdges[i];
+    const hi = Math.max(lo+1, vizBandEdges[i+1]);
+    let sum = 0, n = 0;
+    for(let j=lo; j<hi; j++){ sum += vizFreqData[j]; n++; }
+    const norm = n ? (sum/n)/255 : 0;
+    const barH = Math.max(1, norm * h);
+    const alpha = Math.min(0.85, 0.08 + norm * 0.75);
+    vizCtx2d.fillStyle = 'rgba(22,21,15,' + alpha.toFixed(3) + ')';
+    vizCtx2d.fillRect(i*(barW+gap), h - barH, barW, barH);
   }
 }
 
@@ -907,8 +945,13 @@ function startViz(){
   if(!vizCanvas || !engine || !engine.analyser) return;
   vizFreqData = new Uint8Array(engine.analyser.frequencyBinCount);
   vizTimeData = new Uint8Array(engine.analyser.fftSize);
+  vizBandEdges = null;
   setupVizCanvas();
   window.addEventListener('resize', setupVizCanvas);
+  vizLevelEl.addEventListener('click', ()=>{
+    vizMode = vizMode === 'eq' ? 'db' : 'eq';
+    vizLevelEl.classList.toggle('active', vizMode === 'db');
+  });
   if(vizRAF == null) drawViz();
 }
 
@@ -1095,7 +1138,11 @@ class CollageEngine{
     // masterGain to 0) genuinely shows up as near-silence here too, so the
     // meter always reflects real — now widened — output.
     this.analyser = ctx.createAnalyser();
-    this.analyser.fftSize = 512;
+    // 2048 (up from 512) gives the EQ viz enough real frequency resolution
+    // to actually separate low bands instead of everything below a few
+    // hundred Hz collapsing into one or two bins — this piece's own content
+    // sits mostly down there (grains pitched down, dark by default).
+    this.analyser.fftSize = 2048;
     this.analyser.smoothingTimeConstant = 0.75;
     this.finalClip.connect(this.analyser);
 
