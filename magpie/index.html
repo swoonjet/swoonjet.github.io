@@ -559,6 +559,17 @@ function toneValueToHz(pct){ return 300 * Math.pow(16000/300, pct/100); }
 function hzToTonePct(hz){ return clamp(100 * Math.log(hz/300) / Math.log(16000/300), 0, 100); }
 function toneWord(pct){ return pct<35 ? 'dark' : (pct>70 ? 'bright' : 'even'); }
 
+// The Grains-tab "Size" control — how much raw source material a grain is
+// built from (feeds both its own dry loop and whatever Effect is chosen —
+// see CollageEngine.introduce/regenerateGrainSource). Log-mapped like Tone,
+// since the perceptual jump from 30ms to 300ms is huge while 3s to 4s barely
+// registers. 30ms reads as pure granular dust; 6s is long enough to actually
+// recognize a phrase or a melodic fragment — the whole point of this control
+// is dialing between those two, i.e. abstraction vs. coherence.
+function sizePctToSec(pct){ return 0.03 * Math.pow(6/0.03, pct/100); }
+function secToSizePct(sec){ return clamp(100 * Math.log(sec/0.03) / Math.log(6/0.03), 0, 100); }
+function formatGrainSize(sec){ return sec < 1 ? Math.round(sec*1000) + 'ms' : sec.toFixed(1) + 's'; }
+
 // Filter-type toggle for the per-grain Tone control — same node (`filt`),
 // same slider/Hz math either way, just a different curve shape through it.
 // Cycled by a small chip button next to the slider rather than a whole new
@@ -661,20 +672,26 @@ function buildGrainRow(g){
   const toneVal = toneRow.querySelector('.g-tone-val');
   const filterBtn = toneRow.querySelector('.g-filter-btn');
 
-  // Size + Effect live in a flyout, tucked behind More — resident-only,
-  // same reasoning as Lock: a transient has no rawGrain stored (see
-  // CollageEngine.introduce) and is gone in a few seconds regardless.
-  let flyoutDiv = null, sizeInput = null, sizeVal = null, effectBtn = null;
+  // Size + Amount + Effect live in a flyout, tucked behind More —
+  // resident-only, same reasoning as Lock: a transient has no rawContext
+  // stored (see CollageEngine.introduce) and is gone in a few seconds
+  // regardless. Size and Amount are the two coherence-vs-abstraction axes
+  // (how much real source material, and how much of it is dry vs.
+  // transformed); Effect picks which transform provides the wet side.
+  let flyoutDiv = null, sizeInput = null, sizeVal = null, amountInput = null, amountVal = null, effectBtn = null;
   if(g.kind === 'resident'){
     flyoutDiv = document.createElement('div');
     flyoutDiv.className = 'grain-flyout';
     flyoutDiv.style.display = 'none';
     flyoutDiv.innerHTML =
-      '<div class="grain-ctrl-row"><span class="g-tag">size</span><input type="range" class="g-size" min="10" max="95" step="1"><span class="g-val g-size-val"></span></div>' +
+      '<div class="grain-ctrl-row"><span class="g-tag">size</span><input type="range" class="g-size" min="0" max="100" step="1"><span class="g-val g-size-val"></span></div>' +
+      '<div class="grain-ctrl-row"><span class="g-tag">amount</span><input type="range" class="g-amount" min="0" max="100" step="1"><span class="g-val g-amount-val"></span></div>' +
       '<div class="grain-ctrl-row"><span class="g-tag">effect</span><button class="chip g-effect-btn" type="button"></button></div>';
     row.appendChild(flyoutDiv);
     sizeInput = flyoutDiv.querySelector('.g-size');
     sizeVal = flyoutDiv.querySelector('.g-size-val');
+    amountInput = flyoutDiv.querySelector('.g-amount');
+    amountVal = flyoutDiv.querySelector('.g-amount-val');
     effectBtn = flyoutDiv.querySelector('.g-effect-btn');
   }
 
@@ -706,8 +723,13 @@ function buildGrainRow(g){
     lockBtn.classList.toggle('active', !!g.locked);
   }
   if(sizeInput){
-    const sizePct = g._sizePct != null ? g._sizePct : 70;
-    sizeInput.value = sizePct; sizeVal.textContent = sizePct + '%';
+    const grainDurSec = g._grainDurSec != null ? g._grainDurSec : 0.2;
+    sizeInput.value = Math.round(secToSizePct(grainDurSec));
+    sizeVal.textContent = formatGrainSize(grainDurSec);
+  }
+  if(amountInput){
+    const amt = g._effectAmount != null ? g._effectAmount : 100;
+    amountInput.value = amt; amountVal.textContent = amt + '%';
   }
   if(effectBtn){
     effectBtn.textContent = TRANSFORM_LABELS[g._transformName] || 'Freeze';
@@ -751,12 +773,22 @@ function buildGrainRow(g){
   if(sizeInput){
     // Only the displayed value updates while dragging — a re-render is a
     // new AudioBufferSourceNode (see regenerateGrainSource), not a cheap
-    // AudioParam ramp like Volume/Tone, so it fires on release, not per tick.
+    // AudioParam ramp like Volume/Tone/Amount, so it fires on release, not
+    // per tick.
     sizeInput.addEventListener('input', e=>{
-      sizeVal.textContent = e.target.value + '%';
+      sizeVal.textContent = formatGrainSize(sizePctToSec(parseInt(e.target.value,10)));
     });
     sizeInput.addEventListener('change', e=>{
-      engine.regenerateGrainSource(id, { sizePct: parseInt(e.target.value,10) });
+      engine.regenerateGrainSource(id, { grainDurSec: sizePctToSec(parseInt(e.target.value,10)) });
+    });
+  }
+  if(amountInput){
+    // A pure dry/wet gain crossfade, no re-render — cheap enough to update
+    // live on every tick, unlike Size/Effect.
+    amountInput.addEventListener('input', e=>{
+      const v = parseInt(e.target.value,10);
+      engine.setGrainEffectAmount(id, v);
+      amountVal.textContent = v + '%';
     });
   }
   if(effectBtn){
@@ -784,17 +816,17 @@ function buildGrainRow(g){
   // marks the whole list "actively engaged" so a render pass triggered by
   // some OTHER grain arriving/leaving can't touch this row (or anyone
   // else's) until the person is done with it.
-  [volInput, toneInput, muteBtn, lockBtn, moreBtn, releaseBtn, filterBtn, sizeInput, effectBtn].filter(Boolean).forEach(el=>{
+  [volInput, toneInput, muteBtn, lockBtn, moreBtn, releaseBtn, filterBtn, sizeInput, amountInput, effectBtn].filter(Boolean).forEach(el=>{
     el.addEventListener('pointerdown', markGrainInteractionStart);
   });
-  [volInput, toneInput, sizeInput].filter(Boolean).forEach(el=>{
+  [volInput, toneInput, sizeInput, amountInput].filter(Boolean).forEach(el=>{
     el.addEventListener('input', markGrainInteractionStart);
     el.addEventListener('change', markGrainInteractionEnd);
   });
   row.addEventListener('focusin', markGrainInteractionStart);
   row.addEventListener('focusout', markGrainInteractionEnd);
 
-  return { row, labelDiv, meterCanvas, meterCtx: null, meterRgb, volInput, volVal, toneInput, toneVal, muteBtn, lockBtn, moreBtn, flyoutDiv, sizeInput, sizeVal, effectBtn, releaseBtn, filterBtn };
+  return { row, labelDiv, meterCanvas, meterCtx: null, meterRgb, volInput, volVal, toneInput, toneVal, muteBtn, lockBtn, moreBtn, flyoutDiv, sizeInput, sizeVal, amountInput, amountVal, effectBtn, releaseBtn, filterBtn };
 }
 
 function updateGrainRow(entry, g){
@@ -836,9 +868,14 @@ function updateGrainRow(entry, g){
     if(entry.effectBtn.textContent !== effectLabel) entry.effectBtn.textContent = effectLabel;
   }
   if(entry.sizeInput && document.activeElement !== entry.sizeInput){
-    const sizePct = g._sizePct != null ? g._sizePct : 70;
-    entry.sizeInput.value = sizePct;
-    entry.sizeVal.textContent = sizePct + '%';
+    const grainDurSec = g._grainDurSec != null ? g._grainDurSec : 0.2;
+    entry.sizeInput.value = Math.round(secToSizePct(grainDurSec));
+    entry.sizeVal.textContent = formatGrainSize(grainDurSec);
+  }
+  if(entry.amountInput && document.activeElement !== entry.amountInput){
+    const amt = g._effectAmount != null ? g._effectAmount : 100;
+    entry.amountInput.value = amt;
+    entry.amountVal.textContent = amt + '%';
   }
 }
 
@@ -1445,6 +1482,16 @@ class CollageEngine{
     holder.swellTimer = setTimeout(step, randRange(0, base)*1000);
   }
 
+  // A resident carries TWO sources now (dry/wet, see introduce()) — this is
+  // the one place both ever need stopping together, so every departure path
+  // (natural fade, cap eviction, manual release) shares it rather than each
+  // repeating the same pair of try/catch stops.
+  _stopResidentSources(g, when){
+    try{ g.wetSource.stop(when); }catch(e){}
+    try{ g.drySource.stop(when); }catch(e){}
+    try{ g.vibrato.stop(when); }catch(e){}
+  }
+
   // A resident under the cap could otherwise live for the entire session —
   // the cap only forces turnover once residents.length actually exceeds it.
   // This gives every resident its own natural lifespan (jittered, 3-7min,
@@ -1464,8 +1511,7 @@ class CollageEngine{
       holder.gain.gain.cancelScheduledValues(t);
       holder.gain.gain.setValueAtTime(holder.gain.gain.value, t);
       holder.gain.gain.linearRampToValueAtTime(0, t+3);
-      try{ holder.source.stop(t+3.2); }catch(e){}
-      try{ holder.vibrato.stop(t+3.2); }catch(e){}
+      this._stopResidentSources(holder, t+3.2);
       if(this.onResidentsChanged) this.onResidentsChanged();
       log('fell loose', holder.label + ' fades out on its own after a while.', true, { grainId: holder.id, forager: holder.forager, kind:'resident', label: holder.label, reason:'natural-fade' });
     };
@@ -1526,64 +1572,91 @@ class CollageEngine{
   }
 
   // Re-renders a resident's own already-kept sound from scratch — a
-  // different Effect (transform) on the SAME raw source snippet, a
-  // different Size (how much of that transform's render gets looped), or
-  // both — without touching anything downstream of the source (volume,
-  // tone, pan, lock, mute all live on nodes after it and are untouched).
-  // Resident-only: a transient has no rawGrain stored and is gone in a few
-  // seconds anyway. Async because the transform itself renders offline;
-  // guarded against overlapping calls so a second click/drag while one is
-  // still rendering is just a no-op rather than a race.
+  // different Effect (transform) on the SAME raw source material, a
+  // different Size (how much raw material both the dry loop AND the
+  // transform's input are built from), or both — without touching anything
+  // downstream of the dry/wet mix (volume, tone, pan, lock, mute all live
+  // on nodes after it and are untouched). Always rebuilds BOTH the dry and
+  // wet sources together even for an Effect-only change (the dry slice
+  // ends up byte-identical when Size didn't move) — simpler than branching,
+  // and this only ever runs on a discrete human click/release, not at
+  // audio-rate frequency. A pure Amount (dry/wet blend) change never lands
+  // here at all — see setGrainEffectAmount, a plain live gain ramp with no
+  // re-render. Resident-only: a transient has no rawContext stored and is
+  // gone in a few seconds anyway. Async because the transform itself
+  // renders offline; guarded against overlapping calls so a second
+  // click/drag while one is still rendering is just a no-op, not a race.
   async regenerateGrainSource(id, opts){
     const g = this.residents.find(r=>r.id===id);
-    if(!g || g._regenerating || !g.rawGrain) return null;
+    if(!g || g._regenerating || !g.rawContext) return null;
     g._regenerating = true;
     try{
       const transformName = (opts && opts.transformName) || g._transformName;
-      const sizePct = (opts && opts.sizePct != null) ? opts.sizePct : g._sizePct;
-      let processed;
-      try{ processed = await TRANSFORMS[transformName](this.ctx.sampleRate, g.rawGrain); }
+      const grainDurSec = (opts && opts.grainDurSec != null) ? opts.grainDurSec : g._grainDurSec;
+      const clampedDur = clamp(grainDurSec, 0.02, g.rawContext.duration - 0.01);
+      const rawSlice = extractGrain(this.ctx, g.rawContext, 0, clampedDur);
+
+      let wetProcessed;
+      try{ wetProcessed = await TRANSFORMS[transformName](this.ctx.sampleRate, rawSlice); }
       catch(e){ return null; }
-      const normGain = computeNormalizationGain(processed);
-      if(normGain <= 0) return null; // came out silent this time — leave the grain as it was
-      const rating = computeGrainRating(processed);
+      const wetNormGain = computeNormalizationGain(wetProcessed);
+      if(wetNormGain <= 0) return null; // came out silent this time — leave the grain as it was
+      const rating = computeGrainRating(wetProcessed);
       // Same formula the original arrival used — a manual Effect/Size swap
       // is treated as this specific, already-kept grain arriving again.
-      const newLevel = randRange(0.45, 0.7) * normGain * (0.85 + rating*0.3);
-      const core = this._makeLoopableCore(processed, sizePct/100);
+      const newEnvLevel = randRange(0.45, 0.7) * wetNormGain * (0.85 + rating*0.3);
+      const wetCore = this._makeLoopableCore(wetProcessed);
+      const dryNormGain = computeNormalizationGain(rawSlice) || 1;
 
       const ctx = this.ctx;
-      const newSrc = ctx.createBufferSource();
-      newSrc.buffer = core;
-      newSrc.loop = true;
-      newSrc.playbackRate.value = g.source.playbackRate.value;
+      const newWetSrc = ctx.createBufferSource();
+      newWetSrc.buffer = wetCore;
+      newWetSrc.loop = true;
+      newWetSrc.playbackRate.value = g.wetSource.playbackRate.value;
+
+      const newDrySrc = ctx.createBufferSource();
+      newDrySrc.buffer = rawSlice;
+      newDrySrc.loop = true;
+      newDrySrc.playbackRate.value = g.drySource.playbackRate.value;
 
       // A brief dip-and-recover around the actual swap, same reasoning as
-      // every other envelope move in this engine — a hard cut to a new
-      // buffer would click.
+      // every other envelope move in this engine — a hard cut to new
+      // buffers would click.
       const t = ctx.currentTime;
       const fade = 0.05;
       g.gain.gain.cancelScheduledValues(t);
       g.gain.gain.setValueAtTime(g.gain.gain.value, t);
       g.gain.gain.linearRampToValueAtTime(0, t+fade);
 
-      const oldSrc = g.source;
+      const oldWetSrc = g.wetSource, oldDrySrc = g.drySource;
       setTimeout(()=>{
-        try{ oldSrc.stop(); }catch(e){}
+        try{ oldWetSrc.stop(); }catch(e){}
+        try{ oldDrySrc.stop(); }catch(e){}
         // The vibrato oscillator/depth are long-running and shared across a
-        // grain's whole lifetime — reconnect them to the new source's
+        // grain's whole lifetime — reconnect them to both new sources'
         // detune rather than building a fresh pair.
         g.vibratoDepth.disconnect();
-        g.vibratoDepth.connect(newSrc.detune);
-        newSrc.connect(g.gain);
-        newSrc.start(this.ctx.currentTime);
-        g.source = newSrc;
+        g.vibratoDepth.connect(newWetSrc.detune);
+        g.vibratoDepth.connect(newDrySrc.detune);
+        newWetSrc.connect(g.wetGain);
+        newDrySrc.connect(g.dryGain);
+        newWetSrc.start(this.ctx.currentTime);
+        newDrySrc.start(this.ctx.currentTime);
+        g.wetSource = newWetSrc;
+        g.drySource = newDrySrc;
         g._transformName = transformName;
-        g._sizePct = sizePct;
+        g._grainDurSec = clampedDur;
+        g._dryNormGain = dryNormGain;
+        const amt = clamp((g._effectAmount != null ? g._effectAmount : 100)/100, 0, 1);
+        const tAmt = this.ctx.currentTime;
+        g.wetGain.gain.cancelScheduledValues(tAmt);
+        g.wetGain.gain.setValueAtTime(Math.sin(amt*Math.PI/2), tAmt);
+        g.dryGain.gain.cancelScheduledValues(tAmt);
+        g.dryGain.gain.setValueAtTime(dryNormGain * Math.cos(amt*Math.PI/2), tAmt);
         const t2 = this.ctx.currentTime;
         g.gain.gain.cancelScheduledValues(t2);
         g.gain.gain.setValueAtTime(0, t2);
-        g.gain.gain.linearRampToValueAtTime(newLevel, t2+0.4);
+        g.gain.gain.linearRampToValueAtTime(newEnvLevel, t2+0.4);
         if(this.onResidentsChanged) this.onResidentsChanged();
       }, fade*1000 + 10);
 
@@ -1591,9 +1664,23 @@ class CollageEngine{
     } finally {
       // Cleared just after the swap actually lands (fade + a small margin),
       // not immediately — so a rapid second call can't race the setTimeout
-      // above and grab a source that's about to be replaced out from under it.
+      // above and grab sources that are about to be replaced out from under it.
       setTimeout(()=>{ g._regenerating = false; }, 200);
     }
+  }
+
+  // Pure dry/wet crossfade — no re-render, no node swap, so this updates
+  // live while a person drags the Amount slider, unlike Size/Effect. Each
+  // side's own normalization gain (see introduce()/regenerateGrainSource)
+  // stays baked in so the crossfade doesn't also lurch in overall loudness.
+  setGrainEffectAmount(id, pct){
+    const g = this.residents.find(r=>r.id===id);
+    if(!g) return;
+    g._effectAmount = pct;
+    const amt = clamp(pct/100, 0, 1);
+    const t = this.ctx.currentTime;
+    g.wetGain.gain.setTargetAtTime(Math.sin(amt*Math.PI/2), t, 0.05);
+    g.dryGain.gain.setTargetAtTime((g._dryNormGain != null ? g._dryNormGain : 1) * Math.cos(amt*Math.PI/2), t, 0.05);
   }
 
   // let a person send a specific grain away early, resident or passing
@@ -1615,8 +1702,12 @@ class CollageEngine{
     g.gain.gain.cancelScheduledValues(t);
     g.gain.gain.setValueAtTime(g.gain.gain.value, t);
     g.gain.gain.linearRampToValueAtTime(0, t+1.2);
-    try{ g.source.stop(t+1.4); }catch(e){}
-    try{ g.vibrato.stop(t+1.4); }catch(e){}
+    if(g.kind === 'resident'){
+      this._stopResidentSources(g, t+1.4);
+    } else {
+      try{ g.source.stop(t+1.4); }catch(e){}
+      try{ g.vibrato.stop(t+1.4); }catch(e){}
+    }
     if(this.onResidentsChanged) this.onResidentsChanged();
     log('fell loose', g.label + ' let go by hand.', true, { grainId: g.id, forager: g.forager, kind: g.kind, label: g.label, reason: 'manual' });
   }
@@ -1675,7 +1766,7 @@ class CollageEngine{
     // the mini per-grain EQ enough bins to show real shape, not just noise.
     const analyser = ctx.createAnalyser(); analyser.fftSize = 256;
     const meterBuf = new Uint8Array(analyser.frequencyBinCount);
-    src.connect(env); env.connect(filt); filt.connect(padEq); padEq.connect(duckGain); duckGain.connect(swellGain); swellGain.connect(userGain); userGain.connect(pan); pan.connect(this.masterBus);
+    env.connect(filt); filt.connect(padEq); padEq.connect(duckGain); duckGain.connect(swellGain); swellGain.connect(userGain); userGain.connect(pan); pan.connect(this.masterBus);
     userGain.connect(analyser);
 
     const level = opts.level || 0.5;
@@ -1684,10 +1775,45 @@ class CollageEngine{
     this.duckExisting(id, opts.takeRoot ? 3.5 : 2.5, 0.15, 0.25, opts.takeRoot ? 1.8 : 1.0);
 
     if(opts.takeRoot){
+      // Two parallel sources feeding the same env, not one — the WET side
+      // (src, already-transformed, unchanged from before) and a DRY side
+      // built straight from the raw source material. An Effect Amount dial
+      // crossfades between them live (see setGrainEffectAmount); Size
+      // (see regenerateGrainSource) controls how much raw material both
+      // sides are even built from. extractGrain() already fades both its
+      // own edges toward zero, so the dry slice loops cleanly on its own —
+      // no separate loop-prep step needed the way the wet side needs
+      // _makeLoopableCore (a transform's render has its own one-shot
+      // fade-in/out that would otherwise pulse if looped whole).
+      const wetGain = ctx.createGain();
+      src.connect(wetGain); wetGain.connect(env);
       src.loop = true;
-      env.gain.linearRampToValueAtTime(level, now+fadeIn);
       src.start(now);
-      const resident = { id, kind:'resident', source:src, vibrato, vibratoDepth, gain:env, filt, padEq, duckGain, swellGain, userGain, pan, analyser, meterBuf, label: opts.label || 'unnamed grain', startedAt: now, sourceQuestion: opts.sourceQuestion, forager: opts.forager, panTimer:null, swellTimer:null, fadeTimer:null, muted:false, locked:false, rawGrain: opts.rawGrain || null, _transformName: opts.transformName || 'freeze', _sizePct:70, _regenerating:false, _volPct:100, _tonePct:hzToTonePct(defaultToneHz), _filterType:'lowpass' };
+
+      const rawContext = opts.rawContext || buffer;
+      const grainDurSec = clamp(opts.grainDurSec || 0.2, 0.02, rawContext.duration - 0.01);
+      const drySlice = extractGrain(ctx, rawContext, 0, grainDurSec);
+      const drySrc = ctx.createBufferSource();
+      drySrc.buffer = drySlice;
+      drySrc.loop = true;
+      drySrc.playbackRate.value = src.playbackRate.value;
+      vibratoDepth.connect(drySrc.detune);
+      const dryGain = ctx.createGain();
+      drySrc.connect(dryGain); dryGain.connect(env);
+      drySrc.start(now);
+
+      // Equal-power crossfade between the two, each independently
+      // normalized first (dry material and a transform's render have
+      // wildly different natural loudness) so dragging Amount doesn't
+      // lurch — see regenerateGrainSource for the full explanation.
+      const dryNormGain = computeNormalizationGain(drySlice) || 1;
+      const effectAmount = opts.effectAmount != null ? opts.effectAmount : 100;
+      const amt = clamp(effectAmount/100, 0, 1);
+      wetGain.gain.value = Math.sin(amt*Math.PI/2);
+      dryGain.gain.value = dryNormGain * Math.cos(amt*Math.PI/2);
+
+      env.gain.linearRampToValueAtTime(level, now+fadeIn);
+      const resident = { id, kind:'resident', wetSource:src, drySource:drySrc, wetGain, dryGain, vibrato, vibratoDepth, gain:env, filt, padEq, duckGain, swellGain, userGain, pan, analyser, meterBuf, label: opts.label || 'unnamed grain', startedAt: now, sourceQuestion: opts.sourceQuestion, forager: opts.forager, panTimer:null, swellTimer:null, fadeTimer:null, muted:false, locked:false, rawContext, _transformName: opts.transformName || 'freeze', _grainDurSec: grainDurSec, _effectAmount: effectAmount, _dryNormGain: dryNormGain, _regenerating:false, _volPct:100, _tonePct:hzToTonePct(defaultToneHz), _filterType:'lowpass' };
       this.residents.push(resident);
       this._schedulePanDrift(pan.pan, resident);
       this._scheduleSwell(swellGain.gain, resident);
@@ -1701,13 +1827,13 @@ class CollageEngine{
         oldest.gain.gain.cancelScheduledValues(t);
         oldest.gain.gain.setValueAtTime(oldest.gain.gain.value, t);
         oldest.gain.gain.linearRampToValueAtTime(0, t+4);
-        oldest.source.stop(t+4.2);
-        try{ oldest.vibrato.stop(t+4.2); }catch(e){}
+        this._stopResidentSources(oldest, t+4.2);
         log('fell loose', oldest.label + ' drifts loose from the nest.', true, { grainId: oldest.id, forager: oldest.forager, kind: 'resident', label: oldest.label, reason: 'cap-eviction' });
       }
       if(this.onResidentsChanged) this.onResidentsChanged();
       return resident;
     } else {
+      src.connect(env);
       // real elapsed time to play through the buffer once is longer than
       // its native duration now that playback is slowed down — every
       // envelope/stop/glide below has to use THIS, or the note gets cut
@@ -2298,6 +2424,14 @@ class Forager{
       const startAt = randRange(0, maxStart);
       const grain = extractGrain(ctx, mono, startAt, grainDur);
       stats.collected++;
+      // A longer forward-slice from the same start point, kept alongside
+      // the short grain that actually feeds the transform below — lets a
+      // person later dial the raw material's own length up via the
+      // Grains-tab Size control (real coherence, not just re-shuffling the
+      // TRANSFORMS around a fixed-size grain).
+      const maxContextDur = 6.5;
+      const contextDur = clamp(mono.duration - startAt - 0.02, 0.05, maxContextDur);
+      const rawContext = extractGrain(ctx, mono, startAt, contextDur);
 
       const rms = measureRMS(grain);
       if(rms < 0.002){
@@ -2338,7 +2472,7 @@ class Forager{
       // instead, same as the grain's own label already does.
       const sourceDesc = describeSource(chosenDoc) || dest.label;
       const label = roleLabelCap + ': ' + sourceDesc;
-      const grainObj = this.engine.introduce(processed, { takeRoot, level: baseLevel, label, sourceQuestion: dest, forager: this.name, rawGrain: grain, transformName });
+      const grainObj = this.engine.introduce(processed, { takeRoot, level: baseLevel, label, sourceQuestion: dest, forager: this.name, rawContext, grainDurSec: grainDur, transformName });
       // Rare, unforced easter egg: not something the person triggers, just
       // something that's occasionally already true — a fetched item's own
       // title happens to name a corvid. Deliberately narrow (real corvid
