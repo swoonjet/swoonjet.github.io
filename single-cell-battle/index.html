@@ -62,7 +62,7 @@
   }
   .audio-row input[type=range]::-moz-range-thumb { width:11px; height:11px; border-radius:50%; border:none; background: var(--text); cursor:pointer; }
   h1 {
-    font-family: 'Press Start 2P', 'Inter', monospace; font-size: clamp(30px, 9vw, 58px);
+    font-family: 'Press Start 2P', 'Inter', monospace; font-size: clamp(12px, 3.6vw, 23px);
     font-weight: 400; letter-spacing: 0; line-height: 1.5;
     display: inline-block; will-change: transform;
   }
@@ -209,8 +209,37 @@
     border: none; padding: 13px 18px; min-height: 48px;
     -webkit-tap-highlight-color: transparent;
   }
-  .btn-battle { background: var(--accent); color:#fff; width: 100%; }
-  .btn-battle:disabled { opacity:.4; cursor:default; }
+  .btn-battle {
+    background: var(--accent); color:#fff; width: 100%;
+    position: relative; overflow: hidden;
+    animation: battleGlow 2.2s ease-in-out infinite, battleTextGlitch 4.5s steps(1,end) infinite;
+  }
+  .btn-battle::before {
+    content:''; position:absolute; top:0; left:-60%; width:40%; height:100%;
+    background: rgba(255,255,255,.35); transform: skewX(-18deg);
+    animation: battleShimmer 3.4s ease-in-out infinite;
+  }
+  .btn-battle:disabled { opacity:.4; cursor:default; animation:none; }
+  .btn-battle:disabled::before { animation:none; display:none; }
+  @keyframes battleGlow {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(255,31,113,0); }
+    50% { box-shadow: 0 0 16px 3px var(--accent), 0 0 30px 6px rgba(255,31,113,.35); }
+  }
+  @keyframes battleShimmer {
+    0%, 55% { left:-60%; opacity:0; }
+    62% { opacity:.7; }
+    78% { left:130%; opacity:0; }
+    100% { left:130%; opacity:0; }
+  }
+  @keyframes battleTextGlitch {
+    0%, 94%, 100% { text-shadow:none; }
+    95% { text-shadow: 2px 0 var(--p1), -2px 0 var(--p2); }
+    96% { text-shadow: -2px 0 var(--p1), 2px 0 var(--p2); }
+    97% { text-shadow:none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .btn-battle, .btn-battle::before { animation: none; }
+  }
   .btn-ghost { background: transparent; color: var(--text); border: 1px solid var(--border); width:100%; }
   .btn-ghost:active, .btn-battle:active { transform: scale(.98); }
 
