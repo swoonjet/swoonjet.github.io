@@ -2285,6 +2285,33 @@ function describeSource(doc){
 }
 
 /* ============================================================
+   CONTENT FILTER — keeps current American politics/social-media
+   out of the collage (Jon: no current government, tweets/Twitter,
+   the president). Scoped narrowly on purpose: terms like "congress"
+   or "the president" show up constantly in this app's own genuine
+   historical finds (a 1941 FDR radio address, old newsreels of
+   Congress, etc.), which is exactly the kind of find Magpie is
+   built to surface — so a blanket keyword ban would gut the
+   Antiquarian/date-range strategy. Split into two checks instead.
+   ============================================================ */
+
+// Terms specific enough to modern politics/social media that they never
+// legitimately show up in this app's own decades-old archival finds —
+// always blocked, no date needed.
+const POLITICAL_BLOCK_TERMS = /\b(twitter|tweets?|tweeted|retweet(?:s|ed)?|x\.com|potus|white house|impeachment|inaugurat\w*|administration|congress(?:ional)?|senate|midterms?|elections?)\b/i;
+
+// "president"/"government" alone are too broad to ban outright — only
+// treat a mention as blockable when nothing marks the item as clearly
+// historical (no parsed year, or a year recent enough to plausibly be
+// current-events content rather than an old recording).
+function isModernPoliticalMention(title, meta){
+  if(!title || !/\b(presidents?|government)\b/i.test(title)) return false;
+  const dateField = (meta && (meta.date || meta.year)) || '';
+  const year = parseInt((String(dateField).match(/\d{4}/) || [])[0], 10);
+  return !year || year >= 2000;
+}
+
+/* ============================================================
    GRAIN RATING — a rough acoustic proxy for "is this one working,"
    not a taste model. Peak-to-RMS (crest factor) on the PROCESSED
    grain: too low reads as flat/dead, too high reads as spiky and
@@ -2380,6 +2407,8 @@ class Forager{
       try{ docs = await source.search(dest); }
       catch(e){ log(this.name, 'lost the signal chasing "' + dest.label + '" (' + e.message + ').', true); this._failed(); return; }
 
+      docs = docs.filter(d => !POLITICAL_BLOCK_TERMS.test(d.title || ''));
+
       if(!docs.length){
         log(this.name, 'found nothing for "' + dest.label + '" this time.', true);
         this._failed(); return;
@@ -2398,6 +2427,7 @@ class Forager{
         try{ files = await source.candidateFiles(doc); }
         catch(e){ continue; }
         if(!files.length) continue;
+        if(isModernPoliticalMention(doc.title, doc.meta)) continue;
         for(const file of files){
           let arrayBuf;
           try{ arrayBuf = await source.download(file); }
@@ -2472,7 +2502,12 @@ class Forager{
       // instead, same as the grain's own label already does.
       const sourceDesc = describeSource(chosenDoc) || dest.label;
       const label = roleLabelCap + ': ' + sourceDesc;
-      const grainObj = this.engine.introduce(processed, { takeRoot, level: baseLevel, label, sourceQuestion: dest, forager: this.name, rawContext, grainDurSec: grainDur, transformName });
+      // Amount (dry/wet) used to default to 100 (fully wet/effected) for
+      // every grain unless someone opened the flyout and dragged it by
+      // hand. Randomizing it here means some grains land close to the raw
+      // source material instead of always the fully-processed extreme.
+      const effectAmount = randRange(0, 100);
+      const grainObj = this.engine.introduce(processed, { takeRoot, level: baseLevel, label, sourceQuestion: dest, forager: this.name, rawContext, grainDurSec: grainDur, transformName, effectAmount });
       // Rare, unforced easter egg: not something the person triggers, just
       // something that's occasionally already true — a fetched item's own
       // title happens to name a corvid. Deliberately narrow (real corvid
