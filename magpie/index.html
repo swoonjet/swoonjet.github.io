@@ -70,10 +70,6 @@
   #status{ font-size:0.65rem; letter-spacing:0.12em; text-transform:uppercase; color: var(--ink-24); transition:color 400ms ease; }
   #status.active{ color: var(--ink-70); }
 
-  #ticker{
-    color: var(--ink-70); font-size:0.95rem; min-height:2.6em; line-height:1.5;
-    margin-bottom:1.3rem;
-  }
   #stat-row{
     display:flex; gap:1.5rem; font-size:0.72rem; color: var(--ink-45);
     margin-bottom:1.6rem; letter-spacing:0.01em;
@@ -218,7 +214,6 @@
     <span id="status">idle</span>
   </header>
 
-  <div id="ticker">Waiting for the first magpies to set out&hellip;</div>
   <div id="stat-row">
     <div><b id="s-collected">0</b>collected</div>
     <div><b id="s-resident">0</b>woven in</div>
@@ -539,9 +534,6 @@ function log(tag, text, faded, meta){
   logEl.scrollTop = logEl.scrollHeight;
   while(logEl.children.length > 60){ logEl.removeChild(logEl.firstChild); }
 }
-const tickerEl = document.getElementById('ticker');
-function ticker(line){ tickerEl.textContent = line; }
-
 const stats = { collected:0 };
 function renderStats(residentCount, outCount){
   document.getElementById('s-collected').textContent = stats.collected;
@@ -2297,8 +2289,10 @@ function describeSource(doc){
 
 // Terms specific enough to modern politics/social media that they never
 // legitimately show up in this app's own decades-old archival finds —
-// always blocked, no date needed.
-const POLITICAL_BLOCK_TERMS = /\b(twitter|tweets?|tweeted|retweet(?:s|ed)?|x\.com|potus|white house|impeachment|inaugurat\w*|administration|congress(?:ional)?|senate|midterms?|elections?)\b/i;
+// always blocked, no date needed. "trump" is its own case: Jon asked for
+// it blocked outright, no exceptions — unlike the recency-gated president/
+// government check below, there's no historical carve-out here.
+const POLITICAL_BLOCK_TERMS = /\b(twitter|tweets?|tweeted|retweet(?:s|ed)?|x\.com|potus|white house|impeachment|inaugurat\w*|administration|congress(?:ional)?|senate|midterms?|elections?|trump)\b/i;
 
 // "president"/"government" alone are too broad to ban outright — only
 // treat a mention as blockable when nothing marks the item as clearly
@@ -2399,7 +2393,6 @@ class Forager{
       }
       this.recentlyVisited.push(dest.label);
       if(this.recentlyVisited.length > 4) this.recentlyVisited.shift();
-      ticker(this.name + ' wonders: ' + dest.label);
 
       const source = SOURCES[dest.source] || SOURCES.archive;
 
@@ -2428,6 +2421,16 @@ class Forager{
         catch(e){ continue; }
         if(!files.length) continue;
         if(isModernPoliticalMention(doc.title, doc.meta)) continue;
+        // Re-check against the item's fuller metadata (only archive.org
+        // populates doc.meta) — the always-blocked terms list, "trump"
+        // included, needs to catch a description/subject mention even
+        // when the title itself reads clean.
+        if(doc.meta){
+          const metaText = [doc.title, doc.meta.description, doc.meta.subject]
+            .map(v => Array.isArray(v) ? v.join(' ') : (v || ''))
+            .join(' ');
+          if(POLITICAL_BLOCK_TERMS.test(metaText)) continue;
+        }
         for(const file of files){
           let arrayBuf;
           try{ arrayBuf = await source.download(file); }
@@ -2527,7 +2530,6 @@ class Forager{
         rating: +rating.toFixed(3),
         kindred: !!kindred
       });
-      ticker('Brought back: ' + sourceDesc);
 
       this._done();
     } finally {
