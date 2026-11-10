@@ -189,8 +189,8 @@ details.grp[open]>summary{color:var(--ink)}
 .card h2{margin:0 0 calc(var(--unit)*1.75);font:500 10px/1.2 var(--sans);letter-spacing:.14em;text-transform:uppercase;color:var(--ink-45);display:flex;justify-content:space-between;align-items:baseline;gap:10px}
 .card h2 span{font:400 10px/1.2 var(--mono);letter-spacing:.02em;text-transform:none;color:var(--ink-24)}
 .plist{display:flex;flex-direction:column;gap:2px;max-height:340px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--ink-10) transparent}
-.prow{appearance:none;display:grid;grid-template-columns:6px minmax(0,1fr) 48px 62px;align-items:center;column-gap:10px;padding:5px 0;border:0;border-radius:0;background:transparent;text-align:left;width:100%;color:var(--ink);transition:color .2s ease}
-.prow i{align-self:stretch;width:6px;min-height:24px}
+.prow{appearance:none;display:grid;grid-template-columns:14px minmax(0,1fr) 48px 62px;align-items:center;column-gap:10px;padding:5px 0;border:0;border-radius:0;background:transparent;text-align:left;width:100%;color:var(--ink);transition:color .2s ease}
+.prow i{align-self:stretch;width:14px;min-height:24px;background-size:26px 12px;box-shadow:inset 0 0 0 1px rgba(22,21,15,.14)}
 .prow .nm{font-size:11px;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .prow .nm small{display:block;margin-top:2px;font:400 9.5px/1.2 var(--mono);letter-spacing:.04em;text-transform:none;color:var(--ink-45)}
 .prow .sh{font:400 10.5px var(--mono);color:var(--ink-45);text-align:right}
@@ -1333,6 +1333,16 @@ dialog::backdrop{background:rgba(242,240,235,.88)}
     if (k > 0) inkOn(c, OCHRE, dots(u, v, 3.2, 0.12 + 0.88 * k, 0.42 + 0.38 * k, fp, 41));
     if (t > 58) inkOn(c, ROOT, hatch(u, v, 0.7071, -0.7071, 3.6, 0.4, fp, 0) * clamp01((t - 58) / 4) * 0.85);
   }
+  // plates: each plate gets its own ink (the same family as its colour) and its own stroke, angle and rhythm;
+  // full strength on its land, a lighter version over its ocean floor
+  const PINK = [BLUE, MOSS, OCHRE, SLATE, INK];
+  function penPlate(c, p, u, v, fp, k) {
+    const ang = ((p * 67.5) % 180) * Math.PI / 180, ca = Math.cos(ang), sa = Math.sin(ang), st = Math.floor(p / 5) % 4;
+    let cov;
+    if (st === 2) cov = dots(u, v, 3.4, 0.72, 0.62, fp, 50 + p);
+    else { cov = hatch(u, v, ca, sa, 4.2, 0.36, fp, st === 1 ? 7 : 0); if (st === 3) cov = Math.max(cov, hatch(u, v, -sa, ca, 4.2, 0.34, fp, 0)); }
+    inkOn(c, PINK[p % 5], cov * k);
+  }
   // distance from each sea pixel to the nearest land, in output pixels (two-pass chamfer)
   function coastDist(e, ow, oh) {
     const D = new Float32Array(ow * oh), B = 1.4142;
@@ -1362,6 +1372,7 @@ dialog::backdrop{background:rgba(242,240,235,.88)}
       if (kind === 'terrain') { c[0] = FLAT_LAND[0]; c[1] = FLAT_LAND[1]; c[2] = FLAT_LAND[2]; penTerrain(c, val, u, v, 1); }
       else if (kind === 'sea') { c[0] = SEA_PAPER[0]; c[1] = SEA_PAPER[1]; c[2] = SEA_PAPER[2]; penSea(c, val, val < 1000 ? i + 1 : 99, u, v, 1); }
       else if (kind === 'biome') { const b = BT[val]; c[0] = b[0]; c[1] = b[1]; c[2] = b[2]; penBiome(c, val, u, v, 1); }
+      else if (kind === 'plate') { c[0] = FLAT_LAND[0]; c[1] = FLAT_LAND[1]; c[2] = FLAT_LAND[2]; penPlate(c, val, u, v, 1, 0.9); }
       else if (kind === 'age') { c[0] = SEA_PAPER[0]; c[1] = SEA_PAPER[1]; c[2] = SEA_PAPER[2]; penAge(c, val, u, v, 1); }
       else { c[0] = FLAT_LAND[0]; c[1] = FLAT_LAND[1]; c[2] = FLAT_LAND[2]; penThick(c, val, u, v, 1); }
       const q = (j * w + i) * 4; im.data[q] = c[0]; im.data[q + 1] = c[1]; im.data[q + 2] = c[2]; im.data[q + 3] = 255;
@@ -1398,12 +1409,23 @@ dialog::backdrop{background:rgba(242,240,235,.88)}
       for (let x = 0; x < N; x++) { thF[x] = contF[x] > 0.02 ? vc[x] / contF[x] : 0; ageF[x] = wo[x] > 0.02 ? vo[x] / wo[x] : 0; }
     }
     if (layer === 'biome') { clim = o.climate || climate(Float32Array.from(snap.elev, (v) => v - sl), W, H, { warmth: o.warmth || 0 }); tF = fld(clim.temp); pF = fld(clim.rain); }
-    const pl = snap.plate, pc = o.plateColors || [];
-    const pen = layer === 'terrain' || layer === 'biome' || layer === 'age' || layer === 'thickness';
+    const pl = snap.plate;
+    const pen = layer === 'terrain' || layer === 'biome' || layer === 'age' || layer === 'thickness' || layer === 'plates';
     const fp = o.px || 1300 / ow, land = [0, 0, 0], sea = [0, 0, 0], slopeK = ow / 9.6e5;
     const D = layer === 'terrain' || layer === 'biome' ? coastDist(e, ow, oh) : null;
     let AB = null;   // seafloor age band per pixel, for the isochron lines
     if (layer === 'age') { AB = new Int8Array(N); for (let x = 0; x < N; x++) AB[x] = -e[x] < 300 ? -1 : ageIdx(ageF[x]); }
+    let PID = null;   // the plate under each output pixel: majority of the four nearest grid cells
+    if (layer === 'plates') {
+      PID = new Int32Array(N);
+      for (let j = 0; j < oh; j++) for (let i = 0; i < ow; i++) {
+        const fu = (i + 0.5) / up - 0.5, fv = (j + 0.5) / up - 0.5; let i0 = Math.floor(fu), j0 = Math.floor(fv); const tu = fu - i0, tv = fv - j0;
+        let i1 = i0 + 1, j1 = j0 + 1; j0 = j0 < 0 ? 0 : j0 >= H ? H - 1 : j0; j1 = j1 < 0 ? 0 : j1 >= H ? H - 1 : j1; i0 = ((i0 % W) + W) % W; i1 = ((i1 % W) + W) % W;
+        const ids = [pl[j0 * W + i0], pl[j0 * W + i1], pl[j1 * W + i0], pl[j1 * W + i1]], ws = [(1 - tu) * (1 - tv), tu * (1 - tv), (1 - tu) * tv, tu * tv];
+        let best = ids[0], bw = -1; for (let k = 0; k < 4; k++) { let s = 0; for (let m = 0; m < 4; m++) if (ids[m] === ids[k]) s += ws[m]; if (s > bw) { bw = s; best = ids[k]; } }
+        PID[j * ow + i] = best;
+      }
+    }
     for (let j = 0; j < oh; j++) {
       const jm = j > 0 ? j - 1 : 0, jp = j < oh - 1 ? j + 1 : oh - 1;
       for (let i = 0; i < ow; i++) {
@@ -1415,6 +1437,7 @@ dialog::backdrop{background:rgba(242,240,235,.88)}
           if (mix > 0) {
             if (layer === 'biome') { const k = biomeKey(tF[x], pF[x], h), b = BT[k]; land[0] = b[0]; land[1] = b[1]; land[2] = b[2]; penBiome(land, k, u, v, fp); }
             else { land[0] = FLAT_LAND[0]; land[1] = FLAT_LAND[1]; land[2] = FLAT_LAND[2]; }
+            if (PID) penPlate(land, PID[x], u, v, fp, 0.88);
             if (layer === 'terrain') {
               let T = toneOf(h);
               if (h > 0) {
@@ -1434,25 +1457,21 @@ dialog::backdrop{background:rgba(242,240,235,.88)}
                 const n1 = AB[j * ow + ip], n2 = AB[jp * ow + i];   // isochrons where the age band steps
                 if ((n1 >= 0 && n1 !== AB[x]) || (n2 >= 0 && n2 !== AB[x])) { line = 0.42; lineInk = BLUE; }
               }
+            } else if (PID) {
+              sea[0] = SEA_PAPER[0]; sea[1] = SEA_PAPER[1]; sea[2] = SEA_PAPER[2]; penPlate(sea, PID[x], u, v, fp, 0.38);
             } else {
               sea[0] = SEA_PAPER[0]; sea[1] = SEA_PAPER[1]; sea[2] = SEA_PAPER[2];
               if (D) penSea(sea, -h, (D[x] - 0.5) * fp, u, v, fp);
               else inkOn(sea, BLUE, hatch(u, v, 0, 1, 5, 0.28, fp, 0) * 0.4);
             }
           }
+          if (PID && (PID[j * ow + ip] !== PID[x] || PID[jp * ow + i] !== PID[x])) { line = 0.6; lineInk = INK; }   // plate edges
           const q = x * 4;
           let r = sea[0] + (land[0] - sea[0]) * mix, gg = sea[1] + (land[1] - sea[1]) * mix, b = sea[2] + (land[2] - sea[2]) * mix;
           if (line) { r += (lineInk[0] - r) * line; gg += (lineInk[1] - gg) * line; b += (lineInk[2] - b) * line; }
           const cw = CW[x]; if (cw > 0) { r += (INK[0] - r) * cw; gg += (INK[1] - gg) * cw; b += (INK[2] - b) * cw; }
           rgba[q] = r; rgba[q + 1] = gg; rgba[q + 2] = b; rgba[q + 3] = 255;
           continue;
-        }
-        if (layer === 'plates') {
-          const fu = (i + 0.5) / up - 0.5, fv = (j + 0.5) / up - 0.5; let i0 = Math.floor(fu), j0 = Math.floor(fv); const tu = fu - i0, tv = fv - j0;
-          let i1 = i0 + 1, j1 = j0 + 1; j0 = j0 < 0 ? 0 : j0 >= H ? H - 1 : j0; j1 = j1 < 0 ? 0 : j1 >= H ? H - 1 : j1; i0 = ((i0 % W) + W) % W; i1 = ((i1 % W) + W) % W;
-          const ids = [pl[j0 * W + i0], pl[j0 * W + i1], pl[j1 * W + i0], pl[j1 * W + i1]], ws = [(1 - tu) * (1 - tv), tu * (1 - tv), (1 - tu) * tv, tu * tv];
-          let best = ids[0], bw = -1; for (let k = 0; k < 4; k++) { let s = 0; for (let m = 0; m < 4; m++) if (ids[m] === ids[k]) s += ws[m]; if (s > bw) { bw = s; best = ids[k]; } }
-          const col = pc[best % pc.length]; L = col; S = [col[0] + (PAPER[0] - col[0]) * 0.55, col[1] + (PAPER[1] - col[1]) * 0.55, col[2] + (PAPER[2] - col[2]) * 0.55];
         }
         const q = x * 4; let r = S[0] + (L[0] - S[0]) * a, gg = S[1] + (L[1] - S[1]) * a, b = S[2] + (L[2] - S[2]) * a;
         const cw = CW[x]; if (cw > 0) { r += (INK[0] - r) * cw; gg += (INK[1] - gg) * cw; b += (INK[2] - b) * cw; }
@@ -1935,8 +1954,7 @@ const isFuture = (age) => age < -0.5;
     let tot = 0; for (let x = 0; x < N; x++) { const w = g.cosLat[(x / g.W) | 0]; area[pl[x]] += w; tot += w; if ((fl[x] >> 3) === 2) cont[pl[x]] += w; }
     const rows = snap.info.map((pi, id) => pi && { id, pi, share: area[id] / tot * 100, cont: cont[id] / Math.max(1e-9, area[id]) }).filter(Boolean).sort((a, b) => b.share - a.share);
     el.plist.innerHTML = rows.map((r) => {
-      const col = S.sim.colors[r.id];
-      return `<button class="prow" data-id="${r.id}" aria-pressed="${S.sel === r.id}"><i style="background:rgb(${col})"></i><span class="nm">${NAMES(r.id)}<small>${r.pi.kind === 'continent' ? 'continent' : 'ocean'}</small></span><span class="sh">${r.share.toFixed(1)}%</span><span class="sp"><svg viewBox="0 0 12 12" style="transform:rotate(${r.pi.azimuth.toFixed(0)}deg)"><path d="M6 0.5 L10 10 L6 7.8 L2 10 Z"/></svg>${r.pi.speed.toFixed(1)}</span></button>`;
+      return `<button class="prow" data-id="${r.id}" aria-pressed="${S.sel === r.id}"><i style="background-image:url(${R.swatch('plate', r.id)})"></i><span class="nm">${NAMES(r.id)}<small>${r.pi.kind === 'continent' ? 'continent' : 'ocean'}</small></span><span class="sh">${r.share.toFixed(1)}%</span><span class="sp"><svg viewBox="0 0 12 12" style="transform:rotate(${r.pi.azimuth.toFixed(0)}deg)"><path d="M6 0.5 L10 10 L6 7.8 L2 10 Z"/></svg>${r.pi.speed.toFixed(1)}</span></button>`;
     }).join('');
     const sel = rows.find((r) => r.id === S.sel);
     el.pdetail.hidden = !sel;
