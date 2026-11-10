@@ -4,222 +4,287 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="A speculative plate-tectonics generator. Start from the real Pangaea at 250 million years ago, change how it breaks apart and drifts, and watch alternate Earths unfold.">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%277%27 fill=%27%23090d13%27/%3E%3Ccircle cx=%2716%27 cy=%2716%27 r=%269%27 fill=%27%23c4b480%27/%3E%3Cpath d=%27M7 18c4-2 6 2 10 0s6-5 8-3%27 stroke=%27%230e264e%27 stroke-width=%272.4%27 fill=none/%3E%3C/svg%3E">
+<meta name="theme-color" content="#f2f0eb">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 fill=%27%23f2f0eb%27/%3E%3Ccircle cx=%2716%27 cy=%2716%27 r=%2711%27 fill=%27%23cfd3df%27 stroke=%27%2316150f%27 stroke-width=%271.6%27/%3E%3Cpath d=%27M8 13c3-3 7-2 9 1s5 2 7 0v5c-3 3-6 1-8-1s-6-1-8 1z%27 fill=%27%23fcfbf8%27 stroke=%27%2316150f%27 stroke-width=%271.2%27/%3E%3C/svg%3E">
+<title>Pangaea Otherwise</title>
 </head>
 <body>
-<title>Pangaea Otherwise</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;1,6..72,400&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,500;1,400&display=swap">
 <style>
-/* Layout: a header, then two columns. Left: a scrolling control panel in groups. Right: the stage (view bar, map or globe, timeline,
-   then plates, comparison with the real Earth and numbers). A dark instrument surround so the colour of the map does the talking. */
+/* Paper and ink, after Earshot, Magpie and Weather Reports. The map is a two-ink print — bright land, a blue wash for the
+   sea, an ink coastline — so every annotation on top of it can be plain ink. Vermilion means one thing: a mark made on the
+   map by you or for you (the plate you picked, the focus point, the real coastlines, today on the timeline, a run in
+   progress you can stop). Separation is done with space and weight; the only rule is the heavy one under the masthead. */
 :root{
-  --bg:#090d13; --panel:#0f151e; --panel2:#131b27; --line:#1d2837; --line2:#2a384d;
-  --ink:#e1e8f2; --mute:#93a5bb; --faint:#62748b;
-  --amber:#ffb454; --coral:#ff6a4d; --teal:#35d0c0; --violet:#b88aff; --sky:#6db8ff;
-  --display:'Newsreader',Georgia,'Times New Roman',serif;
-  --sans:'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;
-  --mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
-  color-scheme:dark;
+  --paper:#f2f0eb; --field:#fcfbf8; --base:#ede9dc;
+  --ink:#16150f;
+  --ink-70:rgba(22,21,15,.70); --ink-45:rgba(22,21,15,.45); --ink-24:rgba(22,21,15,.24); --ink-10:rgba(22,21,15,.10); --ink-06:rgba(22,21,15,.06);
+  --accent:#d93d18;
+  --sea:#cfd3e0;
+  --sans:"Helvetica Neue",Helvetica,Inter,"Segoe UI",Arial,sans-serif;
+  --mono:"SF Mono",ui-monospace,"IBM Plex Mono",Menlo,Consolas,monospace;
+  --serif:"Crimson Pro",Georgia,"Times New Roman",serif;
+  --unit:8px; --gutter:32px;
+  color-scheme:light;
 }
 *{box-sizing:border-box}
-html{scroll-behavior:smooth}
-body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 var(--sans);-webkit-font-smoothing:antialiased}
-body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:60;background:var(--bg)}
+[hidden]{display:none !important}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--paper);color:var(--ink);font:13px/1.45 var(--sans);-webkit-font-smoothing:antialiased;overflow-x:hidden}
+/* paper grain: a surface, not an animation */
+body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:30;opacity:.05;mix-blend-mode:multiply;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/></filter><rect width='180' height='180' filter='url(%23n)'/></svg>")}
 button,input,select{font:inherit;color:inherit}
 button{cursor:pointer}
-:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+:focus-visible{outline:1px solid var(--accent);outline-offset:3px}
 .mono{font-family:var(--mono)}
+.label{margin:0 0 calc(var(--unit)*1.5);font:500 10px/1.2 var(--sans);letter-spacing:.14em;text-transform:uppercase;color:var(--ink-45)}
 
-/* header */
-.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:20px 32px;padding:28px max(24px,env(safe-area-inset-right,0px)) 22px max(24px,env(safe-area-inset-left,0px));border-bottom:1px solid var(--line)}
-.brand{max-width:70ch}
-.eyebrow{margin:0 0 8px;font:500 11px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--amber)}
-h1{margin:0;font:400 clamp(32px,4.4vw,52px)/1 var(--display);letter-spacing:-.015em}
-h1 em{font-style:italic;color:var(--amber)}
-.tag{margin:12px 0 0;color:var(--mute);font-size:14.5px;max-width:64ch}
-.actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
-.btn{display:inline-flex;align-items:center;gap:8px;padding:10px 16px;border:1px solid var(--line2);border-radius:6px;background:var(--panel2);color:var(--ink);font-weight:500;font-size:13.5px;line-height:1}
-.btn:hover{border-color:var(--mute);background:#182233}
-.btn.primary{background:var(--amber);border-color:var(--amber);color:#1a1205;font-weight:600}
-.btn.primary:hover{background:#ffc372}
-.btn.ghost{background:transparent}
-.btn[disabled]{opacity:.45;cursor:default}
-select.btn{padding-right:10px}
-.btn svg{width:15px;height:15px;flex:none}
+/* ---------------------------------------------------------------- masthead (Weather Reports header: two titles, one heavy rule) */
+.top{padding:calc(var(--unit)*5) max(var(--gutter),env(safe-area-inset-right,0px)) 0 max(var(--gutter),env(safe-area-inset-left,0px))}
+.top__bar{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px 32px;padding-bottom:14px;border-bottom:2px solid var(--ink)}
+.brand{min-width:0}
+.eyebrow{margin:0 0 10px;font:500 10px/1 var(--sans);letter-spacing:.14em;text-transform:uppercase;color:var(--ink-45)}
+h1{margin:0;font:700 clamp(28px,3.4vw,40px)/1.05 var(--sans);letter-spacing:-.02em}
+h1 em{font-style:normal;font-weight:400;color:var(--ink-45)}
+.actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.tag{margin:18px 0 0;max-width:46ch;font:400 clamp(18px,1.7vw,22px)/1.4 var(--serif);color:var(--ink-70)}
 
-/* app grid */
-.app{display:grid;grid-template-columns:minmax(310px,370px) minmax(0,1fr);align-items:start}
-.controls{position:sticky;top:0;max-height:100vh;overflow-y:auto;border-right:1px solid var(--line);background:var(--panel);padding:0 0 40px;scrollbar-width:thin;scrollbar-color:var(--line2) transparent}
-.stage{min-width:0;padding:20px max(24px,env(safe-area-inset-right,0px)) 80px 24px}
+/* ---------------------------------------------------------------- buttons: one chip vocabulary (Magpie), one solid ink action (Earshot/Magpie) */
+.btn{appearance:none;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:32px;padding:0 14px;border:0;border-radius:0;background:var(--ink-10);color:var(--ink-70);font:500 10.5px/1 var(--sans);letter-spacing:.1em;text-transform:uppercase;white-space:nowrap;transition:background .2s ease,color .2s ease}
+.btn:hover{color:var(--ink)}
+.btn svg{display:none}
+.btn.primary{background:var(--ink);color:var(--paper);padding:0 20px;min-height:36px}
+.btn.primary:hover{background:var(--accent)}
+/* a run in progress is a state you can stop, so it reads as one: Magpie's recording control */
+.btn.primary[data-mode="stop"]{background:transparent;color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.btn.primary[data-mode="stop"]::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--accent);animation:pulse 1.8s cubic-bezier(.37,0,.63,1) infinite}
+.btn.primary[data-mode="stop"]:hover{background:var(--accent);color:var(--paper)}
+.btn.primary[data-mode="stop"]:hover::before{background:var(--paper)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+.btn[disabled]{opacity:.4;cursor:default}
+.mini{min-height:28px;padding:0 11px;font-size:10px}
+.linkbutton{appearance:none;border:0;padding:0;background:none;font:500 10px/1.2 var(--sans);letter-spacing:.12em;text-transform:uppercase;color:var(--ink-45);cursor:pointer;transition:color .25s ease}
+.linkbutton:hover:not(:disabled){color:var(--accent)}
 
-/* control groups */
-.autorow{padding:14px 20px;border-bottom:1px solid var(--line)}
-details.grp{border-bottom:1px solid var(--line)}
-details.grp>summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:15px 20px;cursor:pointer;font:500 11px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--mute)}
+/* fields: Earshot's search field — no box, a hairline underneath, accent on focus */
+select,input[type=number],input[type=text]{appearance:none;-webkit-appearance:none;width:100%;padding:6px 18px 6px 0;border:0;border-bottom:1px solid var(--ink-24);border-radius:0;background:transparent;color:var(--ink);font:400 12.5px/1.3 var(--sans)}
+select{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='8' height='5'><path d='M0 0h8L4 5z' fill='%2316150f' fill-opacity='.45'/></svg>");background-repeat:no-repeat;background-position:right 2px center;cursor:pointer}
+select:hover,input[type=number]:hover,input[type=text]:hover{border-bottom-color:var(--ink-45)}
+select:focus,input[type=number]:focus,input[type=text]:focus{outline:none;border-bottom-color:var(--accent)}
+input[type=text]{font-family:var(--mono);font-size:11px;letter-spacing:.02em}
+input[type=number]{font-family:var(--mono);font-size:12px;padding-right:0}
+select.btn{width:auto;min-width:0;background-color:var(--ink-10);padding:0 30px 0 14px;background-position:right 12px center;border-bottom:0;font:500 10.5px/1 var(--sans);letter-spacing:.1em;text-transform:uppercase;color:var(--ink-70)}
+select.btn:hover{color:var(--ink)}
+option{text-transform:none;letter-spacing:0;font:13px var(--sans);color:var(--ink);background:var(--field)}
+
+/* ranges: Magpie's — a 3px track, a square ink thumb that goes accent under the hand */
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:22px;background:transparent;margin:0;touch-action:pan-y}
+input[type=range]::-webkit-slider-runnable-track{height:3px;background:linear-gradient(to right,var(--ink) var(--fill,0%),var(--ink-10) var(--fill,0%))}
+input[type=range]::-moz-range-track{height:3px;background:var(--ink-10)}
+input[type=range]::-moz-range-progress{height:3px;background:var(--ink)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;margin-top:-5px;border:0;border-radius:0;background:var(--ink);cursor:pointer;transition:background .2s ease}
+input[type=range]::-moz-range-thumb{width:13px;height:13px;border:0;border-radius:0;background:var(--ink);cursor:pointer}
+input[type=range]:hover::-webkit-slider-thumb{background:var(--accent)}
+input[type=range]:hover::-moz-range-thumb{background:var(--accent)}
+input[type=range]:focus-visible{outline:1px solid var(--accent);outline-offset:2px}
+
+/* ---------------------------------------------------------------- the instrument: settings rail + stage */
+.app{display:grid;grid-template-columns:minmax(232px,264px) minmax(0,1fr);column-gap:calc(var(--gutter)*1.25);align-items:start;padding:calc(var(--unit)*4) max(var(--gutter),env(safe-area-inset-right,0px)) calc(var(--unit)*10) max(var(--gutter),env(safe-area-inset-left,0px))}
+.controls{position:sticky;top:0;max-height:100vh;overflow-y:auto;padding:4px 10px 40px 0;margin-top:-4px;scrollbar-width:thin;scrollbar-color:var(--ink-10) transparent;counter-reset:grp}
+.stage{min-width:0}
+
+/* settings */
+.autorow{padding:0 0 calc(var(--unit)*3)}
+.chk{display:flex;gap:10px;align-items:flex-start;font-size:12.5px;color:var(--ink-70);cursor:pointer}
+.chk input{appearance:none;-webkit-appearance:none;flex:none;width:11px;height:11px;margin:3px 0 0;border:1px solid var(--ink-45);border-radius:0;background:transparent;cursor:pointer}
+.chk input:checked{background:var(--ink);border-color:var(--ink)}
+.chk .hint{display:block;margin-top:3px}
+details.grp{margin-bottom:calc(var(--unit)*3)}
+details.grp>summary{list-style:none;display:flex;align-items:baseline;gap:10px;padding:6px 0;cursor:pointer;font:500 10px/1.2 var(--sans);letter-spacing:.14em;text-transform:uppercase;color:var(--ink-45);counter-increment:grp;transition:color .2s ease}
+details.grp>summary::before{content:counter(grp,decimal-leading-zero);font:400 9.5px/1 var(--mono);letter-spacing:.04em;color:var(--ink-24)}
 details.grp>summary::-webkit-details-marker{display:none}
-details.grp>summary::after{content:"";width:7px;height:7px;border-right:1.5px solid var(--faint);border-bottom:1.5px solid var(--faint);transform:rotate(45deg) translateY(-2px);transition:transform .15s}
-details.grp[open]>summary::after{transform:rotate(-135deg) translateY(-2px)}
+details.grp>summary::after{content:"+";margin-left:auto;font:400 12px/1 var(--mono);color:var(--ink-24)}
+details.grp[open]>summary::after{content:"\2013"}
+details.grp>summary:hover{color:var(--ink)}
 details.grp[open]>summary{color:var(--ink)}
-.grp-body{display:flex;flex-direction:column;gap:18px;padding:2px 20px 22px}
-.ctl{display:flex;flex-direction:column;gap:6px}
-.ctl[hidden]{display:none}
+.grp-body{display:flex;flex-direction:column;gap:18px;padding:12px 0 8px}
+.ctl{display:flex;flex-direction:column;gap:4px}
 .ctl-row{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
-.ctl label{font-weight:500;font-size:13px}
-.ctl output{font:500 12px/1 var(--mono);color:var(--amber);font-variant-numeric:tabular-nums;white-space:nowrap}
-.hint{margin:0;font-size:12px;line-height:1.45;color:var(--faint)}
-input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:20px;background:transparent;margin:0}
-input[type=range]::-webkit-slider-runnable-track{height:3px;border-radius:2px;background:linear-gradient(to right,var(--amber) var(--fill,0%),var(--line2) var(--fill,0%))}
-input[type=range]::-moz-range-track{height:3px;border-radius:2px;background:var(--line2)}
-input[type=range]::-moz-range-progress{height:3px;border-radius:2px;background:var(--amber)}
-input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;margin-top:-5.5px;border-radius:50%;background:var(--ink);border:2px solid var(--amber)}
-input[type=range]::-moz-range-thumb{width:11px;height:11px;border-radius:50%;background:var(--ink);border:2px solid var(--amber)}
-select,input[type=number],input[type=text]{width:100%;padding:9px 10px;background:var(--bg);border:1px solid var(--line2);border-radius:6px;color:var(--ink);font-size:13px}
-select:hover,input[type=number]:hover,input[type=text]:hover{border-color:var(--faint)}
-.seed-row{display:flex;gap:8px}
+.ctl label{font-size:12.5px;color:var(--ink-70)}
+.ctl output{font:400 11px/1 var(--mono);letter-spacing:.02em;color:var(--ink);font-variant-numeric:tabular-nums;white-space:nowrap}
+.hint{margin:2px 0 0;font-size:11px;line-height:1.45;color:var(--ink-45)}
+.seed-row{display:flex;gap:8px;align-items:flex-end;margin-top:2px}
 .seed-row input{flex:1;min-width:0}
-.mini{padding:8px 11px;font-size:12.5px}
-.chk{display:flex;gap:9px;align-items:flex-start;font-size:13px}
-.chk input{margin:3px 0 0;accent-color:var(--amber)}
-.pickrow{display:flex;gap:8px;align-items:center}
+.pickrow{display:flex;gap:8px;align-items:center;margin-top:4px}
 .pickrow .btn{flex:none}
 
-/* stage: view bar */
-.viewbar{display:flex;flex-wrap:wrap;align-items:center;gap:12px 22px;margin-bottom:14px}
-.seg{display:inline-flex;border:1px solid var(--line2);border-radius:7px;overflow:hidden;background:var(--panel)}
-.seg button{padding:8px 13px;border:0;border-right:1px solid var(--line2);background:transparent;color:var(--mute);font-size:12.5px;font-weight:500}
-.seg button:last-child{border-right:0}
+/* ---------------------------------------------------------------- view bar */
+.viewbar{display:flex;flex-wrap:wrap;align-items:center;gap:10px 20px;margin-bottom:calc(var(--unit)*2)}
+.seg{display:inline-flex;flex-wrap:wrap;gap:2px}
+.seg button{appearance:none;min-height:30px;padding:0 12px;border:0;border-radius:0;background:var(--ink-06);color:var(--ink-45);font:500 10.5px/1 var(--sans);letter-spacing:.08em;text-transform:uppercase;transition:background .2s ease,color .2s ease}
 .seg button:hover{color:var(--ink)}
-.seg button[aria-pressed="true"]{background:var(--amber);color:#1a1205}
-.toggles{display:flex;flex-wrap:wrap;gap:6px}
-.tgl{padding:7px 11px;border:1px solid var(--line2);border-radius:999px;background:transparent;color:var(--mute);font-size:12px;font-weight:500}
-.tgl:hover{color:var(--ink);border-color:var(--faint)}
-.tgl[aria-pressed="true"]{border-color:var(--amber);color:var(--amber);background:rgba(255,180,84,.08)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+.toggles{display:flex;flex-wrap:wrap;gap:6px 16px}
+.tgl{appearance:none;display:inline-flex;align-items:center;gap:7px;padding:4px 0;border:0;background:none;font:500 10px/1.2 var(--sans);letter-spacing:.12em;text-transform:uppercase;color:var(--ink-45);transition:color .2s ease}
+.tgl::before{content:"";width:7px;height:7px;box-shadow:inset 0 0 0 1px var(--ink-24)}
+.tgl:hover{color:var(--ink)}
+.tgl[aria-pressed="true"]{color:var(--ink)}
+.tgl[aria-pressed="true"]::before{background:var(--ink);box-shadow:none}
 .grow{flex:1}
+.viewbar .btn.mini{background:none;padding:0;min-height:0;color:var(--ink-45);font-size:10px;letter-spacing:.12em}
+.viewbar .btn.mini:hover{color:var(--accent)}
 
-/* the map */
-.mapwrap{position:relative;border:1px solid var(--line2);border-radius:10px;overflow:hidden;background:#06101f;aspect-ratio:2/1}
+/* ---------------------------------------------------------------- the map: a print, square-cornered, no frame */
+.mapwrap{position:relative;overflow:hidden;background:var(--sea);aspect-ratio:2/1;touch-action:pan-y}
 .mapwrap canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
 #overlay{pointer-events:none}
-#map{transform-origin:0 0}
-.zoomctl{position:absolute;right:12px;top:12px;z-index:6;display:flex;align-items:center;gap:6px;padding:5px;border-radius:8px;background:rgba(9,13,19,.8);backdrop-filter:blur(4px)}
-.zoomctl button{min-width:30px;height:30px;padding:0 9px;border:1px solid var(--line2);border-radius:6px;background:var(--panel2);color:var(--ink);font:500 15px/1 var(--sans)}
-.zoomctl button#zreset{font-size:12px}
-.zoomctl button:hover:not([disabled]){border-color:var(--amber)}
-.zoomctl button[disabled]{opacity:.4;cursor:default}
-.zoomctl span{font-size:12px;color:var(--mute);padding:0 6px 0 3px}
-.zoomctl[hidden]{display:none}
-.todaymark{position:absolute;top:0;bottom:16px;width:2px;margin-left:-1px;background:var(--teal);opacity:.9;pointer-events:none;border-radius:1px}
-.todaymark[hidden]{display:none}
-#map{image-rendering:auto}
-.mapwrap{touch-action:pan-y}
-.mapwrap.picking{cursor:crosshair;outline:2px solid var(--amber);outline-offset:-2px}
-.readout{position:absolute;left:14px;top:12px;pointer-events:none;display:flex;flex-direction:column;gap:2px;text-shadow:0 1px 6px rgba(0,0,0,.7)}
-.readout .age{font:400 clamp(28px,4vw,46px)/1 var(--display);color:#fff;font-variant-numeric:tabular-nums}
-.readout .age small{font:500 .38em/1 var(--mono);letter-spacing:.1em;color:#d6e1ee;margin-left:6px}
-.readout .era{font:500 11px/1.3 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:#cfdbe9}
-.tip{position:absolute;z-index:5;pointer-events:none;padding:8px 10px;border:1px solid var(--line2);border-radius:6px;background:rgba(9,13,19,.92);font:12px/1.45 var(--mono);color:var(--ink);white-space:nowrap;transform:translate(14px,14px)}
-.tip[hidden]{display:none}
-.tip b{color:var(--amber);font-weight:500}
-.legend{position:absolute;right:12px;bottom:12px;display:flex;flex-wrap:wrap;justify-content:flex-end;gap:5px 11px;max-width:60%;padding:8px 10px;border-radius:7px;background:rgba(9,13,19,.78);backdrop-filter:blur(4px);font:11px/1 var(--mono);color:#d4deea}
-.legend span{display:inline-flex;align-items:center;gap:6px}
-.legend i{width:10px;height:10px;border-radius:2px;display:inline-block}
-.runbar{position:absolute;left:0;right:0;bottom:0;height:3px;background:rgba(255,255,255,.06)}
-.runbar i{display:block;height:100%;width:0;background:var(--amber)}
-.stagemsg{position:absolute;inset:0;display:none;place-items:center;background:rgba(6,16,31,.55);color:#fff;font:500 13px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase}
+#map{transform-origin:0 0;image-rendering:auto}
+.zoomctl{position:absolute;right:10px;top:10px;z-index:6;display:flex;align-items:center;gap:1px;background:var(--paper)}
+.zoomctl button{appearance:none;min-width:28px;height:28px;padding:0 9px;border:0;border-radius:0;background:transparent;color:var(--ink-70);font:400 14px/1 var(--mono)}
+.zoomctl button#zreset{font:500 9.5px/1 var(--sans);letter-spacing:.12em;text-transform:uppercase}
+.zoomctl button:hover:not([disabled]){color:var(--accent)}
+.zoomctl button[disabled]{color:var(--ink-24);cursor:default}
+.zoomctl span{font:400 10px/1 var(--mono);color:var(--ink-45);padding:0 9px 0 4px}
+.mapwrap.picking{cursor:crosshair;box-shadow:inset 0 0 0 2px var(--accent)}
+.readout{position:absolute;left:14px;top:10px;pointer-events:none;display:flex;flex-direction:column;gap:4px;text-shadow:0 0 1px var(--field),0 0 4px var(--field),0 0 9px rgba(252,251,248,.85)}
+.readout .age{font:500 clamp(28px,3.6vw,44px)/1 var(--sans);letter-spacing:-.025em;color:var(--ink);font-variant-numeric:tabular-nums}
+.readout .age small{font:400 .3em/1 var(--mono);letter-spacing:.06em;color:var(--ink-70);margin-left:5px;vertical-align:.15em}
+.readout .era{font:500 9.5px/1.2 var(--sans);letter-spacing:.16em;text-transform:uppercase;color:var(--ink-70)}
+.tip{position:absolute;z-index:5;pointer-events:none;padding:8px 10px;background:var(--field);box-shadow:0 1px 0 var(--ink-10),0 6px 18px rgba(22,21,15,.10);font:11px/1.5 var(--mono);color:var(--ink-70);white-space:nowrap;transform:translate(14px,14px)}
+.tip b{color:var(--ink);font-weight:500}
+.runbar{position:absolute;left:0;right:0;bottom:0;height:3px;background:transparent}
+.runbar i{display:block;height:100%;width:0;background:var(--accent)}
+.stagemsg{position:absolute;inset:0;display:none;place-items:center;background:rgba(242,240,235,.72);color:var(--ink-70);font:500 10px/1 var(--sans);letter-spacing:.16em;text-transform:uppercase}
 .mapwrap.busy .stagemsg{display:grid}
-.globewrap{display:none;border:1px solid var(--line2);border-radius:10px;background:radial-gradient(circle at 50% 45%,#0e1a2e,#05080d 70%);padding:14px;justify-content:center}
-.globewrap.on{display:flex}
-.globewrap canvas{width:min(100%,640px);aspect-ratio:1/1;cursor:grab;touch-action:none}
-.globewrap canvas:active{cursor:grabbing}
 .mapwrap.off{display:none}
+.globewrap{display:none;justify-content:center;padding:8px 0}
+.globewrap.on{display:flex}
+.globewrap canvas{width:min(100%,600px);aspect-ratio:1/1;cursor:grab;touch-action:none}
+.globewrap canvas:active{cursor:grabbing}
 
-/* timeline */
-.timeline{display:flex;align-items:center;gap:14px;margin:14px 0 4px}
-.play{flex:none;width:40px;height:40px;border-radius:50%;border:1px solid var(--line2);background:var(--panel2);display:grid;place-items:center}
-.play:hover{border-color:var(--amber)}
-.play svg{width:16px;height:16px;fill:var(--ink)}
-.scrub{position:relative;flex:1;min-width:0;padding-top:4px}
+/* key, under the map like Earshot's stage caption */
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:10px;min-height:14px;font:400 10px/1.2 var(--mono);letter-spacing:.03em;color:var(--ink-45)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:9px;height:9px;display:inline-block;box-shadow:inset 0 0 0 1px rgba(22,21,15,.14)}
+
+/* ---------------------------------------------------------------- timeline */
+.timeline{display:flex;align-items:center;gap:16px;margin:calc(var(--unit)*2.5) 0 4px}
+.play{flex:none;width:36px;height:36px;border:0;border-radius:0;background:var(--ink);display:grid;place-items:center;transition:background .2s ease}
+.play:hover{background:var(--accent)}
+.play svg{width:13px;height:13px;fill:var(--paper)}
+.scrub{position:relative;flex:1;min-width:0;padding-top:6px}
 .scrub input{width:100%}
-.ticks{display:flex;justify-content:space-between;margin-top:3px;font:500 10.5px/1 var(--mono);color:var(--faint)}
-.speed{flex:none;width:auto;padding:7px 9px;font-size:12px}
-.status{margin:6px 0 0;font:12px/1.4 var(--mono);color:var(--faint);min-height:1.4em}
-.status b{color:var(--amber);font-weight:500}
+.ticks{display:flex;justify-content:space-between;margin-top:2px;font:400 9.5px/1 var(--mono);letter-spacing:.04em;color:var(--ink-45)}
+.todaymark{position:absolute;top:0;bottom:14px;width:1px;background:var(--accent);pointer-events:none}
+.speed{flex:none;width:auto !important}
+.status{margin:10px 0 0;font:400 11px/1.4 var(--mono);color:var(--ink-45);min-height:1.4em}
+.status b{color:var(--ink);font-weight:500}
 
-/* lower panels */
-.below{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:22px;margin-top:30px}
-.card{border:1px solid var(--line);border-radius:10px;background:var(--panel);padding:18px 18px 16px;min-width:0}
-.card h2{margin:0 0 14px;font:500 11px/1 var(--mono);letter-spacing:.13em;text-transform:uppercase;color:var(--mute);display:flex;justify-content:space-between;gap:10px}
-.card h2 span{color:var(--faint);letter-spacing:.06em;text-transform:none}
-.plist{display:flex;flex-direction:column;gap:3px;max-height:340px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--line2) transparent}
-.prow{display:grid;grid-template-columns:14px minmax(0,1fr) 52px 70px;align-items:center;gap:10px;padding:7px 8px;border:1px solid transparent;border-radius:6px;background:transparent;text-align:left;width:100%}
-.prow:hover{background:var(--panel2)}
-.prow[aria-pressed="true"]{border-color:var(--amber);background:rgba(255,180,84,.07)}
-.prow i{width:12px;height:12px;border-radius:3px}
-.prow .nm{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.prow .nm small{display:block;color:var(--faint);font:11px/1.3 var(--mono);margin:0}
-.prow .sh{font:11.5px var(--mono);color:var(--mute);text-align:right}
-.prow .sp{display:flex;align-items:center;gap:6px;font:11.5px var(--mono);color:var(--ink);justify-content:flex-end}
-.prow .sp svg{width:12px;height:12px;fill:var(--amber)}
-.pdetail{margin-top:12px;padding-top:12px;border-top:1px solid var(--line);font-size:12.5px;color:var(--mute);line-height:1.55}
-.pdetail b{color:var(--ink);font-weight:500}
-.cmp canvas{display:block;width:100%;height:auto;aspect-ratio:2/1;border-radius:6px;border:1px solid var(--line2);background:#0a1a33}
-.cmp p{margin:10px 0 0;font-size:12.5px;color:var(--mute)}
-.stats{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:8px;overflow:hidden}
-.stat{background:var(--panel);padding:12px 12px 11px}
-.stat dt{font:500 10.5px/1.2 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--faint);margin:0 0 6px}
-.stat dd{margin:0;font:400 22px/1 var(--display);font-variant-numeric:tabular-nums}
-.stat dd small{display:block;margin-top:5px;font:11px/1.2 var(--mono);color:var(--faint)}
-.atlas{margin-top:14px;display:flex;flex-direction:column;gap:10px}
-.atlas p{margin:0;font-size:13px;color:var(--mute);line-height:1.6}
-.atlas h3{margin:0;font:400 22px/1.1 var(--display);color:var(--ink)}
-.about{margin-top:30px;max-width:78ch;color:var(--mute);font-size:13px;line-height:1.65}
-.about h2{margin:0 0 10px;font:500 11px/1 var(--mono);letter-spacing:.13em;text-transform:uppercase;color:var(--mute)}
-.about p{margin:0 0 10px}
-.about a{color:var(--sky)}
+/* ---------------------------------------------------------------- reference: plates, the real Earth, numbers */
+.below{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr) minmax(0,1fr);gap:calc(var(--unit)*4) var(--gutter);margin-top:calc(var(--unit)*6)}
+.card{min-width:0}
+.card h2{margin:0 0 calc(var(--unit)*1.75);font:500 10px/1.2 var(--sans);letter-spacing:.14em;text-transform:uppercase;color:var(--ink-45);display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.card h2 span{font:400 10px/1.2 var(--mono);letter-spacing:.02em;text-transform:none;color:var(--ink-24)}
+.plist{display:flex;flex-direction:column;gap:2px;max-height:340px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--ink-10) transparent}
+.prow{appearance:none;display:grid;grid-template-columns:6px minmax(0,1fr) 48px 62px;align-items:center;column-gap:10px;padding:5px 0;border:0;border-radius:0;background:transparent;text-align:left;width:100%;color:var(--ink);transition:color .2s ease}
+.prow i{align-self:stretch;width:6px;min-height:24px}
+.prow .nm{font-size:11px;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.prow .nm small{display:block;margin-top:2px;font:400 9.5px/1.2 var(--mono);letter-spacing:.04em;text-transform:none;color:var(--ink-45)}
+.prow .sh{font:400 10.5px var(--mono);color:var(--ink-45);text-align:right}
+.prow .sp{display:flex;align-items:center;gap:6px;font:400 10.5px var(--mono);color:var(--ink);justify-content:flex-end}
+.prow .sp svg{width:10px;height:10px;fill:currentColor}
+.prow:hover .nm{color:var(--accent)}
+.prow[aria-pressed="true"] .nm,.prow[aria-pressed="true"] .sp{color:var(--accent)}
+.pdetail{margin-top:14px;font-size:12px;color:var(--ink-70);line-height:1.55;max-width:46ch}
+.pdetail b{color:var(--accent);font-weight:500}
+.cmp canvas{display:block;width:100%;height:auto;aspect-ratio:2/1;background:var(--sea)}
+.cmp p{margin:10px 0 0;font-size:11px;line-height:1.5;color:var(--ink-45);max-width:48ch}
+.cmp p em{color:var(--ink-70)}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:calc(var(--unit)*2.25) var(--unit)}
+.stat dt{font:500 9.5px/1.2 var(--sans);letter-spacing:.14em;text-transform:uppercase;color:var(--ink-45);margin:0 0 6px}
+.stat dd{margin:0;font:500 24px/1 var(--sans);letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.stat dd small{display:block;margin-top:5px;font:400 10px/1.3 var(--mono);letter-spacing:0;color:var(--ink-45)}
+.atlas{margin-top:18px;display:flex;flex-direction:column;gap:8px}
+.atlas p{margin:0;font:400 16px/1.45 var(--serif);color:var(--ink-70)}
+.atlas h3{margin:0;font:700 20px/1.15 var(--sans);letter-spacing:-.015em;color:var(--ink)}
+.about{margin-top:calc(var(--unit)*8);padding-top:calc(var(--unit)*3);max-width:68ch}
+.about h2{margin:0 0 14px;font:500 10px/1.2 var(--sans);letter-spacing:.14em;text-transform:uppercase;color:var(--ink-45)}
+.about p{margin:0 0 .7em;font:400 18px/1.5 var(--serif);color:var(--ink-70)}
+.about a{color:var(--ink);text-decoration-color:var(--ink-24)}
+.about a:hover{color:var(--accent)}
 
-/* modal for the multiverse */
-dialog{padding:0;border:1px solid var(--line2);border-radius:12px;background:var(--panel);color:var(--ink);width:min(1100px,94vw);max-height:92vh;overflow:auto}
-dialog::backdrop{background:rgba(3,6,10,.8)}
-.dlg-h{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:18px 22px;border-bottom:1px solid var(--line)}
-.dlg-h h2{margin:0;font:400 24px/1 var(--display)}
-.multi{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:18px;padding:22px}
-.mcell{display:flex;flex-direction:column;gap:8px;border:1px solid var(--line2);border-radius:8px;padding:8px;background:var(--bg);text-align:left}
-.mcell:hover{border-color:var(--amber)}
-.mcell canvas{width:100%;aspect-ratio:2/1;border-radius:4px;background:#06101f;display:block}
-.mcell span{font:12px var(--mono);color:var(--mute);padding:0 4px 3px}
+/* ---------------------------------------------------------------- six other worlds: a full paper sheet, like Earshot's library */
+dialog{padding:0;border:0;border-radius:0;background:var(--paper);color:var(--ink);width:min(1120px,100vw);max-width:100vw;max-height:100dvh;overflow:auto;box-shadow:0 1px 0 var(--ink-10),0 24px 60px rgba(22,21,15,.14)}
+dialog::backdrop{background:rgba(242,240,235,.88)}
+.dlg-h{display:flex;justify-content:space-between;align-items:flex-end;gap:14px;margin:28px 28px 0;padding-bottom:12px;border-bottom:2px solid var(--ink)}
+.dlg-h h2{margin:0;font:700 26px/1.05 var(--sans);letter-spacing:-.02em}
+.dlg-h .btn.mini{background:none;padding:0;min-height:0;color:var(--ink-45)}
+.dlg-h .btn.mini:hover{color:var(--accent)}
+#multi-msg{padding:14px 28px 0 !important}
+.multi{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:28px 24px;padding:22px 28px 32px}
+.mcell{appearance:none;display:flex;flex-direction:column;gap:8px;padding:0;border:0;border-radius:0;background:none;text-align:left}
+.mcell canvas{width:100%;aspect-ratio:2/1;background:var(--sea);display:block}
+.mcell span{font:500 10px/1.2 var(--sans);letter-spacing:.12em;text-transform:uppercase;color:var(--ink-45);transition:color .2s ease}
+.mcell:hover span{color:var(--accent)}
 
+/* ---------------------------------------------------------------- narrower */
+@media (max-width:1180px){
+  .below{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .below .card:last-child{grid-column:1/-1}
+  .below .card:last-child .stats{grid-template-columns:repeat(3,1fr)}
+}
 @media (max-width:1000px){
-  .app{grid-template-columns:1fr}
-  .controls{position:static;max-height:none;border-right:0;border-top:1px solid var(--line);order:2}
-  .stage{padding:16px 16px 40px}
+  :root{--gutter:24px}
+  .app{grid-template-columns:minmax(0,1fr)}
+  .controls{position:static;max-height:none;overflow:visible;padding:0;margin:calc(var(--unit)*7) 0 0;order:2;columns:2 260px;column-gap:var(--gutter)}
+  .controls>*{break-inside:avoid}
+  .controls::before{content:"Settings";display:block;column-span:all;margin:0 0 16px;padding-bottom:10px;border-bottom:2px solid var(--ink);font:700 20px/1 var(--sans);letter-spacing:-.015em;color:var(--ink)}
 }
-@media (max-width:640px){
-  .top{padding:22px 16px 18px}
-  .legend{display:none}
-  .stats{grid-template-columns:1fr 1fr}
-  .actions .btn{padding:9px 12px}
+@media (max-width:720px){
+  :root{--gutter:16px}
+  .top{padding-top:calc(var(--unit)*3)}
+  .actions{width:100%}
+  .actions select.btn{flex:1 1 100%}
+  .actions .btn{flex:1 1 auto}
+  .below{grid-template-columns:minmax(0,1fr)}
+  .below .card:last-child .stats{grid-template-columns:1fr 1fr}
+  .viewbar{gap:10px 14px}
+  .viewbar .grow{display:none}
+  .seg button{padding:0 10px;min-height:30px}
+  .timeline{gap:12px}
+  .ticks span:nth-child(even):not(:last-child){visibility:hidden}
+  .ticks span:nth-last-child(2){visibility:hidden}
+  .readout{left:10px;top:8px}
+  .zoomctl{right:6px;top:6px}
+  .zoomctl span{display:none}
+  .controls{columns:1}
+  .about p{font-size:17px}
+  .dlg-h{margin:20px 16px 0}
+  #multi-msg{padding:12px 16px 0 !important}
+  .multi{padding:18px 16px 24px}
 }
-@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
-
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}.btn.primary[data-mode="stop"]::before{animation:none}}
 </style>
 <header class="top">
-  <div class="brand">
-    <p class="eyebrow">Speculative tectonics</p>
-    <h1>Pangaea <em>Otherwise</em></h1>
-    <p class="tag">Start from the best reconstruction of Pangaea. Change how it breaks apart and how the pieces move, then watch the next 250 million years play out on a spinning planet.</p>
+  <div class="top__bar">
+    <div class="brand">
+      <p class="eyebrow">Speculative tectonics</p>
+      <h1>Pangaea <em>Otherwise</em></h1>
+    </div>
+    <div class="actions">
+      <select id="presets" class="btn" aria-label="Scenarios"><option value="">Scenarios…</option></select>
+      <button class="btn" id="dice" type="button"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="2" y="2" width="12" height="12" rx="2.5"/><circle cx="5.5" cy="5.5" r=".9" fill="currentColor"/><circle cx="10.5" cy="10.5" r=".9" fill="currentColor"/><circle cx="8" cy="8" r=".9" fill="currentColor"/></svg>New world</button>
+      <button class="btn" id="roll" type="button">Roll six</button>
+      <button class="btn primary" id="run" type="button">Run</button>
+    </div>
   </div>
-  <div class="actions">
-    <select id="presets" class="btn" aria-label="Scenarios"><option value="">Scenarios…</option></select>
-    <button class="btn" id="dice" type="button"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="2" y="2" width="12" height="12" rx="2.5"/><circle cx="5.5" cy="5.5" r=".9" fill="currentColor"/><circle cx="10.5" cy="10.5" r=".9" fill="currentColor"/><circle cx="8" cy="8" r=".9" fill="currentColor"/></svg>New world</button>
-    <button class="btn" id="roll" type="button">Roll six</button>
-    <button class="btn primary" id="run" type="button">Run</button>
-  </div>
+  <p class="tag">Start from the best reconstruction of Pangaea. Change how it breaks apart and how the pieces move, then watch the next 250 million years play out on a spinning planet.</p>
 </header>
 <div class="app">
   <aside class="controls" id="controls" aria-label="Settings">
-    <div class="autorow"><label class="chk"><input id="auto" type="checkbox" checked> <span>Run again after each change<br><span class="hint">Applies at Sketch and Standard detail.</span></span></label></div>
+    <div class="autorow"><label class="chk"><input id="auto" type="checkbox" checked> <span>Run again after each change<span class="hint">Applies at Sketch and Standard detail.</span></span></label></div>
   </aside>
   <main class="stage">
     <div class="viewbar">
@@ -240,13 +305,13 @@ dialog::backdrop{background:rgba(3,6,10,.8)}
       <canvas id="map" width="720" height="360" aria-label="Map of the simulated world"></canvas>
       <canvas id="overlay"></canvas>
       <div class="readout"><div class="age" id="age">250<small>Ma</small></div><div class="era" id="era">Triassic</div></div>
-      <div class="legend" id="legend"></div>
       <div class="tip" id="tip" hidden></div>
       <div class="zoomctl" id="zoomctl" title="Zoom: Ctrl or ⌘ + scroll, pinch, or the buttons. Drag to pan. Double-click to zoom in."><button id="zin" type="button" aria-label="Zoom in">+</button><button id="zout" type="button" aria-label="Zoom out">−</button><button id="zreset" type="button" aria-label="Reset zoom" disabled>Reset</button><span id="zlbl" class="mono">×1.0</span></div>
       <div class="stagemsg" id="stagemsg">Preparing Pangaea…</div>
       <div class="runbar"><i id="runbar"></i></div>
     </div>
     <div class="globewrap" id="globewrap"><canvas id="globe" width="720" height="720" aria-label="Globe view"></canvas></div>
+    <div class="legend" id="legend"></div>
     <div class="timeline">
       <button class="play" id="playBtn" type="button" aria-label="Play"></button>
       <div class="scrub"><i class="todaymark" id="todaymark" hidden></i><input id="scrub" type="range" min="0" max="0" value="0" step="1" aria-label="Time"><div class="ticks" id="ticks"></div></div>
@@ -254,8 +319,8 @@ dialog::backdrop{background:rgba(3,6,10,.8)}
     </div>
     <p class="status" id="status" role="status" aria-live="polite"></p>
     <div class="below">
-      <section class="card" aria-labelledby="h-plates"><h2 id="h-plates">Plates <span>click one to follow it</span></h2><div class="plist" id="plist"></div><div class="pdetail" id="pdetail" hidden></div></section>
-      <section class="card cmp" aria-labelledby="h-cmp"><h2 id="h-cmp">What really happened <span id="cmpLbl"></span></h2><canvas id="cmp" width="720" height="360" aria-label="Actual coastlines at the same time"></canvas><p>The same moment in the real history, from the plate model this page starts from. Turn on <em>Real coastlines</em> to lay them over the map.</p></section>
+      <section class="card" aria-labelledby="h-plates"><h2 id="h-plates">Plates <span>pick one to follow it</span></h2><div class="plist" id="plist"></div><div class="pdetail" id="pdetail" hidden></div></section>
+      <section class="card cmp" aria-labelledby="h-cmp"><h2 id="h-cmp">What really happened <span id="cmpLbl"></span></h2><canvas id="cmp" width="720" height="360" aria-label="Actual coastlines at the same time"></canvas><p>The same moment in the real history, from the plate model this page starts from. Turn on <em>Real coastlines</em> to lay them over the map in red.</p></section>
       <section class="card" aria-labelledby="h-stats"><h2 id="h-stats">This world in numbers</h2><dl class="stats" id="stats" style="margin:0"></dl><div class="atlas" id="atlas"></div></section>
     </div>
     <section class="about" aria-labelledby="h-about">
@@ -650,7 +715,8 @@ dialog::backdrop{background:rgba(3,6,10,.8)}
     }
     this.wRun = pls.map(() => new Float64Array(3));          // integrated angular velocity (deg/Myr) incl. collision braking
     this.wPrev = pls.map(() => new Float64Array(3));
-    this.colors = pls.map((_, p) => hsl((p * 137.508 + 20) % 360, 0.42, 0.6));
+    // identity colours only (the simulation never reads them): Earshot's printing inks, blue, moss, ochre, slate and ink, at four tints on paper
+    this.colors = pls.map((_, p) => { const k = [[26, 61, 168], [56, 102, 71], [158, 115, 18], [92, 97, 107], [22, 21, 15]][p % 5], t = [0.42, 0.24, 0.6, 0.33][Math.floor(p / 5) % 4], pp = [242, 240, 235]; return k.map((c, i) => Math.round(pp[i] + (c - pp[i]) * t)); });
   };
   function hsl(h, s, l) { // -> [r,g,b] 0..255
     const a = s * Math.min(l, 1 - l), f = (n) => { const k = (n + h / 30) % 12; return l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1)); };
@@ -1158,8 +1224,9 @@ dialog::backdrop{background:rgba(3,6,10,.8)}
     if (snow > 0 || ice) { const f = Math.max(snow, ice); for (let c = 0; c < 3; c++) out[c] = out[c] * (1 - f) + [243, 246, 250][c] * f; }
   }
   /* ---- flat palettes: every layer is banded fills in one family of colours, no gradients, no shading ---- */
-  const FLAT_LAND = [196, 180, 128], FLAT_SEA = [14, 38, 78];
-  const BC = { ice: [238, 242, 246], tundra: [186, 192, 170], cold: [206, 196, 174], boreal: [84, 118, 96], temperate: [102, 144, 90], grass: [178, 184, 112], savanna: [198, 172, 98], desert: [224, 202, 150], rain: [50, 118, 74], rock: [152, 142, 132] };
+  /* paper-and-ink print: bright field for land, a wash of Earshot's blue ink for the sea, umber and moss for relief and life */
+  const FLAT_LAND = [250, 249, 245], FLAT_SEA = [207, 211, 224], INK = [22, 21, 15], PAPER = [242, 240, 235];
+  const BC = { ice: [252, 252, 250], tundra: [212, 214, 200], cold: [228, 224, 210], boreal: [86, 116, 96], temperate: [134, 158, 122], grass: [196, 196, 148], savanna: [218, 192, 128], desert: [240, 228, 198], rain: [56, 102, 71], rock: [156, 153, 147] };
   const LEGEND = [['ice and snow', BC.ice], ['tundra', BC.tundra], ['boreal forest', BC.boreal], ['temperate forest', BC.temperate], ['grassland', BC.grass], ['savanna', BC.savanna], ['desert', BC.desert], ['rainforest', BC.rain], ['bare rock', BC.rock]];
   function biomeFlat(T, P, h) {
     if (T < -10) return BC.ice;
@@ -1172,10 +1239,10 @@ dialog::backdrop{background:rgba(3,6,10,.8)}
     if (mi < 0.25) return BC.desert; if (mi < 0.5) return BC.grass; if (mi < 0.85) return BC.savanna;
     return (mi > 1.4 && T >= 22) ? BC.rain : BC.temperate;
   }
-  function terrainSea(d) { return d > 4000 ? [11, 32, 70] : d > 2500 ? FLAT_SEA : d > 1000 ? [22, 56, 100] : d > 200 ? [34, 82, 128] : [52, 108, 150]; }
-  function terrainLand(h) { return h < 250 ? FLAT_LAND : h < 700 ? [182, 162, 110] : h < 1500 ? [160, 138, 96] : h < 2500 ? [136, 114, 86] : h < 3800 ? [112, 94, 76] : [232, 228, 218]; }
-  function ageBand(a) { return a < 15 ? [246, 212, 107] : a < 45 ? [239, 138, 74] : a < 90 ? [201, 71, 95] : a < 140 ? [122, 63, 143] : a < 190 ? [59, 63, 140] : [32, 38, 94]; }
-  function thickBand(t) { return t < 27 ? [96, 148, 184] : t < 38 ? FLAT_LAND : t < 50 ? [212, 160, 96] : t < 62 ? [176, 92, 68] : [240, 230, 220]; }
+  function terrainSea(d) { return d > 4000 ? [168, 180, 212] : d > 2500 ? [186, 195, 219] : d > 1000 ? [201, 208, 224] : d > 200 ? [216, 221, 230] : [230, 233, 237]; }
+  function terrainLand(h) { return h < 250 ? FLAT_LAND : h < 700 ? [238, 232, 214] : h < 1500 ? [224, 208, 172] : h < 2500 ? [200, 172, 118] : h < 3800 ? [158, 124, 64] : [96, 84, 66]; }
+  function ageBand(a) { return a < 15 ? [222, 227, 238] : a < 45 ? [192, 202, 226] : a < 90 ? [158, 174, 212] : a < 140 ? [120, 142, 196] : a < 190 ? [80, 108, 178] : [42, 74, 158]; }
+  function thickBand(t) { return t < 27 ? [214, 222, 212] : t < 38 ? FLAT_LAND : t < 50 ? [230, 212, 168] : t < 62 ? [196, 154, 80] : [120, 84, 24]; }
   const clamp01 = (v) => (v < 0 ? 0 : v > 1 ? 1 : v);
 
   function paint(snap, grid, o) {
@@ -1184,12 +1251,15 @@ dialog::backdrop{background:rgba(3,6,10,.8)}
     const fld = (arr) => (up === 1 ? Float32Array.from(arr) : upsampleElev(arr, W, H, ow, oh));
     const e = fld(snap.elev); for (let x = 0; x < N; x++) e[x] -= sl;
     // coastline coverage, anti-aliased by the local height gradient
-    const A = new Float32Array(N);
+    const A = new Float32Array(N), CW = new Float32Array(N), coast = o.coast === undefined ? 0.82 : o.coast;
     for (let j = 0; j < oh; j++) {
       const jm = j > 0 ? j - 1 : 0, jp = j < oh - 1 ? j + 1 : oh - 1;
       for (let i = 0; i < ow; i++) {
         const im = i === 0 ? ow - 1 : i - 1, ip = i === ow - 1 ? 0 : i + 1, x = j * ow + i;
-        A[x] = clamp01(0.5 + e[x] / Math.max(8, (Math.abs(e[j * ow + ip] - e[j * ow + im]) + Math.abs(e[jp * ow + i] - e[jm * ow + i])) * 0.5));
+        const gr = Math.max(8, (Math.abs(e[j * ow + ip] - e[j * ow + im]) + Math.abs(e[jp * ow + i] - e[jm * ow + i])) * 0.5);
+        A[x] = clamp01(0.5 + e[x] / gr);
+        const up0 = e[x] > 0;   // ink only where the coast actually passes: a neighbour on the other side of sea level
+        if (coast && (up0 !== (e[j * ow + ip] > 0) || up0 !== (e[j * ow + im] > 0) || up0 !== (e[jp * ow + i] > 0) || up0 !== (e[jm * ow + i] > 0))) CW[x] = coast * clamp01(1.15 - Math.abs(e[x]) / gr);
       }
     }
     // category fields, smoothed as numbers and normalised so edges do not darken
@@ -1208,17 +1278,19 @@ dialog::backdrop{background:rgba(3,6,10,.8)}
       for (let i = 0; i < ow; i++) {
         const x = j * ow + i, h = e[x], a = A[x]; let L = FLAT_LAND, S = FLAT_SEA;
         if (layer === 'terrain') { L = terrainLand(h); S = terrainSea(-h); }
-        else if (layer === 'biome') { L = biomeFlat(tF[x], pF[x], h); S = h > -200 ? [24, 58, 104] : FLAT_SEA; }
-        else if (layer === 'age') { S = -h < 300 ? [70, 102, 128] : ageBand(ageF[x]); }
+        else if (layer === 'biome') { L = biomeFlat(tF[x], pF[x], h); S = h > -200 ? [224, 228, 235] : FLAT_SEA; }
+        else if (layer === 'age') { S = -h < 300 ? [233, 229, 216] : ageBand(ageF[x]); }
         else if (layer === 'thickness') { const aC = clamp01((contF[x] - 0.5) / 0.12 + 0.5), c = thickBand(thF[x]); const q = x * 4; rgba[q] = FLAT_SEA[0] + (c[0] - FLAT_SEA[0]) * aC; rgba[q + 1] = FLAT_SEA[1] + (c[1] - FLAT_SEA[1]) * aC; rgba[q + 2] = FLAT_SEA[2] + (c[2] - FLAT_SEA[2]) * aC; rgba[q + 3] = 255; continue; }
         else if (layer === 'plates') {
           const fu = (i + 0.5) / up - 0.5, fv = (j + 0.5) / up - 0.5; let i0 = Math.floor(fu), j0 = Math.floor(fv); const tu = fu - i0, tv = fv - j0;
           let i1 = i0 + 1, j1 = j0 + 1; j0 = j0 < 0 ? 0 : j0 >= H ? H - 1 : j0; j1 = j1 < 0 ? 0 : j1 >= H ? H - 1 : j1; i0 = ((i0 % W) + W) % W; i1 = ((i1 % W) + W) % W;
           const ids = [pl[j0 * W + i0], pl[j0 * W + i1], pl[j1 * W + i0], pl[j1 * W + i1]], ws = [(1 - tu) * (1 - tv), tu * (1 - tv), (1 - tu) * tv, tu * tv];
           let best = ids[0], bw = -1; for (let k = 0; k < 4; k++) { let s = 0; for (let m = 0; m < 4; m++) if (ids[m] === ids[k]) s += ws[m]; if (s > bw) { bw = s; best = ids[k]; } }
-          const col = pc[best % pc.length]; L = col; S = [col[0] * 0.42, col[1] * 0.42, col[2] * 0.42];
+          const col = pc[best % pc.length]; L = col; S = [col[0] + (PAPER[0] - col[0]) * 0.55, col[1] + (PAPER[1] - col[1]) * 0.55, col[2] + (PAPER[2] - col[2]) * 0.55];
         }
-        const q = x * 4; rgba[q] = S[0] + (L[0] - S[0]) * a; rgba[q + 1] = S[1] + (L[1] - S[1]) * a; rgba[q + 2] = S[2] + (L[2] - S[2]) * a; rgba[q + 3] = 255;
+        const q = x * 4; let r = S[0] + (L[0] - S[0]) * a, gg = S[1] + (L[1] - S[1]) * a, b = S[2] + (L[2] - S[2]) * a;
+        const cw = CW[x]; if (cw > 0) { r += (INK[0] - r) * cw; gg += (INK[1] - gg) * cw; b += (INK[2] - b) * cw; }
+        rgba[q] = r; rgba[q + 1] = gg; rgba[q + 2] = b; rgba[q + 3] = 255;
       }
     }
     return { rgba, w: ow, h: oh, clim };
@@ -1299,7 +1371,8 @@ dialog::backdrop{background:rgba(3,6,10,.8)}
   const LAYERS = [['flat', 'Flat'], ['biome', 'Living world'], ['terrain', 'Terrain'], ['plates', 'Plates'], ['age', 'Seafloor age'], ['thickness', 'Crust thickness']];
   const ERAS = [[0.5, 'Present day'], [2.6, 'Neogene'], [23, 'Paleogene'], [66, 'Late Cretaceous'], [145, 'Early Cretaceous'], [163, 'Late Jurassic'], [201, 'Jurassic'], [252, 'Triassic']];
   const eraOf = (age) => { if (age < -0.5) return 'Future (speculative)'; for (const [a, n] of ERAS) if (age <= a) return n; return 'Triassic'; };
-  const PCOL = { ridge: '#ff5a3c', trench: '#27d3c3', transform: '#c9d1dc', collision: '#b88aff' };
+  const SANS = '"Helvetica Neue", Helvetica, Arial, sans-serif', MONO = '"SF Mono", ui-monospace, Menlo, monospace', SERIF = '"Crimson Pro", Georgia, serif', ACCENT = '#d93d18';
+  const PCOL = { ridge: '#9e7312', trench: '#1a3da8', transform: '#5c616b', collision: '#16150f' };   // Earshot's inks: ochre, blue, slate, ink
 
   /* ------------------------------------------------------------------ state ---- */
   const S = {
@@ -1521,11 +1594,11 @@ const isFuture = (age) => age < -0.5;
   function updateLegend() {
     const L = S.d.layer; let h = '';
     const sw = (c, t) => `<span><i style="background:rgb(${c})"></i>${t}</span>`;
-    if (L === 'flat') h = '<span><i style="background:rgb(196,180,128)"></i>land</span><span><i style="background:rgb(14,38,78)"></i>ocean</span>';
+    if (L === 'flat') h = sw('250,249,245', 'land') + sw('207,211,224', 'ocean') + sw('22,21,15', 'coast');
     else if (L === 'biome') R.LEGEND.forEach(([n, c]) => (h += sw(c, n)));
-    else if (L === 'terrain') h = sw('196,180,128', 'lowland') + sw('160,138,96', 'hills') + sw('112,94,76', 'mountains') + sw('232,228,218', 'peaks') + sw('52,108,150', 'shelf sea') + sw('14,38,78', 'deep sea');
-    else if (L === 'age') h = sw('246,212,107', 'new floor') + sw('239,138,74', '15 Myr') + sw('201,71,95', '45 Myr') + sw('122,63,143', '90 Myr') + sw('59,63,140', '140 Myr') + sw('32,38,94', '190+ Myr');
-    else if (L === 'thickness') h = sw('96,148,184', 'thin, stretched') + sw('196,180,128', 'normal') + sw('212,160,96', 'thick') + sw('176,92,68', 'mountain belt') + sw('240,230,220', 'roots of high ranges');
+    else if (L === 'terrain') h = sw('250,249,245', 'lowland') + sw('224,208,172', 'hills') + sw('158,124,64', 'mountains') + sw('96,84,66', 'peaks') + sw('230,233,237', 'shelf sea') + sw('168,180,212', 'deep sea');
+    else if (L === 'age') h = sw('222,227,238', 'new floor') + sw('192,202,226', '15 Myr') + sw('158,174,212', '45 Myr') + sw('120,142,196', '90 Myr') + sw('80,108,178', '140 Myr') + sw('42,74,158', '190+ Myr');
+    else if (L === 'thickness') h = sw('214,222,212', 'thin, stretched') + sw('250,249,245', 'normal') + sw('230,212,168', 'thick') + sw('196,154,80', 'mountain belt') + sw('120,84,24', 'roots of high ranges');
     else h = Object.entries(PCOL).map(([k, c]) => `<span><i style="background:${c}"></i>${{ ridge: 'ridge', trench: 'subduction', transform: 'sliding', collision: 'collision' }[k]}</span>`).join('');
     el.legend.innerHTML = h;
   }
@@ -1548,21 +1621,21 @@ const isFuture = (age) => age < -0.5;
     // selected plate
     if (S.sel >= 0) {
       const c = tmpCanvas(gw, gh), x = c.getContext('2d'), im = x.createImageData(gw, gh), pl = snap.plate;
-      for (let i = 0; i < pl.length; i++) if (pl[i] === S.sel) { const q = i * 4; im.data[q] = 255; im.data[q + 1] = 180; im.data[q + 2] = 84; im.data[q + 3] = 78; }
+      for (let i = 0; i < pl.length; i++) if (pl[i] === S.sel) { const q = i * 4; im.data[q] = 217; im.data[q + 1] = 61; im.data[q + 2] = 24; im.data[q + 3] = 52; }
       x.putImageData(im, 0, 0); win(c);
     }
     // plate boundaries
     if (S.d.bounds || S.d.layer === 'plates') {
-      const c = tmpCanvas(gw, gh), x = c.getContext('2d'), im = x.createImageData(gw, gh), f = snap.flags, cols = [null, [255, 90, 60], [39, 211, 195], [201, 209, 220], [184, 138, 255]];
-      for (let i = 0; i < f.length; i++) { const b = f[i] & 7; if (b) { const q = i * 4, cc = cols[b]; im.data[q] = cc[0]; im.data[q + 1] = cc[1]; im.data[q + 2] = cc[2]; im.data[q + 3] = 235; } }
+      const c = tmpCanvas(gw, gh), x = c.getContext('2d'), im = x.createImageData(gw, gh), f = snap.flags, cols = [null, [158, 115, 18], [26, 61, 168], [92, 97, 107], [22, 21, 15]];
+      for (let i = 0; i < f.length; i++) { const b = f[i] & 7; if (b) { const q = i * 4, cc = cols[b]; im.data[q] = cc[0]; im.data[q + 1] = cc[1]; im.data[q + 2] = cc[2]; im.data[q + 3] = 255; } }
       x.putImageData(im, 0, 0); win(c);
     }
     // graticule
     if (S.d.grid) {
-      g.lineWidth = dpr; g.font = (10 * dpr) + 'px IBM Plex Mono, monospace'; g.fillStyle = 'rgba(255,255,255,.55)';
+      g.lineWidth = dpr; g.font = (9.5 * dpr) + 'px ' + MONO; g.fillStyle = 'rgba(22,21,15,.45)';
       const gs = z.k < 2 ? 30 : z.k < 5 ? 10 : 5;
-      for (let lat = -90 + gs; lat <= 90 - gs; lat += gs) { g.strokeStyle = lat === 0 ? 'rgba(255,255,255,.32)' : 'rgba(255,255,255,.14)'; g.beginPath(); g.moveTo(0, py(lat)); g.lineTo(W, py(lat)); g.stroke(); if (py(lat) > 0 && py(lat) < H) { if (lat) g.fillText((Math.abs(lat)) + '°' + (lat > 0 ? 'N' : 'S'), 6 * dpr, py(lat) - 4 * dpr); else g.fillText('0°', 6 * dpr, py(0) - 4 * dpr); } }
-      for (let lon = -180 + gs; lon <= 180 - gs; lon += gs) { g.strokeStyle = lon === 0 ? 'rgba(255,255,255,.32)' : 'rgba(255,255,255,.12)'; g.beginPath(); g.moveTo(px(lon), 0); g.lineTo(px(lon), H); g.stroke(); }
+      for (let lat = -90 + gs; lat <= 90 - gs; lat += gs) { g.strokeStyle = lat === 0 ? 'rgba(22,21,15,.30)' : 'rgba(22,21,15,.11)'; g.beginPath(); g.moveTo(0, py(lat)); g.lineTo(W, py(lat)); g.stroke(); if (py(lat) > 46 * dpr && py(lat) < H) { g.textAlign = 'right'; g.fillText(lat ? Math.abs(lat) + '°' + (lat > 0 ? 'N' : 'S') : '0°', W - 6 * dpr, py(lat) - 4 * dpr); g.textAlign = 'start'; } /* right edge: the age readout owns the top left */ }
+      for (let lon = -180 + gs; lon <= 180 - gs; lon += gs) { g.strokeStyle = lon === 0 ? 'rgba(22,21,15,.30)' : 'rgba(22,21,15,.11)'; g.beginPath(); g.moveTo(px(lon), 0); g.lineTo(px(lon), H); g.stroke(); }
     }
     // plate motion
     if (S.d.arrows && snap.info) {
@@ -1570,26 +1643,29 @@ const isFuture = (age) => age < -0.5;
       snap.info.forEach((pi) => {
         if (!pi || pi.speed < 0.35 || pi.cells < 150) return;
         const L = Math.max(14, Math.min(84, pi.speed * 8)) * dpr * (W / (1000 * dpr)), a = pi.azimuth * D2R, x0 = px(pi.lon), y0 = py(pi.lat), x1 = x0 + Math.sin(a) * L, y1 = y0 - Math.cos(a) * L;
-        g.strokeStyle = 'rgba(0,0,0,.6)'; g.lineWidth = 4.2 * dpr; head(g, x0, y0, x1, y1, 7 * dpr);
-        g.strokeStyle = '#fff'; g.lineWidth = 2 * dpr; head(g, x0, y0, x1, y1, 7 * dpr);
-        g.fillStyle = 'rgba(0,0,0,.65)'; g.beginPath(); g.arc(x0, y0, 3.4 * dpr, 0, 7); g.fill(); g.fillStyle = '#fff'; g.beginPath(); g.arc(x0, y0, 2 * dpr, 0, 7); g.fill();
+        g.strokeStyle = 'rgba(250,249,245,.9)'; g.lineWidth = 4.6 * dpr; head(g, x0, y0, x1, y1, 7 * dpr);
+        g.strokeStyle = '#16150f'; g.lineWidth = 1.6 * dpr; head(g, x0, y0, x1, y1, 7 * dpr);
+        g.fillStyle = 'rgba(250,249,245,.9)'; g.fillRect(x0 - 3.6 * dpr, y0 - 3.6 * dpr, 7.2 * dpr, 7.2 * dpr); g.fillStyle = '#16150f'; g.fillRect(x0 - 2.4 * dpr, y0 - 2.4 * dpr, 4.8 * dpr, 4.8 * dpr);
       });
     }
     // focus point on the starting frame
     if (S.cur === 0 && S.p.drive !== 'random' && S.p.drive !== 'north') {
       const x = px(S.p.driveLon), y = py(S.p.driveLat), r = 9 * dpr;
-      g.strokeStyle = '#ffb454'; g.lineWidth = 2 * dpr; g.beginPath(); g.arc(x, y, r, 0, 7); g.moveTo(x - r * 1.6, y); g.lineTo(x + r * 1.6, y); g.moveTo(x, y - r * 1.6); g.lineTo(x, y + r * 1.6); g.stroke();
-      g.fillStyle = '#ffb454'; g.font = '600 ' + (10 * dpr) + 'px IBM Plex Mono, monospace'; g.fillText('FOCUS', x + r * 1.8, y - r * 0.4);
+      g.strokeStyle = ACCENT; g.lineWidth = 1.5 * dpr; g.beginPath(); g.arc(x, y, r, 0, 7); g.moveTo(x - r * 1.6, y); g.lineTo(x + r * 1.6, y); g.moveTo(x, y - r * 1.6); g.lineTo(x, y + r * 1.6); g.stroke();
+      g.fillStyle = ACCENT; g.font = '500 ' + (9.5 * dpr) + 'px ' + SANS; if ('letterSpacing' in g) g.letterSpacing = (1.4 * dpr) + 'px'; g.fillText('FOCUS', x + r * 1.8, y - r * 0.4);
     }
     // names from Claude
     if (S.d.names && S.atlas && S.atlas.frame === S.cur) {
       g.textAlign = 'center'; g.lineJoin = 'round';
       S.atlas.items.forEach((it) => {
-        const x = px(it.lon), y = py(it.lat); g.font = (it.ocean ? 'italic 500 ' : '600 ') + (it.ocean ? 13 : 12.5) * dpr + 'px Newsreader, serif';
+        const x = px(it.lon), y = py(it.lat), nm = it.ocean ? it.name : it.name.toUpperCase();
+        g.font = it.ocean ? 'italic 400 ' + (15 * dpr) + 'px ' + SERIF : '500 ' + (10.5 * dpr) + 'px ' + SANS; if ('letterSpacing' in g) g.letterSpacing = it.ocean ? '0px' : (1.6 * dpr) + 'px';
+        g.strokeStyle = 'rgba(250,249,245,.92)'; g.lineWidth = 3.5 * dpr; g.strokeText(nm, x, y); g.fillStyle = it.ocean ? '#1a3da8' : '#16150f'; g.fillText(nm, x, y);
         g.strokeStyle = 'rgba(6,14,28,.85)'; g.lineWidth = 3.5 * dpr; g.strokeText(it.name, x, y); g.fillStyle = it.ocean ? 'rgba(190,220,255,.92)' : '#fff'; g.fillText(it.name, x, y);
       });
-      g.textAlign = 'start';
+      g.textAlign = 'start'; if ('letterSpacing' in g) g.letterSpacing = '0px';
     }
+    if ('letterSpacing' in g) g.letterSpacing = '0px';
   }
   function head(g, x0, y0, x1, y1, hs) {
     const a = Math.atan2(y1 - y0, x1 - x0); g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.moveTo(x1 - hs * Math.cos(a - 0.45), y1 - hs * Math.sin(a - 0.45)); g.lineTo(x1, y1); g.lineTo(x1 - hs * Math.cos(a + 0.45), y1 - hs * Math.sin(a + 0.45)); g.stroke();
@@ -1604,7 +1680,7 @@ const isFuture = (age) => age < -0.5;
     const w = m.w, h = m.h, c = document.createElement('canvas'); c.width = w; c.height = h; const x = c.getContext('2d'), im = x.createImageData(w, h), d = m.data;
     for (let j = 1; j < h - 1; j++) for (let i = 0; i < w; i++) {
       const k = j * w + i; if (!d[k]) continue; const il = i ? i - 1 : w - 1, ir = i === w - 1 ? 0 : i + 1;
-      if (!d[k - w] || !d[k + w] || !d[j * w + il] || !d[j * w + ir]) { const q = k * 4; im.data[q] = 255; im.data[q + 1] = 120; im.data[q + 2] = 200; im.data[q + 3] = 255; }
+      if (!d[k - w] || !d[k + w] || !d[j * w + il] || !d[j * w + ir]) { const q = k * 4; im.data[q] = 217; im.data[q + 1] = 61; im.data[q + 2] = 24; im.data[q + 3] = 255; }
     }
     x.putImageData(im, 0, 0); return (ghostCache[ra] = c);
   }
@@ -1630,16 +1706,17 @@ const isFuture = (age) => age < -0.5;
         const i1 = (i0 + 1) % sw; i0 = (i0 + sw) % sw; const j1 = Math.min(sh - 1, j0 + 1); j0 = Math.max(0, j0);
         const a = (j0 * sw + i0) * 4, b = (j0 * sw + i1) * 4, e = (j1 * sw + i0) * 4, f = (j1 * sw + i1) * 4;
         const w00 = (1 - tu) * (1 - tv), w10 = tu * (1 - tv), w01 = (1 - tu) * tv, w11 = tu * tv;
-        const lam = Math.max(0, xx * Lx + yy * Ly + z * Lz), light = 0.52 + 0.7 * lam, rim = Math.pow(1 - z, 2.6) * 0.5;
+        const lam = Math.max(0, xx * Lx + yy * Ly + z * Lz), light = 0.8 + 0.24 * lam, rim = Math.pow(1 - z, 2.6) * 0.35;
         for (let k = 0; k < 3; k++) {
           const col = src[a + k] * w00 + src[b + k] * w10 + src[e + k] * w01 + src[f + k] * w11;
-          const atm = [120, 175, 255][k];
+          const atm = [242, 240, 235][k];
           d[q + k] = Math.min(255, col * light + (atm - col * light) * rim);
         }
         d[q + 3] = rho > 0.994 ? Math.max(0, (1 - rho) / 0.006 * 255) : 255;
       }
     }
     g.putImageData(im, 0, 0);
+    g.strokeStyle = 'rgba(22,21,15,.55)'; g.lineWidth = size / 600; g.beginPath(); g.arc(size / 2, size / 2, R_ - 0.5, 0, 7); g.stroke();
   }
   function setupGlobeDrag() {
     const c = el.globe; let down = false, lx = 0, ly = 0;
@@ -1733,7 +1810,7 @@ const isFuture = (age) => age < -0.5;
   }
   function drawCompare() {
     const snap = snapNow(); if (!snap) return;
-    if (isFuture(ageOf(snap))) { const c0 = el.cmp; c0.width = 720; c0.height = 360; const g0 = c0.getContext('2d'); g0.fillStyle = '#0a1a33'; g0.fillRect(0, 0, 720, 360); g0.fillStyle = '#93a5bb'; g0.font = '500 20px IBM Plex Mono, monospace'; g0.textAlign = 'center'; g0.fillText('No real data for the future', 360, 186); el.cmpLbl.textContent = 'Future'; return; }
+    if (isFuture(ageOf(snap))) { const c0 = el.cmp; c0.width = 720; c0.height = 360; const g0 = c0.getContext('2d'); g0.fillStyle = '#ede9dc'; g0.fillRect(0, 0, 720, 360); g0.fillStyle = 'rgba(22,21,15,.45)'; g0.font = '500 17px ' + SANS; if ('letterSpacing' in g0) g0.letterSpacing = '3px'; g0.textAlign = 'center'; g0.fillText('No real data for the future', 360, 186); el.cmpLbl.textContent = 'Future'; return; }
     const ra = realAge(ageOf(snap)), m = masks['real' + ra];
     el.cmpLbl.textContent = 'Actual Earth at ' + (ra === 0 ? 'present' : ra + ' Ma');
     if (!m) { loadMask('real', ra).then(() => drawCompare()); return; }
@@ -1741,7 +1818,8 @@ const isFuture = (age) => age < -0.5;
     const g = c.getContext('2d'), im = g.createImageData(w, h), sx = m.w / w, sy = m.h / h;
     for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
       const on = m.data[Math.floor(j * sy) * m.w + Math.floor(i * sx)], q = (j * w + i) * 4;
-      if (on) { im.data[q] = 196; im.data[q + 1] = 180; im.data[q + 2] = 128; } else { im.data[q] = 14; im.data[q + 1] = 38; im.data[q + 2] = 78; } im.data[q + 3] = 255;
+      const edge = on && j > 0 && j < h - 1 && (!m.data[Math.floor((j - 1) * sy) * m.w + Math.floor(i * sx)] || !m.data[Math.floor((j + 1) * sy) * m.w + Math.floor(i * sx)] || !m.data[Math.floor(j * sy) * m.w + Math.floor(((i + 1) % w) * sx)] || !m.data[Math.floor(j * sy) * m.w + Math.floor(((i + w - 1) % w) * sx)]);
+      const c = edge ? [22, 21, 15] : on ? [250, 249, 245] : [207, 211, 224]; im.data[q] = c[0]; im.data[q + 1] = c[1]; im.data[q + 2] = c[2]; im.data[q + 3] = 255;
     }
     g.putImageData(im, 0, 0);
   }
