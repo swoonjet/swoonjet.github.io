@@ -1,0 +1,89 @@
+# Jon Toews
+
+> Jon Toews is a creative director and creative technologist in Toronto, Canada. He has led creative teams of up to 120 people as executive creative director at Klick Health, Critical Mass and Public Inc., and as creative director and managing director at Bensimon Byrne. His work has been recognized at Cannes Lions, the Clio Awards, New York Festivals, Communication Arts and Creative Floor. He teaches advanced copywriting at OCAD University.
+
+## Open to
+
+All of it, in Toronto, remote or travelling:
+
+- Full-time roles: executive creative director, creative director, group creative director, head of creative, chief creative officer, director of creative technology, head of AI creative
+- Freelance and contract creative direction
+- Consulting on generative AI in creative work, AI-agent prototyping and creative workflow automation
+- Brand identity, campaigns, digital product and experiential projects
+- Creative-technology builds: interactive installations, sonification, generative instruments and web prototypes
+- Type design commissions and custom typefaces
+- Collaborations with artists, studios, technologists and researchers
+- Teaching, workshops, talks and juries
+
+Contact: jontoews@gmail.com
+
+- Website: https://jontoews.com/
+- LinkedIn: https://www.linkedin.com/in/jontoews/
+
+## What he does
+
+- Creative direction across brand, digital, experiential and generative work
+- Brand identity and design systems; integrated campaigns; digital product and UX
+- Generative AI for concepting and production; AI-agent prototyping; creative workflow automation
+- Web prototyping of interactive and audio work (HTML, CSS, JavaScript, Web Audio)
+- Type design and typography; copywriting; music and sound
+- Sectors: healthcare and pharma, financial services, B2B and enterprise technology, public sector and non-profit, consumer brands
+
+## Selected career
+
+- Executive Creative Director, Klick Health / Katalyst, Toronto (2019–2023): led a 50-person creative team on a $60M business; built Axsome Therapeutics' corporate brand and the Auvelity launch platform.
+- Executive Creative Director, Public Inc., Toronto (2017–2019): purpose-driven work for Converse, Scotiabank, Universal, Danone and the City of Toronto.
+- Executive Creative Director / General Manager, Critical Mass, Toronto (2013–2016): ran the 120-person office; global ECD on Citi's Future of Banking; NASA web redesign; Sweeper for UNMAS (Cannes Lions).
+- Creative Director / Managing Director, Bensimon Byrne / Mighty, Toronto (2008–2012): led the agency's digital practice.
+
+## Projects
+
+Experiments in emergence: simple rules and small systems that grow into instruments, worlds and language.
+
+- [Earshot](https://jontoews.com/earshot/): Four live field mics, thousands of kilometres apart, streaming right now. Nothing is pre-recorded — every layer comes from whatever happens to coincide.
+- [Heliosphere](https://jontoews.com/heliosphere/): Live solar wind and geomagnetic data, translated into sound. The sun, audible.
+- [Cadastre](https://jontoews.com/cadastre/): Generate a whole city from a seed — terrain, streets, parcels, parks, every place named. Pan, zoom, export it poster-size.
+- [Linger](https://jontoews.com/linger/): Short fiction and poetry at the speed of reflection. No scrolling, no skimming — just the prose.
+- [Weather Reports](https://jontoews.com/Weather-Reports-Field-Guide/): Forty-six writers, one premise: an unexplained weather phenomenon over World C6H-ɛ. Read it as anthology, archive, or apply for a researcher post.
+- [Grainfield](https://jontoews.com/grainfield/): A browser-based granular synthesis explorer. Pull a sound apart on a node canvas and listen to its grains.
+- [Chord Loom](https://jontoews.com/chord-loom/): Build a chord and load it onto one of twelve breathing pads, each with its own envelope, tape-loop memory, and reverb.
+- [Single Cell Battle](https://jontoews.com/single-cell-battle/): A turn-based microorganism battler ported from a Python sim. Roll a roster, fight the computer's, win and evolve — lose three times and die.
+- [Moira](https://jontoews.com/moira/): A base curve swept through hundreds of rotations until it interferes with itself. Nine variations on an old moiré sketch, with inks that actually mix.
+- [Jems](https://jontoews.com/jems/): Random points, Delaunay-triangulated into a mosaic of tonal glass. Regenerate for a new arrangement, export as SVG or PNG.
+- [Lampo](https://jontoews.com/lampo/): Twelve random points in four dimensions, resolved into a Bezier surface of revolution. Tune it, orbit it, keep the good ones.
+- [Lateral Walks](https://jontoews.com/walks/): A trained lateral thinker looks through live webcams and follows the chain of ideas wherever it goes.
+- [Streetwander](https://jontoews.com/streetwander/): An agent takes creative walks through real neighborhoods — notices briefly, thinks a lot. Each walk leaves a main artifact and a few companions.
+- [Curiothymia](https://curiothymia.jontoews.com): A mind that wanders. Threads of thought, branching by association. Let your attention follow.
+- [Dual-Emergence](https://jontoews.com/dual-emergence/): Two opposed agents negotiate every stage of a planet's life, formation to deep future. Eight worlds; some plateau, some endure.
+- [Musical Morphospace](https://jontoews.com/musical-morphospace/): A curiosity-driven agent exploring the space of possible musical grammars — the musics humanity didn't happen to invent.
+- [Akros](https://jontoews.com/akros/): A complete constructed language built from scratch by autonomous AI agents. 735 words, 99 grammar patterns, a 7-god pantheon.
+- [Marmalade](https://jontoews.com/marmalade/): An autonomous generative collage engine making art in the wild, on its own schedule.
+- [Stimviz](https://jontoews.com/stimviz/): 138 digital archives spanning illustration, design, audio, architecture, typography, science, photography, and film.
+- [Terragod](https://jontoews.com/terragod/): Roll a continent, an island, an atoll, or a whole world. Pan, zoom, export as SVG or PNG.
+- [Gazetteer](https://jontoews.com/gazetteer/): Invent place names from a phoneme grammar. Seed one by integer, coordinate, or landmark, and watch it break apart.
+- [Trungle Bunch](https://jontoews.com/trungle-bunch/): A generative instrument grown, not laid out. Triangular bodies on a mycelial network, voiced by the colours their threads join.
+- [Petri](https://jontoews.com/petri/): Two views of the same organism. One tab lets a colony crawl, eat, and grow under a cursor's pull; the other pins a single specimen to a slide — cell wall, nucleus, and reach rendered entirely in dots and lines.
+- [Magpie](https://jontoews.com/magpie/): Five magpies out looking for interesting things, each hunting a different way — by theme, by era, by obscurity, by memory. What they carry home gets transformed and woven into the collage.
+- [Seismic Entropy](https://jontoews.com/seismic/): True random numbers pulled from live seismic sensor noise at nine stations worldwide — a wall of raw integers, each traceable to real ground motion happening right now.
+- [SFRC-RADIO](https://sfrc-radio.jontoews.com): An unattended internet radio station curated by an agent reading live planetary data — geomagnetic activity, solar wind, weather, aircraft overhead, the sun's position — and letting the sky decide what plays next.
+- [Pangaea Otherwise](https://jontoews.com/pangaea-otherwise/): A speculative plate-tectonics generator. It starts from the real Pangaea at 250 million years ago, lets you change how the supercontinent breaks apart and how the pieces drift, then plays out alternate Earths, and runs the clock on into the future.
+
+## Typefaces
+
+Nine original typefaces, free for personal and commercial use on Utypeia.
+
+- [Annulet](https://jontoews.com/type/annulet/): Display. Ultra-heavy capitals and figures cut from one unit grid, every stroke end bitten by a quarter-disc notch, so the alphabet turns like an iris.
+- [Balkenfeder](https://jontoews.com/type/balkenfeder/): Display. A reverse-contrast display face: heavy horizontal bars, fine upright strokes, rounded corners and feet that kick outward.
+- [Chronolith](https://jontoews.com/type/chronolith/): Display. Heavy at the ground, light at the sky. A high-contrast face with fine filaments and an invented symbol keyboard.
+- [Culvert](https://jontoews.com/type/culvert/): Display. Straight runs and curved conduits in three widths, solid on the plain keys and inline or relief with Shift. Its companion, Waterways, types maps.
+- [Elytra](https://jontoews.com/type/elytra/): Display. An insect-inspired face: spindle-leg stems, beaded antenna ascenders, wing-case bowls and leaf-shaped arms, leaning four degrees mid-step.
+- [Rasoir](https://jontoews.com/type/rasoir/): Serif. A razor-edged Didone: thick upright stems, hairlines as thin as the cut allows, flat unbracketed serifs and ball dots.
+- [Schilf](https://jontoews.com/type/schilf/): Condensed. A tall, narrow Jugendstil-inspired face, with flared feet, high crossbars and swinging terminals.
+- [Trapu](https://jontoews.com/type/trapu/): Display. A heavy Art Deco face, squat and stocky, cut three ways: Solid on the plain keys, Single line with Shift, Multiple line with Option.
+- [Unkelchunk](https://jontoews.com/type/unkelchunk/): Slab. A heavy slab face of capitals and figures built only from rectangles and right-angled triangles, like carved masonry.
+
+## Pages
+
+- [Home](https://jontoews.com/): overview and contact
+- [Projects](https://jontoews.com/projects/): every experiment
+- [Type](https://jontoews.com/type/): the nine typefaces

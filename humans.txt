@@ -1,0 +1,12 @@
+/* TEAM */
+Creative director, designer, developer, type designer: Jon Toews
+Contact: jontoews@gmail.com
+LinkedIn: https://www.linkedin.com/in/jontoews/
+From: Toronto, Canada
+
+/* SITE */
+Last update: 2026
+Standards: HTML, CSS, JavaScript
+Type: Host Grotesk; Annulet, Balkenfeder, Chronolith, Culvert, Elytra, Rasoir, Schilf, Trapu, Unkelchunk (Jon Toews)
+Grid: twelve columns, Swiss
+Note: the machine needs an art director.
