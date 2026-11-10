@@ -1,554 +1,247 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html lang="en-CA">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jon Toews — Creative Director</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Archivo+Black&family=Anton&family=Oswald:wght@700&family=Bebas+Neue&family=Poppins:wght@900&family=Abril+Fatface&family=Playfair+Display:wght@900&family=Cinzel:wght@900&family=Alfa+Slab+One&family=Titan+One&family=Bangers&family=Fredoka:wght@700&family=Passion+One:wght@900&family=Bungee&family=Rampart+One&family=Black+Ops+One&family=Special+Elite&family=Space+Mono:wght@700&family=Permanent+Marker&family=Press+Start+2P&display=swap" rel="stylesheet">
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jon Toews — Creative direction &amp; technology</title>
+<meta name="description" content="Jon Toews is a Toronto creative director working across brand, digital, experiential and generative work.">
 
-        :root {
-            --bg: #0a0a0a;
-            --text: #f5f5f5;
-            --muted: #888;
-            --accent: #ff1f71;
-        }
-
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: var(--bg);
-            color: var(--text);
-            height: 100vh;
-            overflow: hidden;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            -webkit-font-smoothing: antialiased;
-        }
-
-        canvas {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 0;
-        }
-
-        .hero::before {
-            content: '';
-            position: fixed;
-            width: 600px;
-            height: 600px;
-            background: radial-gradient(circle, rgba(255,31,113,0.12) 0%, transparent 70%);
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            pointer-events: none;
-            z-index: 1;
-        }
-
-        .hero {
-            position: relative;
-            z-index: 2;
-            text-align: center;
-            padding: 2rem;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 1.5rem;
-        }
-
-        h1 {
-            font-size: clamp(3rem, 8vw, 6rem);
-            font-weight: 800;
-            letter-spacing: -3px;
-            line-height: 1.15;
-        }
-
-        /* Each hero line has a box height fixed in em (so it still scales
-           with the responsive font-size) so a glitched-in font's different
-           metrics can never grow/shrink this element and bump the blurb or
-           buttons below it. nowrap means a wide face can't wrap a word onto
-           a second line either -- that would be a much bigger bump. See the
-           mobile breakpoints below for how the font-size itself is kept
-           small enough that nowrap doesn't run text off small screens. */
-        h1 .hero-line {
-            display: block;
-            height: 1.15em;
-            line-height: 1.15;
-            white-space: nowrap;
-            overflow: visible;
-        }
-
-        h1 .hero-line--accent {
-            color: #ff1f71;
-        }
-
-        .gl {
-            display: inline-block;
-            font-family: inherit;
-            font-weight: inherit;
-        }
-
-        .gl-space {
-            display: inline-block;
-            width: 0.32em;
-        }
-
-        .blurb {
-            font-size: 1.25rem;
-            color: #bbb;
-            max-width: 500px;
-            font-weight: 400;
-            line-height: 1.6;
-        }
-
-        .email-link {
-            display: inline-block;
-            padding: 0.9rem 2.5rem;
-            background: var(--accent);
-            color: white;
-            text-decoration: none;
-            border-radius: 100px;
-            font-weight: 600;
-            font-size: 1rem;
-            transition: transform 0.3s, box-shadow 0.3s;
-        }
-
-        .email-link:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 30px rgba(255,31,113,0.3);
-        }
-
-        .experiments-link {
-            display: inline-block;
-            margin-top: 0.25rem;
-            font-size: 0.85rem;
-            font-weight: 500;
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
-            color: var(--muted);
-            text-decoration: none;
-            border-bottom: 1px solid transparent;
-            transition: color 0.25s ease, border-color 0.25s ease;
-        }
-
-        .experiments-link:hover {
-            color: var(--accent);
-            border-bottom-color: var(--accent);
-        }
-
-        .experiments-link .arrow {
-            display: inline-block;
-            margin-left: 0.4em;
-            transition: transform 0.25s ease;
-        }
-
-        .experiments-link:hover .arrow {
-            transform: translateX(4px);
-        }
-
-        /* Narrower viewports: the 20-face glitch pool spans very different
-           character widths (a pixel/monospace face vs. a slim condensed
-           sans), and h1 is nowrap by design (see above). Shrinking the
-           floor here keeps even a wide-leaning glitch combination fitting
-           on a phone instead of running past the screen edge. */
-        @media (max-width: 640px) {
-            h1 {
-                font-size: clamp(1.9rem, 9.5vw, 2.6rem);
-                letter-spacing: -1.5px;
-            }
-        }
-
-        @media (max-width: 380px) {
-            h1 {
-                font-size: clamp(1.6rem, 9.5vw, 2.2rem);
-                letter-spacing: -1px;
-            }
-        }
-    </style>
+<meta name="theme-color" content="#f2f1ee">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Jon Toews">
+<meta property="og:title" content="Jon Toews — Creative direction &amp; technology">
+<meta property="og:description" content="Jon Toews is a Toronto creative director working across brand, digital, experiential and generative work.">
+<meta property="og:image" content="https://jontoews.com/assets/share.jpg">
+<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Host+Grotesk:wght@400;500;600;700;800&display=swap">
+<script>/* moiré: a different starting angle, position and orientation on every page load */
+(() => { const r = document.documentElement.style, R = (a, b) => a + Math.random() * (b - a);
+  r.setProperty("--moire-x", R(43, 61).toFixed(1) + "%");
+  r.setProperty("--moire-delay", -R(0, 900).toFixed(1) + "s");
+  r.setProperty("--moire-flip", Math.random() < 0.5 ? -1 : 1);
+  r.setProperty("--moire-dx", R(-18, 18).toFixed(1) + "vmax");
+  r.setProperty("--moire-dy", R(-18, 18).toFixed(1) + "vmax"); })();</script>
+<link rel="stylesheet" href="assets/css/site.css?v=42326d51">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
 </head>
 <body>
+<div class="moire" aria-hidden="true"></div>
+<div class="cols" aria-hidden="true"><div class="cols__inner"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div></div>
+<header class="wrap masthead">
+  <div class="a"><span class="tag">Human:</span><p class="meta"><a class="stretch" href="./" style="text-decoration:none">Jon Toews</a></p></div>
+  <div class="b"><span class="tag">Practice:</span><p class="meta"><span class="stretch">Creative direction · Technology</span></p></div>
+  <div class="c"><span class="tag">Index:</span><nav class="meta" aria-label="Site"><a class="stretch" href="projects/">Projects</a><span>·</span><a class="stretch" href="#contact">Contact</a></nav></div>
+</header>
+<main>
+<section class="wrap hero" aria-labelledby="h">
+  <div class="hero__meta">
+    <p class="label accent">Selected work</p>
+    <p class="label muted">2026</p>
+  </div>
+  <h1 class="headline" id="h"><span class="l">The machine</span> <span class="l">needs an</span> <span class="l">art director.</span></h1>
+</section>
+<section class="wrap strip" aria-label="Summary">
+  <div class="a"><p class="label accent">Discipline</p><p class="meta">Creative direction<br>Workflows<br>Emergent design</p></div>
+  <div class="b"><p class="label accent">Domains</p><p class="meta">Brand<br>Digital<br>Experiential<br>Generative</p></div>
+  <div class="c"><p class="label accent">Contact / say hello</p><a class="chip" href="mailto:jontoews@gmail.com">jontoews@gmail.com</a></div>
+</section>
 
-    <canvas id="ca-canvas"></canvas>
+<section class="wrap section" aria-labelledby="p-h">
+  <div class="section__head full">
+    <h2 class="label accent a" id="p-h">Projects</h2>
+  </div>
+  <div class="index__cols">
+    <span class="label muted i-title">Project</span>
+    <span class="label muted i-field">Field</span>
+  </div>
+  <ol class="index" role="list">
+  <li><a class="row" href="https://jontoews.com/earshot/">
+    <span class="i-thumb"><img src="assets/thumbs/earshot.jpg?v=dd85ebdb" alt="" width="800" height="600" loading="lazy" decoding="async"></span>
+    <span class="i-head"><span class="title i-title">Earshot</span><span class="body i-note">Four live field mics, thousands of kilometres apart, streaming right now. Nothing is pre-recorded — every layer comes from whatever happens to coincide.</span></span>
+    <span class="label i-field">Live audio · Composition</span>
+    <span class="label i-go" aria-hidden="true">→</span>
+  </a></li>
+  <li><a class="row" href="https://jontoews.com/heliosphere/">
+    <span class="i-thumb"><img src="assets/thumbs/heliosphere.jpg?v=aec01925" alt="" width="800" height="600" loading="lazy" decoding="async"></span>
+    <span class="i-head"><span class="title i-title">Heliosphere</span><span class="body i-note">Live solar wind and geomagnetic data, translated into sound. The sun, audible.</span></span>
+    <span class="label i-field">Sonification</span>
+    <span class="label i-go" aria-hidden="true">→</span>
+  </a></li>
+  <li><a class="row" href="https://jontoews.com/cadastre/">
+    <span class="i-thumb"><img src="assets/thumbs/cadastre.jpg?v=ab489659" alt="" width="800" height="600" loading="lazy" decoding="async"></span>
+    <span class="i-head"><span class="title i-title">Cadastre</span><span class="body i-note">Generate a whole city from a seed — terrain, streets, parcels, parks, every place named. Pan, zoom, export it poster-size.</span></span>
+    <span class="label i-field">Generative · Cartography</span>
+    <span class="label i-go" aria-hidden="true">→</span>
+  </a></li>
+  <li><a class="row" href="https://jontoews.com/linger/">
+    <span class="i-thumb"><img src="assets/thumbs/linger.jpg?v=988cbbaa" alt="" width="800" height="600" loading="lazy" decoding="async"></span>
+    <span class="i-head"><span class="title i-title">Linger</span><span class="body i-note">Short fiction and poetry at the speed of reflection. No scrolling, no skimming — just the prose.</span></span>
+    <span class="label i-field">Reading</span>
+    <span class="label i-go" aria-hidden="true">→</span>
+  </a></li>
+  <li><a class="row" href="https://jontoews.com/Weather-Reports-Field-Guide/">
+    <span class="i-thumb"><img src="assets/thumbs/weather-reports-field-guide.jpg?v=34ac4236" alt="" width="800" height="600" loading="lazy" decoding="async"></span>
+    <span class="i-head"><span class="title i-title">Weather Reports</span><span class="body i-note">Forty-six writers, one premise: an unexplained weather phenomenon over World C6H-ɛ. Read it as anthology, archive, or apply for a researcher post.</span></span>
+    <span class="label i-field">Anthology · Fiction</span>
+    <span class="label i-go" aria-hidden="true">→</span>
+  </a></li>
+  <li><a class="row" href="https://jontoews.com/grainfield/">
+    <span class="i-thumb"><img src="assets/thumbs/grainfield.jpg?v=c4964c1f" alt="" width="800" height="600" loading="lazy" decoding="async"></span>
+    <span class="i-head"><span class="title i-title">Grainfield</span><span class="body i-note">A browser-based granular synthesis explorer. Pull a sound apart on a node canvas and listen to its grains.</span></span>
+    <span class="label i-field">Synthesis</span>
+    <span class="label i-go" aria-hidden="true">→</span>
+  </a></li>
+  <li><a class="row" href="https://jontoews.com/chord-loom/">
+    <span class="i-thumb"><img src="assets/thumbs/chord-loom.jpg?v=c2b7e2e5" alt="" width="800" height="600" loading="lazy" decoding="async"></span>
+    <span class="i-head"><span class="title i-title">Chord Loom</span><span class="body i-note">Build a chord and load it onto one of twelve breathing pads, each with its own envelope, tape-loop memory, and reverb.</span></span>
+    <span class="label i-field">Instrument · Web Audio</span>
+    <span class="label i-go" aria-hidden="true">→</span>
+  </a></li>
+  <li><a class="row" href="type/">
+    <span class="i-thumb"><img src="assets/thumbs/type.jpg?v=1d9221b2" alt="" width="800" height="600" loading="lazy" decoding="async"></span>
+    <span class="i-head"><span class="title i-title">Type Design</span><span class="body i-note">Nine original typefaces, from a razor-edged Didone and a stocky Art Deco cut to an insect-legged display face and a modular kit that types maps. Each gets its own specimen to try; all are free on Utypeia.</span></span>
+    <span class="label i-field">Typefaces</span>
+    <span class="label i-go" aria-hidden="true">→</span>
+  </a></li>
+  <li><a class="row" href="https://jontoews.com/single-cell-battle/">
+    <span class="i-thumb"><img src="assets/thumbs/single-cell-battle.jpg?v=132b4538" alt="" width="800" height="600" loading="lazy" decoding="async"></span>
+    <span class="i-head"><span class="title i-title">Single Cell Battle</span><span class="body i-note">A turn-based microorganism battler ported from a Python sim. Roll a roster, fight the computer&#x27;s, win and evolve — lose three times and die.</span></span>
+    <span class="label i-field">Game · Roguelike</span>
+    <span class="label i-go" aria-hidden="true">→</span>
+  </a></li>
+  <li><a class="row" href="https://jontoews.com/moira/">
+    <span class="i-thumb"><img src="assets/thumbs/moira.jpg?v=76bb0e3a" alt="" width="800" height="600" loading="lazy" decoding="async"></span>
+    <span class="i-head"><span class="title i-title">Moira</span><span class="body i-note">A base curve swept through hundreds of rotations until it interferes with itself. Nine variations on an old moiré sketch, with inks that actually mix.</span></span>
+    <span class="label i-field">Generative</span>
+    <span class="label i-go" aria-hidden="true">→</span>
+  </a></li>
+  <li><a class="row" href="https://jontoews.com/jems/">
+    <span class="i-thumb"><img src="assets/thumbs/jems.jpg?v=76e19016" alt="" width="800" height="600" loading="lazy" decoding="async"></span>
+    <span class="i-head"><span class="title i-title">Jems</span><span class="body i-note">Random points, Delaunay-triangulated into a mosaic of tonal glass. Regenerate for a new arrangement, export as SVG or PNG.</span></span>
+    <span class="label i-field">Generative</span>
+    <span class="label i-go" aria-hidden="true">→</span>
+  </a></li>
+  <li><a class="row" href="https://jontoews.com/lampo/">
+    <span class="i-thumb"><img src="assets/thumbs/lampo.jpg?v=44c7fb58" alt="" width="800" height="600" loading="lazy" decoding="async"></span>
+    <span class="i-head"><span class="title i-title">Lampo</span><span class="body i-note">Twelve random points in four dimensions, resolved into a Bezier surface of revolution. Tune it, orbit it, keep the good ones.</span></span>
+    <span class="label i-field">Generative</span>
+    <span class="label i-go" aria-hidden="true">→</span>
+  </a></li>
+  <li><a class="row" href="https://jontoews.com/walks/">
+    <span class="i-thumb"><img src="assets/thumbs/walks.jpg?v=c7fd9123" alt="" width="800" height="600" loading="lazy" decoding="async"></span>
+    <span class="i-head"><span class="title i-title">Lateral Walks</span><span class="body i-note">A trained lateral thinker looks through live webcams and follows the chain of ideas wherever it goes.</span></span>
+    <span class="label i-field">Agent · Webcams</span>
+    <span class="label i-go" aria-hidden="true">→</span>
+  </a></li>
+  <li><a class="row" href="https://jontoews.com/streetwander/">
+    <span class="i-thumb"><img src="assets/thumbs/streetwander.jpg?v=bbfac4ae" alt="" width="800" height="600" loading="lazy" decoding="async"></span>
+    <span class="i-head"><span class="title i-title">Streetwander</span><span class="body i-note">An agent takes creative walks through real neighborhoods — notices briefly, thinks a lot. Each walk leaves a main artifact and a few companions.</span></span>
+    <span class="label i-field">Agent · Streetview</span>
+    <span class="label i-go" aria-hidden="true">→</span>
+  </a></li>
+  <li><a class="row" href="https://curiothymia.jontoews.com">
+    <span class="i-thumb"><img src="assets/thumbs/curiothymia-jontoews-com.jpg?v=276eda51" alt="" width="800" height="600" loading="lazy" decoding="async"></span>
+    <span class="i-head"><span class="title i-title">Curiothymia</span><span class="body i-note">A mind that wanders. Threads of thought, branching by association. Let your attention follow.</span></span>
+    <span class="label i-field">Agent · Mind</span>
+    <span class="label i-go" aria-hidden="true">→</span>
+  </a></li>
+  <li><a class="row" href="https://jontoews.com/dual-emergence/">
+    <span class="i-thumb"><img src="assets/thumbs/dual-emergence.jpg?v=d01d76e3" alt="" width="800" height="600" loading="lazy" decoding="async"></span>
+    <span class="i-head"><span class="title i-title">Dual-Emergence</span><span class="body i-note">Two opposed agents negotiate every stage of a planet&#x27;s life, formation to deep future. Eight worlds; some plateau, some endure.</span></span>
+    <span class="label i-field">Agent · Worlds</span>
+    <span class="label i-go" aria-hidden="true">→</span>
+  </a></li>
+  <li><a class="row" href="https://jontoews.com/musical-morphospace/">
+    <span class="i-thumb"><img src="assets/thumbs/musical-morphospace.jpg?v=356cbe1e" alt="" width="800" height="600" loading="lazy" decoding="async"></span>
+    <span class="i-head"><span class="title i-title">Musical Morphospace</span><span class="body i-note">A curiosity-driven agent exploring the space of possible musical grammars — the musics humanity didn&#x27;t happen to invent.</span></span>
+    <span class="label i-field">Agent · Music</span>
+    <span class="label i-go" aria-hidden="true">→</span>
+  </a></li>
+  <li><a class="row" href="https://jontoews.com/akros/">
+    <span class="i-thumb"><img src="assets/thumbs/akros.jpg?v=811bd2f8" alt="" width="800" height="600" loading="lazy" decoding="async"></span>
+    <span class="i-head"><span class="title i-title">Akros</span><span class="body i-note">A complete constructed language built from scratch by autonomous AI agents. 735 words, 99 grammar patterns, a 7-god pantheon.</span></span>
+    <span class="label i-field">Language · Agent</span>
+    <span class="label i-go" aria-hidden="true">→</span>
+  </a></li>
+  <li><a class="row" href="https://jontoews.com/marmalade/">
+    <span class="i-thumb"><img src="assets/thumbs/marmalade.jpg?v=4a5bcb60" alt="" width="800" height="600" loading="lazy" decoding="async"></span>
+    <span class="i-head"><span class="title i-title">Marmalade</span><span class="body i-note">An autonomous generative collage engine making art in the wild, on its own schedule.</span></span>
+    <span class="label i-field">Generative</span>
+    <span class="label i-go" aria-hidden="true">→</span>
+  </a></li>
+  <li><a class="row" href="https://jontoews.com/stimviz/">
+    <span class="i-thumb"><img src="assets/thumbs/stimviz.jpg?v=b1d7e3da" alt="" width="800" height="600" loading="lazy" decoding="async"></span>
+    <span class="i-head"><span class="title i-title">Stimviz</span><span class="body i-note">138 digital archives spanning illustration, design, audio, architecture, typography, science, photography, and film.</span></span>
+    <span class="label i-field">Archive</span>
+    <span class="label i-go" aria-hidden="true">→</span>
+  </a></li>
+  <li><a class="row" href="https://jontoews.com/terragod/">
+    <span class="i-thumb"><img src="assets/thumbs/terragod.jpg?v=897d01a9" alt="" width="800" height="600" loading="lazy" decoding="async"></span>
+    <span class="i-head"><span class="title i-title">Terragod</span><span class="body i-note">Roll a continent, an island, an atoll, or a whole world. Pan, zoom, export as SVG or PNG.</span></span>
+    <span class="label i-field">Generative · Maps</span>
+    <span class="label i-go" aria-hidden="true">→</span>
+  </a></li>
+  <li><a class="row" href="https://jontoews.com/gazetteer/">
+    <span class="i-thumb"><img src="assets/thumbs/gazetteer.jpg?v=1fe4bde9" alt="" width="800" height="600" loading="lazy" decoding="async"></span>
+    <span class="i-head"><span class="title i-title">Gazetteer</span><span class="body i-note">Invent place names from a phoneme grammar. Seed one by integer, coordinate, or landmark, and watch it break apart.</span></span>
+    <span class="label i-field">Generative · Toponymy</span>
+    <span class="label i-go" aria-hidden="true">→</span>
+  </a></li>
+  <li><a class="row" href="https://jontoews.com/trungle-bunch/">
+    <span class="i-thumb"><img src="assets/thumbs/trungle-bunch.jpg?v=dd78eaa6" alt="" width="800" height="600" loading="lazy" decoding="async"></span>
+    <span class="i-head"><span class="title i-title">Trungle Bunch</span><span class="body i-note">A generative instrument grown, not laid out. Triangular bodies on a mycelial network, voiced by the colours their threads join.</span></span>
+    <span class="label i-field">Instrument · Web Audio</span>
+    <span class="label i-go" aria-hidden="true">→</span>
+  </a></li>
+  <li><a class="row" href="https://jontoews.com/petri/">
+    <span class="i-thumb"><img src="assets/thumbs/petri.jpg?v=042caf56" alt="" width="800" height="600" loading="lazy" decoding="async"></span>
+    <span class="i-head"><span class="title i-title">Petri</span><span class="body i-note">Two views of the same organism. One tab lets a colony crawl, eat, and grow under a cursor&#x27;s pull; the other pins a single specimen to a slide — cell wall, nucleus, and reach rendered entirely in dots and lines.</span></span>
+    <span class="label i-field">Generative · Specimen</span>
+    <span class="label i-go" aria-hidden="true">→</span>
+  </a></li>
+  <li><a class="row" href="https://jontoews.com/magpie/">
+    <span class="i-thumb"><img src="assets/thumbs/magpie.jpg?v=63fcfb7b" alt="" width="800" height="600" loading="lazy" decoding="async"></span>
+    <span class="i-head"><span class="title i-title">Magpie</span><span class="body i-note">Five magpies out looking for interesting things, each hunting a different way — by theme, by era, by obscurity, by memory. What they carry home gets transformed and woven into the collage.</span></span>
+    <span class="label i-field">Agent · Sound</span>
+    <span class="label i-go" aria-hidden="true">→</span>
+  </a></li>
+  <li><a class="row" href="https://jontoews.com/seismic/">
+    <span class="i-thumb"><img src="assets/thumbs/seismic.jpg?v=16ccfe60" alt="" width="800" height="600" loading="lazy" decoding="async"></span>
+    <span class="i-head"><span class="title i-title">Seismic Entropy</span><span class="body i-note">True random numbers pulled from live seismic sensor noise at nine stations worldwide — a wall of raw integers, each traceable to real ground motion happening right now.</span></span>
+    <span class="label i-field">Live data · Randomness</span>
+    <span class="label i-go" aria-hidden="true">→</span>
+  </a></li>
+  <li><a class="row" href="https://sfrc-radio.jontoews.com">
+    <span class="i-thumb"><img src="assets/thumbs/sfrc-radio-jontoews-com.jpg?v=5d1c0e07" alt="" width="800" height="600" loading="lazy" decoding="async"></span>
+    <span class="i-head"><span class="title i-title">SFRC-RADIO</span><span class="body i-note">An unattended internet radio station curated by an agent reading live planetary data — geomagnetic activity, solar wind, weather, aircraft overhead, the sun&#x27;s position — and letting the sky decide what plays next.</span></span>
+    <span class="label i-field">Radio · Agent curator</span>
+    <span class="label i-go" aria-hidden="true">→</span>
+  </a></li>
+  <li><a class="row" href="https://jontoews.com/pangaea-otherwise/">
+    <span class="i-thumb"><img src="assets/thumbs/pangaea-otherwise.jpg?v=16150331" alt="" width="800" height="600" loading="lazy" decoding="async"></span>
+    <span class="i-head"><span class="title i-title">Pangaea Otherwise</span><span class="body i-note">A speculative plate-tectonics generator. It starts from the real Pangaea at 250 million years ago, lets you change how the supercontinent breaks apart and how the pieces drift, then plays out alternate Earths, and runs the clock on into the future.</span></span>
+    <span class="label i-field">Generative · Tectonics</span>
+    <span class="label i-go" aria-hidden="true">→</span>
+  </a></li>
+  </ol>
+</section>
 
-    <div class="hero">
-        <h1>
-            <span class="hero-line hero-line--accent"><span class="gl">J</span><span class="gl">o</span><span class="gl">n</span><span class="gl-space"> </span><span class="gl">T</span><span class="gl">o</span><span class="gl">e</span><span class="gl">w</span><span class="gl">s</span></span>
-            <span class="hero-line"><span class="gl">C</span><span class="gl">r</span><span class="gl">e</span><span class="gl">a</span><span class="gl">t</span><span class="gl">i</span><span class="gl">v</span><span class="gl">e</span><span class="gl-space"> </span><span class="gl">D</span><span class="gl">i</span><span class="gl">r</span><span class="gl">e</span><span class="gl">c</span><span class="gl">t</span><span class="gl">o</span><span class="gl">r</span></span>
-        </h1>
-        <p class="blurb">Award-winning creative direction spanning digital experiences, brand systems, film, short fiction, music, and emerging technology.</p>
-        <a href="mailto:jontoews@gmail.com" class="email-link">jontoews@gmail.com</a>
-        <p class="blurb" style="color: var(--muted); font-size: 0.95rem;">I'd love to hear from you about new projects,<br>creative collaborations, or opportunities.</p>
-        <a href="/experiments/" class="experiments-link">Projects<span class="arrow">→</span></a>
-    </div>
-
-    <script>
-        // ============================================================
-        // A custom cellular automaton -- deliberately NOT Conway's Game of
-        // Life rules. Boolean alive/dead state evolves on a fixed timer
-        // (a "generation"), using wider/more permissive birth & survival
-        // neighbor-count bands than B3/S23 so colonies actively spread and
-        // persist rather than GoL's famously fragile die-off. Layered on
-        // top of that discrete rule engine:
-        //   - each cell also carries a continuous `energy` value that eases
-        //     toward 1 (alive) or 0 (dead) every rendered frame, independent
-        //     of how chunky the generation ticks are -- rendered as a circle
-        //     whose radius AND alpha scale with energy, so birth reads as a
-        //     literal grow-from-a-point and death as a shrink-to-nothing,
-        //     not a hard on/off flicker.
-        //   - a newborn cell inherits its color from a live neighbor (with
-        //     a small mutation chance), so colonies read as genetically
-        //     related blobs rather than uniform noise.
-        //   - small independent random birth/death probabilities stop any
-        //     pattern from ever freezing into a static still-life.
-        //   - periodic reseed events drop a fresh cluster of cells at a
-        //     random point on the canvas -- literal "multiplying" into new
-        //     territory, not just neighbor-adjacent growth.
-        // Rendered on a fully transparent-cleared canvas (no fill rect) so
-        // only living cells emit any light against the page's near-black
-        // background -- kept intentionally dark/sparse for text legibility.
-        //
-        // Tap/click anywhere launches an outward kill wave (a dotted
-        // shockwave ring) that clears a big radius; normal growth rules
-        // regrow it over the following seconds.
-        // ============================================================
-        (function () {
-            "use strict";
-
-            var canvas = document.getElementById('ca-canvas');
-            var ctx = canvas.getContext('2d');
-            var dpr = Math.min(window.devicePixelRatio || 1, 2);
-            var cssW = 0, cssH = 0;
-
-            var PALETTE = ['#ff1f71', '#c026d3', '#7858ff', '#06b6d4', '#ffffff'];
-
-            var TICK_MS = 130;
-            var CELL = 11;
-            var BRIGHTNESS = 0.15;
-            var RESEED_SEC = 5;
-            var BLAST_FACTOR = 0.55; // fraction of min(width,height) -- big on purpose
-
-            // ---------------- custom rule constants ----------------
-            var BIRTH_MIN = 2, BIRTH_MAX = 4;       // wider than GoL's exact-3 birth
-            var SURVIVE_MIN = 1, SURVIVE_MAX = 4;   // wider than GoL's 2-3 survival
-            var SPONTANEOUS_DEATH = 0.015;          // natural turnover even when "should" survive
-            var SPONTANEOUS_BIRTH = 0.0006;         // rare unprovoked spark, keeps it from ever fully dying
-            var COLOR_MUTATION = 0.08;
-            var ENERGY_EASE = 0.14;
-
-            var cols, rows;
-            var alive, next, energy, colorIdx;
-
-            function idx(x, y) { return y * cols + x; }
-
-            function hexToRgba(hex, alpha) {
-                var r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16);
-                return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha.toFixed(3) + ')';
-            }
-
-            function seedRandom(count, cx, cy, radius) {
-                for (var i = 0; i < count; i++) {
-                    var x, y;
-                    if (cx != null) {
-                        x = Math.max(0, Math.min(cols - 1, Math.round(cx + (Math.random() * 2 - 1) * radius)));
-                        y = Math.max(0, Math.min(rows - 1, Math.round(cy + (Math.random() * 2 - 1) * radius)));
-                    } else {
-                        x = Math.floor(Math.random() * cols);
-                        y = Math.floor(Math.random() * rows);
-                    }
-                    var id = idx(x, y);
-                    alive[id] = 1;
-                    colorIdx[id] = Math.floor(Math.random() * PALETTE.length);
-                }
-            }
-
-            function buildGrid() {
-                cols = Math.ceil(cssW / CELL);
-                rows = Math.ceil(cssH / CELL);
-                var n = Math.max(1, cols * rows);
-                alive = new Uint8Array(n);
-                next = new Uint8Array(n);
-                energy = new Float32Array(n);
-                colorIdx = new Uint8Array(n);
-                seedRandom(Math.floor(n * 0.02));
-            }
-
-            function resize() {
-                cssW = window.innerWidth;
-                cssH = window.innerHeight;
-                canvas.width = cssW * dpr;
-                canvas.height = cssH * dpr;
-                ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-                buildGrid();
-            }
-
-            function neighborCount(x, y) {
-                var count = 0;
-                for (var dy = -1; dy <= 1; dy++) {
-                    var ny = (y + dy + rows) % rows;
-                    var rowBase = ny * cols;
-                    for (var dx = -1; dx <= 1; dx++) {
-                        if (dx === 0 && dy === 0) continue;
-                        var nx = (x + dx + cols) % cols;
-                        count += alive[rowBase + nx];
-                    }
-                }
-                return count;
-            }
-
-            function pickParentColor(x, y) {
-                if (Math.random() < COLOR_MUTATION) return Math.floor(Math.random() * PALETTE.length);
-                var candidates = [];
-                for (var dy = -1; dy <= 1; dy++) {
-                    var ny = (y + dy + rows) % rows;
-                    var rowBase = ny * cols;
-                    for (var dx = -1; dx <= 1; dx++) {
-                        if (dx === 0 && dy === 0) continue;
-                        var nx = (x + dx + cols) % cols;
-                        var id = rowBase + nx;
-                        if (alive[id]) candidates.push(colorIdx[id]);
-                    }
-                }
-                if (!candidates.length) return Math.floor(Math.random() * PALETTE.length);
-                return candidates[Math.floor(Math.random() * candidates.length)];
-            }
-
-            function step() {
-                for (var y = 0; y < rows; y++) {
-                    for (var x = 0; x < cols; x++) {
-                        var id = idx(x, y);
-                        var n = neighborCount(x, y);
-                        var willLive;
-                        if (alive[id]) {
-                            willLive = (n >= SURVIVE_MIN && n <= SURVIVE_MAX) && Math.random() > SPONTANEOUS_DEATH;
-                        } else {
-                            willLive = (n >= BIRTH_MIN && n <= BIRTH_MAX) || Math.random() < SPONTANEOUS_BIRTH;
-                            if (willLive) colorIdx[id] = pickParentColor(x, y);
-                        }
-                        next[id] = willLive ? 1 : 0;
-                    }
-                }
-                var tmp = alive; alive = next; next = tmp;
-            }
-
-            function render() {
-                ctx.clearRect(0, 0, cssW, cssH);
-                var n = cols * rows;
-                for (var i = 0; i < n; i++) {
-                    var target = alive[i] ? 1 : 0;
-                    var e = energy[i] + (target - energy[i]) * ENERGY_EASE;
-                    energy[i] = e;
-                    if (e < 0.004) { energy[i] = 0; continue; }
-
-                    var x = i % cols, y = (i / cols) | 0;
-                    var cx = x * CELL + CELL / 2, cy = y * CELL + CELL / 2;
-                    var radius = (CELL * 0.5) * Math.min(1, e);
-                    var alpha = BRIGHTNESS * e;
-
-                    ctx.fillStyle = hexToRgba(PALETTE[colorIdx[i]], alpha);
-                    ctx.beginPath();
-                    ctx.arc(cx, cy, Math.max(0, radius), 0, Math.PI * 2);
-                    ctx.fill();
-                }
-            }
-
-            // ---------------- click/tap-to-explode ----------------
-            var explosions = [];
-            var EXPLOSION_DURATION = 550;
-
-            function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
-
-            function triggerExplosion(x, y) {
-                explosions.push({ x: x, y: y, startTime: null, maxRadius: BLAST_FACTOR * Math.min(cssW, cssH) });
-            }
-
-            function updateExplosions(ts) {
-                for (var i = explosions.length - 1; i >= 0; i--) {
-                    var ex = explosions[i];
-                    if (ex.startTime === null) ex.startTime = ts;
-                    var t = (ts - ex.startTime) / EXPLOSION_DURATION;
-                    if (t >= 1) { explosions.splice(i, 1); continue; }
-
-                    var waveRadius = ex.maxRadius * easeOutCubic(t);
-                    var waveRadiusSq = waveRadius * waveRadius;
-                    var gx0 = Math.max(0, Math.floor((ex.x - waveRadius) / CELL));
-                    var gx1 = Math.min(cols - 1, Math.ceil((ex.x + waveRadius) / CELL));
-                    var gy0 = Math.max(0, Math.floor((ex.y - waveRadius) / CELL));
-                    var gy1 = Math.min(rows - 1, Math.ceil((ex.y + waveRadius) / CELL));
-
-                    for (var gy = gy0; gy <= gy1; gy++) {
-                        var cy = gy * CELL + CELL / 2;
-                        var dy = cy - ex.y;
-                        var rowBase = gy * cols;
-                        for (var gx = gx0; gx <= gx1; gx++) {
-                            var cx = gx * CELL + CELL / 2;
-                            var dx = cx - ex.x;
-                            if (dx * dx + dy * dy <= waveRadiusSq) alive[rowBase + gx] = 0;
-                        }
-                    }
-                }
-            }
-
-            function renderExplosions(ts) {
-                for (var i = 0; i < explosions.length; i++) {
-                    var ex = explosions[i];
-                    if (ex.startTime === null) continue;
-                    var t = (ts - ex.startTime) / EXPLOSION_DURATION;
-                    if (t < 0 || t > 1) continue;
-                    var r = ex.maxRadius * easeOutCubic(t);
-                    var alpha = (1 - t) * 0.22;
-                    ctx.strokeStyle = 'rgba(255,255,255,' + alpha.toFixed(3) + ')';
-                    ctx.lineWidth = 2;
-                    ctx.setLineDash([6, 8]);
-                    ctx.beginPath();
-                    ctx.arc(ex.x, ex.y, r, 0, Math.PI * 2);
-                    ctx.stroke();
-                    ctx.setLineDash([]);
-                }
-            }
-
-            // touchstart fires immediately on tap (no ~300ms synthesized-click
-            // delay); the click listener below guards against double-firing
-            // for the same tap once the browser's own click event follows.
-            var lastTouchTriggerTime = 0;
-            window.addEventListener('touchstart', function (e) {
-                if (!e.touches || !e.touches.length) return;
-                var t = e.touches[0];
-                lastTouchTriggerTime = performance.now();
-                triggerExplosion(t.clientX, t.clientY);
-            }, { passive: true });
-
-            window.addEventListener('click', function (e) {
-                if (performance.now() - lastTouchTriggerTime < 600) return;
-                triggerExplosion(e.clientX, e.clientY);
-            });
-
-            var lastTick = 0, lastReseed = 0, started = false;
-
-            function frame(ts) {
-                if (!started) { lastTick = ts; lastReseed = ts; started = true; }
-
-                if (ts - lastTick >= TICK_MS) {
-                    step();
-                    lastTick = ts;
-                }
-                if (ts - lastReseed >= RESEED_SEC * 1000) {
-                    seedRandom(6 + Math.floor(Math.random() * 10), Math.random() * cols, Math.random() * rows, 4);
-                    lastReseed = ts;
-                }
-
-                updateExplosions(ts);
-                render();
-                renderExplosions(ts);
-                requestAnimationFrame(frame);
-            }
-
-            resize();
-            window.addEventListener('resize', resize);
-            requestAnimationFrame(frame);
-        })();
-    </script>
-
-    <script>
-        // ============================================================
-        // Per-letter type glitch: every letter starts in the page's base
-        // font (Inter) and, on its own independent random clock, flickers
-        // through a couple of the 20 curated display faces below before
-        // landing on one -- or occasionally landing back on Inter -- and
-        // holding there for a while before glitching again. Unsynchronized
-        // per letter, forever, so the word is always some evolving mix of
-        // faces rather than a single synchronized effect.
-        // ============================================================
-        (function () {
-            "use strict";
-
-            if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-
-            // 20 curated faces, bold-to-heavy where the family offers it,
-            // deliberately spanning as many distinct type genres as possible:
-            // grotesque, condensed display, geometric, high-contrast serif,
-            // classical serif, slab, comic/cartoon, rounded, urban/graffiti,
-            // stencil, typewriter, monospace, marker script, pixel.
-            var FONTS = [
-                { family: "'Archivo Black', sans-serif", weight: 400 },
-                { family: "'Anton', sans-serif", weight: 400 },
-                { family: "'Oswald', sans-serif", weight: 700 },
-                { family: "'Bebas Neue', sans-serif", weight: 400 },
-                { family: "'Poppins', sans-serif", weight: 900 },
-                { family: "'Abril Fatface', serif", weight: 400 },
-                { family: "'Playfair Display', serif", weight: 900 },
-                { family: "'Cinzel', serif", weight: 900 },
-                { family: "'Alfa Slab One', serif", weight: 400 },
-                { family: "'Titan One', cursive", weight: 400 },
-                { family: "'Bangers', cursive", weight: 400 },
-                { family: "'Fredoka', sans-serif", weight: 700 },
-                { family: "'Passion One', cursive", weight: 900 },
-                { family: "'Bungee', cursive", weight: 400 },
-                { family: "'Rampart One', cursive", weight: 400 },
-                { family: "'Black Ops One', cursive", weight: 400 },
-                { family: "'Special Elite', cursive", weight: 400 },
-                { family: "'Space Mono', monospace", weight: 700 },
-                { family: "'Permanent Marker', cursive", weight: 400 },
-                { family: "'Press Start 2P', cursive", weight: 400 }
-            ];
-
-            function randInt(min, max) { return Math.floor(min + Math.random() * (max - min + 1)); }
-            function pick(arr) { return arr[randInt(0, arr.length - 1)]; }
-
-            function applyBase(span) {
-                span.style.fontFamily = '';
-                span.style.fontWeight = '';
-            }
-            function applyFont(span, f) {
-                span.style.fontFamily = f.family;
-                span.style.fontWeight = f.weight;
-            }
-
-            // Landing pool is weighted so a letter returns to base Inter
-            // roughly one time in six, giving the word periodic moments
-            // of full legibility instead of drifting purely chaotic.
-            function landingChoice() {
-                return Math.random() < 0.16 ? null : pick(FONTS);
-            }
-
-            function flickerThenLand(span, onLand) {
-                var steps = randInt(2, 4);
-                var i = 0;
-                (function step() {
-                    if (i >= steps) { onLand(); return; }
-                    applyFont(span, pick(FONTS));
-                    i++;
-                    setTimeout(step, randInt(60, 150));
-                })();
-            }
-
-            function loop(span) {
-                var dwell = randInt(2000, 7000);
-                setTimeout(function () {
-                    flickerThenLand(span, function () {
-                        var landed = landingChoice();
-                        if (landed) applyFont(span, landed); else applyBase(span);
-                        loop(span);
-                    });
-                }, dwell);
-            }
-
-            var letters = document.querySelectorAll('.gl');
-            for (var i = 0; i < letters.length; i++) {
-                (function (span) {
-                    setTimeout(function () { loop(span); }, randInt(400, 4000));
-                })(letters[i]);
-            }
-        })();
-    </script>
-
+<section class="wrap section" id="contact" aria-labelledby="contact-h">
+  <h2 class="label muted contact__label" id="contact-h">Contact</h2>
+  <div class="contact__text">
+    <p class="body">I’d love to hear from you about new projects, creative collaborations or opportunities.</p>
+    <p class="body">Client portfolio available on request.</p>
+    <p class="body"><a class="email" href="mailto:jontoews@gmail.com">jontoews@gmail.com</a></p>
+  </div>
+</section>
+</main>
+<footer class="wrap site-foot">
+  <p class="label muted a">© 2026 Jon Toews</p>
+</footer>
+<script src="assets/js/moire.js?v=f6622097" defer></script>
+<script src="assets/js/stretch.js?v=c0a21fcd" defer></script>
 </body>
 </html>

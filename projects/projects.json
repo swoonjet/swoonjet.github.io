@@ -1,0 +1,264 @@
+[
+ {
+  "title": "Heliosphere",
+  "tags": [
+   "Sonification"
+  ],
+  "desc": "Live solar wind and geomagnetic data, translated into sound. The sun, audible.",
+  "url": "https://jontoews.com/heliosphere/",
+  "thumb": "heliosphere.jpg"
+ },
+ {
+  "title": "Linger",
+  "tags": [
+   "Reading"
+  ],
+  "desc": "Short fiction and poetry at the speed of reflection. No scrolling, no skimming — just the prose.",
+  "url": "https://jontoews.com/linger/",
+  "thumb": "linger.jpg"
+ },
+ {
+  "title": "Grainfield",
+  "tags": [
+   "Synthesis"
+  ],
+  "desc": "A browser-based granular synthesis explorer. Pull a sound apart on a node canvas and listen to its grains.",
+  "url": "https://jontoews.com/grainfield/",
+  "thumb": "grainfield.jpg"
+ },
+ {
+  "title": "Chord Loom",
+  "tags": [
+   "Instrument",
+   "Web Audio"
+  ],
+  "desc": "Build a chord and load it onto one of twelve breathing pads, each with its own envelope, tape-loop memory, and reverb.",
+  "url": "https://jontoews.com/chord-loom/",
+  "thumb": "chord-loom.jpg"
+ },
+ {
+  "title": "Cadastre",
+  "tags": [
+   "Generative",
+   "Cartography"
+  ],
+  "desc": "Generate a whole city from a seed — terrain, streets, parcels, parks, every place named. Pan, zoom, export it poster-size.",
+  "url": "https://jontoews.com/cadastre/",
+  "thumb": "cadastre.jpg"
+ },
+ {
+  "title": "Earshot",
+  "tags": [
+   "Live audio",
+   "Composition"
+  ],
+  "desc": "Four live field mics, thousands of kilometres apart, streaming right now. Nothing is pre-recorded — every layer comes from whatever happens to coincide.",
+  "url": "https://jontoews.com/earshot/",
+  "thumb": "earshot.jpg"
+ },
+ {
+  "title": "Weather Reports",
+  "tags": [
+   "Anthology",
+   "Fiction"
+  ],
+  "desc": "Forty-six writers, one premise: an unexplained weather phenomenon over World C6H-ɛ. Read it as anthology, archive, or apply for a researcher post.",
+  "url": "https://jontoews.com/Weather-Reports-Field-Guide/",
+  "thumb": "weather-reports-field-guide.jpg"
+ },
+ {
+  "title": "Single Cell Battle",
+  "tags": [
+   "Game",
+   "Roguelike"
+  ],
+  "desc": "A turn-based microorganism battler ported from a Python sim. Roll a roster, fight the computer's, win and evolve — lose three times and die.",
+  "url": "https://jontoews.com/single-cell-battle/",
+  "thumb": "single-cell-battle.jpg"
+ },
+ {
+  "title": "Moira",
+  "tags": [
+   "Generative"
+  ],
+  "desc": "A base curve swept through hundreds of rotations until it interferes with itself. Nine variations on an old moiré sketch, with inks that actually mix.",
+  "url": "https://jontoews.com/moira/",
+  "thumb": "moira.jpg"
+ },
+ {
+  "title": "Jems",
+  "tags": [
+   "Generative"
+  ],
+  "desc": "Random points, Delaunay-triangulated into a mosaic of tonal glass. Regenerate for a new arrangement, export as SVG or PNG.",
+  "url": "https://jontoews.com/jems/",
+  "thumb": "jems.jpg"
+ },
+ {
+  "title": "Lampo",
+  "tags": [
+   "Generative"
+  ],
+  "desc": "Twelve random points in four dimensions, resolved into a Bezier surface of revolution. Tune it, orbit it, keep the good ones.",
+  "url": "https://jontoews.com/lampo/",
+  "thumb": "lampo.jpg"
+ },
+ {
+  "title": "Lateral Walks",
+  "tags": [
+   "Agent",
+   "Webcams"
+  ],
+  "desc": "A trained lateral thinker looks through live webcams and follows the chain of ideas wherever it goes.",
+  "url": "https://jontoews.com/walks/",
+  "thumb": "walks.jpg"
+ },
+ {
+  "title": "Streetwander",
+  "tags": [
+   "Agent",
+   "Streetview"
+  ],
+  "desc": "An agent takes creative walks through real neighborhoods — notices briefly, thinks a lot. Each walk leaves a main artifact and a few companions.",
+  "url": "https://jontoews.com/streetwander/",
+  "thumb": "streetwander.jpg"
+ },
+ {
+  "title": "Curiothymia",
+  "tags": [
+   "Agent",
+   "Mind"
+  ],
+  "desc": "A mind that wanders. Threads of thought, branching by association. Let your attention follow.",
+  "url": "https://curiothymia.jontoews.com",
+  "thumb": "curiothymia-jontoews-com.jpg"
+ },
+ {
+  "title": "Dual-Emergence",
+  "tags": [
+   "Agent",
+   "Worlds"
+  ],
+  "desc": "Two opposed agents negotiate every stage of a planet's life, formation to deep future. Eight worlds; some plateau, some endure.",
+  "url": "https://jontoews.com/dual-emergence/",
+  "thumb": "dual-emergence.jpg"
+ },
+ {
+  "title": "Musical Morphospace",
+  "tags": [
+   "Agent",
+   "Music"
+  ],
+  "desc": "A curiosity-driven agent exploring the space of possible musical grammars — the musics humanity didn't happen to invent.",
+  "url": "https://jontoews.com/musical-morphospace/",
+  "thumb": "musical-morphospace.jpg"
+ },
+ {
+  "title": "Akros",
+  "tags": [
+   "Language",
+   "Agent"
+  ],
+  "desc": "A complete constructed language built from scratch by autonomous AI agents. 735 words, 99 grammar patterns, a 7-god pantheon.",
+  "url": "https://jontoews.com/akros/",
+  "thumb": "akros.jpg"
+ },
+ {
+  "title": "Marmalade",
+  "tags": [
+   "Generative"
+  ],
+  "desc": "An autonomous generative collage engine making art in the wild, on its own schedule.",
+  "url": "https://jontoews.com/marmalade/",
+  "thumb": "marmalade.jpg"
+ },
+ {
+  "title": "Stimviz",
+  "tags": [
+   "Archive"
+  ],
+  "desc": "138 digital archives spanning illustration, design, audio, architecture, typography, science, photography, and film.",
+  "url": "https://jontoews.com/stimviz/",
+  "thumb": "stimviz.jpg"
+ },
+ {
+  "title": "Terragod",
+  "tags": [
+   "Generative",
+   "Maps"
+  ],
+  "desc": "Roll a continent, an island, an atoll, or a whole world. Pan, zoom, export as SVG or PNG.",
+  "url": "https://jontoews.com/terragod/",
+  "thumb": "terragod.jpg"
+ },
+ {
+  "title": "Gazetteer",
+  "tags": [
+   "Generative",
+   "Toponymy"
+  ],
+  "desc": "Invent place names from a phoneme grammar. Seed one by integer, coordinate, or landmark, and watch it break apart.",
+  "url": "https://jontoews.com/gazetteer/",
+  "thumb": "gazetteer.jpg"
+ },
+ {
+  "title": "Trungle Bunch",
+  "tags": [
+   "Instrument",
+   "Web Audio"
+  ],
+  "desc": "A generative instrument grown, not laid out. Triangular bodies on a mycelial network, voiced by the colours their threads join.",
+  "url": "https://jontoews.com/trungle-bunch/",
+  "thumb": "trungle-bunch.jpg"
+ },
+ {
+  "title": "Petri",
+  "tags": [
+   "Generative",
+   "Specimen"
+  ],
+  "desc": "Two views of the same organism. One tab lets a colony crawl, eat, and grow under a cursor's pull; the other pins a single specimen to a slide — cell wall, nucleus, and reach rendered entirely in dots and lines.",
+  "url": "https://jontoews.com/petri/",
+  "thumb": "petri.jpg"
+ },
+ {
+  "title": "Magpie",
+  "tags": [
+   "Agent",
+   "Sound"
+  ],
+  "desc": "Five magpies out looking for interesting things, each hunting a different way — by theme, by era, by obscurity, by memory. What they carry home gets transformed and woven into the collage.",
+  "url": "https://jontoews.com/magpie/",
+  "thumb": "magpie.jpg"
+ },
+ {
+  "title": "Seismic Entropy",
+  "tags": [
+   "Live data",
+   "Randomness"
+  ],
+  "desc": "True random numbers pulled from live seismic sensor noise at nine stations worldwide — a wall of raw integers, each traceable to real ground motion happening right now.",
+  "url": "https://jontoews.com/seismic/",
+  "thumb": "seismic.jpg"
+ },
+ {
+  "title": "SFRC-RADIO",
+  "tags": [
+   "Radio",
+   "Agent curator"
+  ],
+  "desc": "An unattended internet radio station curated by an agent reading live planetary data — geomagnetic activity, solar wind, weather, aircraft overhead, the sun's position — and letting the sky decide what plays next.",
+  "url": "https://sfrc-radio.jontoews.com",
+  "thumb": "sfrc-radio-jontoews-com.jpg"
+ },
+ {
+  "title": "Pangaea Otherwise",
+  "tags": [
+   "Generative",
+   "Tectonics"
+  ],
+  "desc": "A speculative plate-tectonics generator. It starts from the real Pangaea at 250 million years ago, lets you change how the supercontinent breaks apart and how the pieces drift, then plays out alternate Earths, and runs the clock on into the future.",
+  "url": "https://jontoews.com/pangaea-otherwise/",
+  "thumb": "pangaea-otherwise.jpg"
+ }
+]
