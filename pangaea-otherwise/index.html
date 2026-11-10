@@ -168,6 +168,7 @@ details.grp[open]>summary{color:var(--ink)}
 .legend{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:10px;min-height:14px;font:400 10px/1.2 var(--mono);letter-spacing:.03em;color:var(--ink-45)}
 .legend span{display:inline-flex;align-items:center;gap:6px}
 .legend i{width:9px;height:9px;display:inline-block;box-shadow:inset 0 0 0 1px rgba(22,21,15,.14)}
+.legend i.tx{width:26px;height:12px}
 
 /* ---------------------------------------------------------------- timeline */
 .timeline{display:flex;align-items:center;gap:16px;margin:calc(var(--unit)*2.5) 0 4px}
@@ -1223,27 +1224,151 @@ dialog::backdrop{background:rgba(242,240,235,.88)}
     const snow = T < -3 ? Math.min(1, (-3 - T) / 5) : 0, ice = T < -9 ? 1 : 0;
     if (snow > 0 || ice) { const f = Math.max(snow, ice); for (let c = 0; c < 3; c++) out[c] = out[c] * (1 - f) + [243, 246, 250][c] * f; }
   }
-  /* ---- flat palettes: every layer is banded fills in one family of colours, no gradients, no shading ---- */
-  /* paper-and-ink print: bright field for land, a wash of Earshot's blue ink for the sea, umber and moss for relief and life */
+  /* ---- palettes. Flat and Plates stay as banded fills; Terrain, Living world, Seafloor age and Crust thickness are drawn
+   * in pen and ink over paper: hatching, cross-hatching, stipple and small drawn marks, one ink per meaning ---- */
   const FLAT_LAND = [250, 249, 245], FLAT_SEA = [207, 211, 224], INK = [22, 21, 15], PAPER = [242, 240, 235];
+  const SEA_PAPER = [233, 234, 236], SHELF_PAPER = [238, 235, 226];
+  const UMBER = [112, 80, 40], MOSS = [46, 86, 58], OLIVE = [104, 112, 38], OCHRE = [158, 115, 18], BLUE = [26, 61, 168], SLATE = [92, 97, 107], ROOT = [116, 72, 18];
   const BC = { ice: [252, 252, 250], tundra: [212, 214, 200], cold: [228, 224, 210], boreal: [86, 116, 96], temperate: [134, 158, 122], grass: [196, 196, 148], savanna: [218, 192, 128], desert: [240, 228, 198], rain: [56, 102, 71], rock: [156, 153, 147] };
-  const LEGEND = [['ice and snow', BC.ice], ['tundra', BC.tundra], ['boreal forest', BC.boreal], ['temperate forest', BC.temperate], ['grassland', BC.grass], ['savanna', BC.savanna], ['desert', BC.desert], ['rainforest', BC.rain], ['bare rock', BC.rock]];
-  function biomeFlat(T, P, h) {
-    if (T < -10) return BC.ice;
-    if (h > 3800) return T < -2 ? BC.ice : BC.rock;
-    if (h > 2600) return BC.rock;
+  const BT = {};   // the faint wash under each biome's marks
+  Object.keys(BC).forEach((k) => (BT[k] = BC[k].map((c, n) => c + (FLAT_LAND[n] - c) * (k === 'rain' ? 0.62 : 0.8))));
+  const LEGEND = [['ice and snow', 'ice'], ['tundra', 'tundra'], ['boreal forest', 'boreal'], ['temperate forest', 'temperate'], ['grassland', 'grass'], ['savanna', 'savanna'], ['desert', 'desert'], ['rainforest', 'rain'], ['bare rock', 'rock']];
+  function biomeKey(T, P, h) {
+    if (T < -10) return 'ice';
+    if (h > 3800) return T < -2 ? 'ice' : 'rock';
+    if (h > 2600) return 'rock';
     const mi = P / (100 + 52 * Math.max(T, 0));
-    if (T < 0) return mi < 0.25 ? BC.cold : BC.tundra;
-    if (T < 8) return mi < 0.3 ? BC.cold : mi < 0.7 ? BC.tundra : BC.boreal;
-    if (T < 18) return mi < 0.25 ? BC.desert : mi < 0.5 ? BC.grass : BC.temperate;
-    if (mi < 0.25) return BC.desert; if (mi < 0.5) return BC.grass; if (mi < 0.85) return BC.savanna;
-    return (mi > 1.4 && T >= 22) ? BC.rain : BC.temperate;
+    if (T < 0) return mi < 0.25 ? 'cold' : 'tundra';
+    if (T < 8) return mi < 0.3 ? 'cold' : mi < 0.7 ? 'tundra' : 'boreal';
+    if (T < 18) return mi < 0.25 ? 'desert' : mi < 0.5 ? 'grass' : 'temperate';
+    if (mi < 0.25) return 'desert'; if (mi < 0.5) return 'grass'; if (mi < 0.85) return 'savanna';
+    return (mi > 1.4 && T >= 22) ? 'rain' : 'temperate';
   }
-  function terrainSea(d) { return d > 4000 ? [168, 180, 212] : d > 2500 ? [186, 195, 219] : d > 1000 ? [201, 208, 224] : d > 200 ? [216, 221, 230] : [230, 233, 237]; }
-  function terrainLand(h) { return h < 250 ? FLAT_LAND : h < 700 ? [238, 232, 214] : h < 1500 ? [224, 208, 172] : h < 2500 ? [200, 172, 118] : h < 3800 ? [158, 124, 64] : [96, 84, 66]; }
-  function ageBand(a) { return a < 15 ? [222, 227, 238] : a < 45 ? [192, 202, 226] : a < 90 ? [158, 174, 212] : a < 140 ? [120, 142, 196] : a < 190 ? [80, 108, 178] : [42, 74, 158]; }
-  function thickBand(t) { return t < 27 ? [214, 222, 212] : t < 38 ? FLAT_LAND : t < 50 ? [230, 212, 168] : t < 62 ? [196, 154, 80] : [120, 84, 24]; }
   const clamp01 = (v) => (v < 0 ? 0 : v > 1 ? 1 : v);
+  const fr = (v) => v - Math.floor(v);
+  function hash2(a, b) { let h = Math.imul(a | 0, 374761393) ^ Math.imul(b | 0, 668265263); h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; }
+  function seg(px, py, ax, ay, bx, by) { const dx = bx - ax, dy = by - ay, t = clamp01(((px - ax) * dx + (py - ay) * dy) / (dx * dx + dy * dy)); return Math.hypot(px - ax - t * dx, py - ay - t * dy); }
+  function inkOn(c, k, a) { if (a > 0) { if (a > 1) a = 1; c[0] += (k[0] - c[0]) * a; c[1] += (k[1] - c[1]) * a; c[2] += (k[2] - c[2]) * a; } }
+  /* All marks are measured in screen pixels (u, v); fp is how many screen pixels one output pixel covers, and the
+   * coverage of each mark is filtered over it, so the drawing keeps its line weight at any detail or zoom. */
+  // parallel pen strokes across the direction (ca, sa): a slow wobble, and pressure that swells and thins along each stroke
+  function hatch(u, v, ca, sa, per, hw, fp, dash) {
+    if (fp > per * 0.55) return Math.min(1, (2 * hw + 0.4) / per);
+    const t = u * ca + v * sa + 0.5 * Math.sin(u * 0.057 + v * 0.093 + ca * 3) + 0.3 * Math.sin(v * 0.031 - u * 0.027 + sa * 2);
+    const n = Math.floor(t / per), s = v * ca - u * sa;
+    if (dash && fr((s + hash2(n, 91) * 40) / dash) > 0.68) return 0;
+    const w = hw * (0.8 + 0.32 * Math.sin(s * 0.17 + n * 2.3)), d = Math.abs(fr(t / per) - 0.5) * per;
+    return clamp01((w - d) / fp + 0.5);
+  }
+  // stipple: one dot at most per cell, placed and kept by a hash, so density reads as tone
+  function dots(u, v, cell, dens, r, fp, seed) {
+    if (dens <= 0) return 0;
+    if (fp > cell * 0.5) return Math.min(1, dens * 3.6 * r * r / (cell * cell));
+    const ci = Math.floor(u / cell), cj = Math.floor(v / cell);
+    if (hash2(ci + seed, cj) > dens) return 0;
+    const m = cell - 2 * (r + 0.5), cx = (ci + 0.5) * cell + (hash2(ci, cj + seed) - 0.5) * m, cy = (cj + 0.5) * cell + (hash2(ci + 7 * seed, cj) - 0.5) * m;
+    return clamp01((r - Math.hypot(u - cx, v - cy)) / fp + 0.5);
+  }
+  // small drawn marks scattered one per cell: trees, rings, grass tufts, dashes
+  function glyph(u, v, kind, cell, dens, fp, seed) {
+    if (fp > cell * 0.4) return dens * 0.18;
+    const ci = Math.floor(u / cell), cj = Math.floor(v / cell);
+    if (hash2(ci + seed, cj - seed) > dens) return 0;
+    const jt = cell * 0.36, L = cell * 0.5;
+    const x = u - (ci + 0.5) * cell - (hash2(ci, cj + seed) - 0.5) * jt, y = v - (cj + 0.5) * cell - (hash2(ci + 3 * seed, cj) - 0.5) * jt;
+    let d;
+    if (kind === 'ring') d = Math.abs(Math.hypot(x, y) - L * 0.42);
+    else if (kind === 'tree') d = Math.min(seg(x, y, 0, -L * 0.5, 0, L * 0.5), seg(x, y, 0, -L * 0.5, -L * 0.32, -L * 0.02), seg(x, y, 0, -L * 0.5, L * 0.32, -L * 0.02));
+    else if (kind === 'tuft') d = Math.min(seg(x, y, 0, L * 0.35, -L * 0.32, -L * 0.3), seg(x, y, 0, L * 0.35, 0, -L * 0.45), seg(x, y, 0, L * 0.35, L * 0.32, -L * 0.3));
+    else d = seg(x, y, -L * 0.5, 0, L * 0.5, 0);
+    return clamp01((0.42 - d) / fp + 0.5);
+  }
+  const toneOf = (h) => (h < 200 ? 0 : Math.pow(clamp01((h - 200) / 3800), 0.75));
+  // terrain: umber hatching that builds to cross-hatching as the ground rises and turns away from the light
+  function penTerrain(c, T, u, v, fp) {
+    const g1 = clamp01((T - 0.1) / 0.06), g2 = clamp01((T - 0.45) / 0.06), g3 = clamp01((T - 0.74) / 0.06);
+    let cov = 0;
+    if (g1 > 0) cov = hatch(u, v, 0.7071, -0.7071, 4.2, 0.26 + 0.3 * T, fp, 0) * g1;
+    if (g2 > 0) cov = Math.max(cov, hatch(u, v, 0.7071, 0.7071, 4.2, 0.28 + 0.25 * T, fp, 0) * g2);
+    if (g3 > 0) cov = Math.max(cov, hatch(u, v, 0.26, 0.97, 3.4, 0.36, fp, 0) * g3);
+    inkOn(c, UMBER, cov * 0.92);
+  }
+  // water: engraver's water-lining, rings that follow the coast and open out, then ruled lines that tighten with depth
+  function penSea(c, dep, ds, u, v, fp) {
+    let cov = 0;
+    if (ds < 26 && fp < 2.6) {
+      const w = ds + 0.5 * Math.sin(u * 0.09 + v * 0.071) + 0.3 * Math.sin(v * 0.13 - u * 0.05);
+      for (let k = 1; k <= 5; k++) { const rk = 3 * k + 0.25 * k * k; cov = Math.max(cov, clamp01((0.36 - Math.abs(w - rk)) / fp + 0.5) * (1.1 - k * 0.17)); }
+    }
+    if (dep > 2500) cov = Math.max(cov, hatch(u, v, 0, 1, dep > 4200 ? 3.8 : 5.6, 0.26, fp, 0) * (dep > 4200 ? 0.62 : 0.45));
+    inkOn(c, BLUE, cov * 0.72);
+  }
+  // living world: each biome has its own mark in its own ink over a faint wash
+  function penBiome(c, key, u, v, fp) {
+    switch (key) {
+      case 'tundra': inkOn(c, SLATE, glyph(u, v, 'dash', 7, 0.6, fp, 3) * 0.8); break;
+      case 'cold': inkOn(c, SLATE, dots(u, v, 5, 0.4, 0.55, fp, 5) * 0.8); break;
+      case 'boreal': inkOn(c, MOSS, glyph(u, v, 'tree', 7, 0.92, fp, 7)); break;
+      case 'temperate': inkOn(c, MOSS, glyph(u, v, 'ring', 6.5, 0.88, fp, 11)); break;
+      case 'rain': inkOn(c, MOSS, Math.max(glyph(u, v, 'ring', 4.6, 1, fp, 13), hatch(u, v, 0.7071, -0.7071, 3.4, 0.28, fp, 0) * 0.55)); break;
+      case 'grass': inkOn(c, OLIVE, glyph(u, v, 'tuft', 7.5, 0.62, fp, 17) * 0.9); break;
+      case 'savanna': inkOn(c, OCHRE, Math.max(glyph(u, v, 'tuft', 9, 0.38, fp, 19), dots(u, v, 4.5, 0.22, 0.5, fp, 23)) * 0.9); break;
+      case 'desert': inkOn(c, OCHRE, dots(u, v, 3.6, 0.42, 0.5, fp, 29) * 0.85); break;
+      case 'rock': inkOn(c, SLATE, Math.max(hatch(u, v, 0.7071, -0.7071, 3.8, 0.32, fp, 0), hatch(u, v, 0.7071, 0.7071, 3.8, 0.32, fp, 0)) * 0.85); break;
+    }
+  }
+  // seafloor age, one blue ink: bare paper at the ridges, then stipple, hatching, and cross-hatching on the oldest floor
+  const ageIdx = (a) => (a < 15 ? 0 : a < 45 ? 1 : a < 90 ? 2 : a < 140 ? 3 : a < 190 ? 4 : 5);
+  function penAge(c, a, u, v, fp) {
+    let cov = 0;
+    if (a >= 15 && a < 45) cov = dots(u, v, 4.2, 0.45, 0.45, fp, 31);
+    else if (a >= 45) cov = hatch(u, v, 0.7071, -0.7071, a < 90 ? 6 : 4.2, a < 90 ? 0.26 : 0.32, fp, 0);
+    if (a >= 140) cov = Math.max(cov, hatch(u, v, 0.7071, 0.7071, a < 190 ? 6 : 4.2, a < 190 ? 0.26 : 0.32, fp, 0));
+    inkOn(c, BLUE, cov * 0.7);
+  }
+  // crust thickness: stretched crust in broken slate dashes, then ochre stipple thickening into hatched mountain roots
+  function penThick(c, t, u, v, fp) {
+    if (t < 27) { inkOn(c, SLATE, glyph(u, v, 'dash', 6, 0.55, fp, 37) * 0.75); return; }
+    const k = clamp01((t - 29) / 31);
+    if (k > 0) inkOn(c, OCHRE, dots(u, v, 3.2, 0.12 + 0.88 * k, 0.42 + 0.38 * k, fp, 41));
+    if (t > 58) inkOn(c, ROOT, hatch(u, v, 0.7071, -0.7071, 3.6, 0.4, fp, 0) * clamp01((t - 58) / 4) * 0.85);
+  }
+  // distance from each sea pixel to the nearest land, in output pixels (two-pass chamfer)
+  function coastDist(e, ow, oh) {
+    const D = new Float32Array(ow * oh), B = 1.4142;
+    for (let x = 0; x < D.length; x++) D[x] = e[x] > 0 ? 0 : 1e6;
+    for (let j = 0; j < oh; j++) for (let i = 0; i < ow; i++) {
+      const x = j * ow + i; let d = D[x]; if (d === 0) continue;
+      if (i > 0) d = Math.min(d, D[x - 1] + 1);
+      if (j > 0) { d = Math.min(d, D[x - ow] + 1); if (i > 0) d = Math.min(d, D[x - ow - 1] + B); if (i < ow - 1) d = Math.min(d, D[x - ow + 1] + B); }
+      D[x] = d;
+    }
+    for (let j = oh - 1; j >= 0; j--) for (let i = ow - 1; i >= 0; i--) {
+      const x = j * ow + i; let d = D[x]; if (d === 0) continue;
+      if (i < ow - 1) d = Math.min(d, D[x + 1] + 1);
+      if (j < oh - 1) { d = Math.min(d, D[x + ow] + 1); if (i < ow - 1) d = Math.min(d, D[x + ow + 1] + B); if (i > 0) d = Math.min(d, D[x + ow - 1] + B); }
+      D[x] = d;
+    }
+    return D;
+  }
+  // a small legend sample drawn with the same pens
+  const swCache = {};
+  function swatch(kind, val) {
+    const id = kind + ':' + val; if (swCache[id]) return swCache[id];
+    const w = 26, h = 12, cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+    const g = cv.getContext('2d'), im = g.createImageData(w, h), c = [0, 0, 0];
+    for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
+      const u = i + 3.5, v = j + 3.5;
+      if (kind === 'terrain') { c[0] = FLAT_LAND[0]; c[1] = FLAT_LAND[1]; c[2] = FLAT_LAND[2]; penTerrain(c, val, u, v, 1); }
+      else if (kind === 'sea') { c[0] = SEA_PAPER[0]; c[1] = SEA_PAPER[1]; c[2] = SEA_PAPER[2]; penSea(c, val, val < 1000 ? i + 1 : 99, u, v, 1); }
+      else if (kind === 'biome') { const b = BT[val]; c[0] = b[0]; c[1] = b[1]; c[2] = b[2]; penBiome(c, val, u, v, 1); }
+      else if (kind === 'age') { c[0] = SEA_PAPER[0]; c[1] = SEA_PAPER[1]; c[2] = SEA_PAPER[2]; penAge(c, val, u, v, 1); }
+      else { c[0] = FLAT_LAND[0]; c[1] = FLAT_LAND[1]; c[2] = FLAT_LAND[2]; penThick(c, val, u, v, 1); }
+      const q = (j * w + i) * 4; im.data[q] = c[0]; im.data[q + 1] = c[1]; im.data[q + 2] = c[2]; im.data[q + 3] = 255;
+    }
+    g.putImageData(im, 0, 0);
+    return (swCache[id] = cv.toDataURL());
+  }
 
   function paint(snap, grid, o) {
     const W = grid.W, H = grid.H, up = o.up || 1, ow = W * up, oh = H * up, sl = o.seaLevel || 0, layer = o.layer || 'flat', N = ow * oh;
@@ -1274,14 +1399,55 @@ dialog::backdrop{background:rgba(242,240,235,.88)}
     }
     if (layer === 'biome') { clim = o.climate || climate(Float32Array.from(snap.elev, (v) => v - sl), W, H, { warmth: o.warmth || 0 }); tF = fld(clim.temp); pF = fld(clim.rain); }
     const pl = snap.plate, pc = o.plateColors || [];
+    const pen = layer === 'terrain' || layer === 'biome' || layer === 'age' || layer === 'thickness';
+    const fp = o.px || 1300 / ow, land = [0, 0, 0], sea = [0, 0, 0], slopeK = ow / 9.6e5;
+    const D = layer === 'terrain' || layer === 'biome' ? coastDist(e, ow, oh) : null;
+    let AB = null;   // seafloor age band per pixel, for the isochron lines
+    if (layer === 'age') { AB = new Int8Array(N); for (let x = 0; x < N; x++) AB[x] = -e[x] < 300 ? -1 : ageIdx(ageF[x]); }
     for (let j = 0; j < oh; j++) {
+      const jm = j > 0 ? j - 1 : 0, jp = j < oh - 1 ? j + 1 : oh - 1;
       for (let i = 0; i < ow; i++) {
         const x = j * ow + i, h = e[x], a = A[x]; let L = FLAT_LAND, S = FLAT_SEA;
-        if (layer === 'terrain') { L = terrainLand(h); S = terrainSea(-h); }
-        else if (layer === 'biome') { L = biomeFlat(tF[x], pF[x], h); S = h > -200 ? [224, 228, 235] : FLAT_SEA; }
-        else if (layer === 'age') { S = -h < 300 ? [233, 229, 216] : ageBand(ageF[x]); }
-        else if (layer === 'thickness') { const aC = clamp01((contF[x] - 0.5) / 0.12 + 0.5), c = thickBand(thF[x]); const q = x * 4; rgba[q] = FLAT_SEA[0] + (c[0] - FLAT_SEA[0]) * aC; rgba[q + 1] = FLAT_SEA[1] + (c[1] - FLAT_SEA[1]) * aC; rgba[q + 2] = FLAT_SEA[2] + (c[2] - FLAT_SEA[2]) * aC; rgba[q + 3] = 255; continue; }
-        else if (layer === 'plates') {
+        if (pen) {
+          const u = (i + 0.5) * fp, v = (j + 0.5) * fp, im = i === 0 ? ow - 1 : i - 1, ip = i === ow - 1 ? 0 : i + 1;
+          const mix = layer === 'thickness' ? clamp01((contF[x] - 0.5) / 0.12 + 0.5) : a;
+          let line = 0, lineInk = INK;
+          if (mix > 0) {
+            if (layer === 'biome') { const k = biomeKey(tF[x], pF[x], h), b = BT[k]; land[0] = b[0]; land[1] = b[1]; land[2] = b[2]; penBiome(land, k, u, v, fp); }
+            else { land[0] = FLAT_LAND[0]; land[1] = FLAT_LAND[1]; land[2] = FLAT_LAND[2]; }
+            if (layer === 'terrain') {
+              let T = toneOf(h);
+              if (h > 0) {
+                const sl2 = -(e[j * ow + ip] - e[j * ow + im] + e[jp * ow + i] - e[jm * ow + i]) * slopeK;   // light from the north-west
+                T = clamp01(T + clamp01(sl2) * 0.55 * clamp01(h / 500) - clamp01(-sl2) * 0.2);
+                const b0 = Math.floor(h / 1000);   // index contours every 1000 m
+                if (b0 !== Math.floor(e[j * ow + ip] / 1000) || b0 !== Math.floor(e[jp * ow + i] / 1000)) { line = 0.5; lineInk = UMBER; }
+              }
+              penTerrain(land, T, u, v, fp);
+            } else if (layer === 'thickness') penThick(land, thF[x], u, v, fp);
+          }
+          if (mix < 1) {
+            if (layer === 'age') {
+              const s0 = -h < 300 ? SHELF_PAPER : SEA_PAPER; sea[0] = s0[0]; sea[1] = s0[1]; sea[2] = s0[2];
+              if (AB[x] >= 0) {
+                penAge(sea, ageF[x], u, v, fp);
+                const n1 = AB[j * ow + ip], n2 = AB[jp * ow + i];   // isochrons where the age band steps
+                if ((n1 >= 0 && n1 !== AB[x]) || (n2 >= 0 && n2 !== AB[x])) { line = 0.42; lineInk = BLUE; }
+              }
+            } else {
+              sea[0] = SEA_PAPER[0]; sea[1] = SEA_PAPER[1]; sea[2] = SEA_PAPER[2];
+              if (D) penSea(sea, -h, (D[x] - 0.5) * fp, u, v, fp);
+              else inkOn(sea, BLUE, hatch(u, v, 0, 1, 5, 0.28, fp, 0) * 0.4);
+            }
+          }
+          const q = x * 4;
+          let r = sea[0] + (land[0] - sea[0]) * mix, gg = sea[1] + (land[1] - sea[1]) * mix, b = sea[2] + (land[2] - sea[2]) * mix;
+          if (line) { r += (lineInk[0] - r) * line; gg += (lineInk[1] - gg) * line; b += (lineInk[2] - b) * line; }
+          const cw = CW[x]; if (cw > 0) { r += (INK[0] - r) * cw; gg += (INK[1] - gg) * cw; b += (INK[2] - b) * cw; }
+          rgba[q] = r; rgba[q + 1] = gg; rgba[q + 2] = b; rgba[q + 3] = 255;
+          continue;
+        }
+        if (layer === 'plates') {
           const fu = (i + 0.5) / up - 0.5, fv = (j + 0.5) / up - 0.5; let i0 = Math.floor(fu), j0 = Math.floor(fv); const tu = fu - i0, tv = fv - j0;
           let i1 = i0 + 1, j1 = j0 + 1; j0 = j0 < 0 ? 0 : j0 >= H ? H - 1 : j0; j1 = j1 < 0 ? 0 : j1 >= H ? H - 1 : j1; i0 = ((i0 % W) + W) % W; i1 = ((i1 % W) + W) % W;
           const ids = [pl[j0 * W + i0], pl[j0 * W + i1], pl[j1 * W + i0], pl[j1 * W + i1]], ws = [(1 - tu) * (1 - tv), tu * (1 - tv), (1 - tu) * tv, tu * tv];
@@ -1296,7 +1462,7 @@ dialog::backdrop{background:rgba(242,240,235,.88)}
     return { rgba, w: ow, h: oh, clim };
   }
 
-  return { paint, climate, LEGEND, hillshade, upsampleElev };
+  return { paint, climate, LEGEND, swatch, hillshade, upsampleElev };
 });
 
 </script>
@@ -1575,7 +1741,8 @@ const isFuture = (age) => age < -0.5;
     const snap = snapNow(); if (!snap || !S.sim) return;
     let up = hi && S.sim.grid.W <= 720 ? 2 : 1;
     if (hi && S.zoom.k > 1.5) up = Math.max(up, Math.min(S.zoom.k > 4 ? 6 : 4, Math.floor(4320 / S.sim.grid.W)));
-    const o = { up, layer: S.d.layer, seaLevel: S.d.seaLevel, warmth: S.d.warmth, relief: S.d.relief, plateColors: S.sim.colors };
+    const rw = el.map.getBoundingClientRect().width;   // the pens draw in screen pixels, so line weight holds at every zoom
+    const o = { up, px: rw > 0 ? rw / (S.sim.grid.W * up) : undefined, layer: S.d.layer, seaLevel: S.d.seaLevel, warmth: S.d.warmth, relief: S.d.relief, plateColors: S.sim.colors };
     if (S.d.layer === 'biome') o.climate = climateFor(snap);
     const img = R.paint(snap, S.sim.grid, o);
     if (el.map.width !== img.w || el.map.height !== img.h) { el.map.width = img.w; el.map.height = img.h; }
@@ -1594,11 +1761,12 @@ const isFuture = (age) => age < -0.5;
   function updateLegend() {
     const L = S.d.layer; let h = '';
     const sw = (c, t) => `<span><i style="background:rgb(${c})"></i>${t}</span>`;
+    const tx = (k, v, t) => `<span><i class="tx" style="background-image:url(${R.swatch(k, v)})"></i>${t}</span>`;
     if (L === 'flat') h = sw('250,249,245', 'land') + sw('207,211,224', 'ocean') + sw('22,21,15', 'coast');
-    else if (L === 'biome') R.LEGEND.forEach(([n, c]) => (h += sw(c, n)));
-    else if (L === 'terrain') h = sw('250,249,245', 'lowland') + sw('224,208,172', 'hills') + sw('158,124,64', 'mountains') + sw('96,84,66', 'peaks') + sw('230,233,237', 'shelf sea') + sw('168,180,212', 'deep sea');
-    else if (L === 'age') h = sw('222,227,238', 'new floor') + sw('192,202,226', '15 Myr') + sw('158,174,212', '45 Myr') + sw('120,142,196', '90 Myr') + sw('80,108,178', '140 Myr') + sw('42,74,158', '190+ Myr');
-    else if (L === 'thickness') h = sw('214,222,212', 'thin, stretched') + sw('250,249,245', 'normal') + sw('230,212,168', 'thick') + sw('196,154,80', 'mountain belt') + sw('120,84,24', 'roots of high ranges');
+    else if (L === 'biome') R.LEGEND.forEach(([n, k]) => (h += tx('biome', k, n)));
+    else if (L === 'terrain') h = tx('terrain', 0, 'lowland') + tx('terrain', 0.3, 'hills') + tx('terrain', 0.58, 'mountains') + tx('terrain', 0.9, 'peaks') + tx('sea', 200, 'coastal water') + tx('sea', 4500, 'deep sea');
+    else if (L === 'age') h = tx('age', 5, 'new floor') + tx('age', 30, '15 Myr') + tx('age', 60, '45 Myr') + tx('age', 110, '90 Myr') + tx('age', 160, '140 Myr') + tx('age', 200, '190+ Myr');
+    else if (L === 'thickness') h = tx('thick', 20, 'thin, stretched') + tx('thick', 33, 'normal') + tx('thick', 46, 'thick') + tx('thick', 56, 'mountain belt') + tx('thick', 66, 'roots of high ranges');
     else h = Object.entries(PCOL).map(([k, c]) => `<span><i style="background:${c}"></i>${{ ridge: 'ridge', trench: 'subduction', transform: 'sliding', collision: 'collision' }[k]}</span>`).join('');
     el.legend.innerHTML = h;
   }
@@ -1913,7 +2081,7 @@ const isFuture = (age) => age < -0.5;
       await new Promise((r) => setTimeout(r, 30));
       const sim = new E.Sim(Object.assign({}, S.p, { seed, res, snapEvery: 1000 }), mask); sim.run(Math.min(S.p.duration, S.p.startAge));
       const snap = sim.snapshot(), cl = R.climate(Float32Array.from(snap.elev, (v) => v - S.d.seaLevel), sim.grid.W, sim.grid.H, { warmth: S.d.warmth });
-      const img = R.paint(snap, sim.grid, { up: 1, layer: 'biome', seaLevel: S.d.seaLevel, warmth: S.d.warmth, relief: S.d.relief, plateColors: sim.colors, climate: cl });
+      const img = R.paint(snap, sim.grid, { up: 1, px: 0.55, layer: 'biome', seaLevel: S.d.seaLevel, warmth: S.d.warmth, relief: S.d.relief, plateColors: sim.colors, climate: cl });
       cv.width = img.w; cv.height = img.h; cv.getContext('2d').putImageData(new ImageData(img.rgba, img.w, img.h), 0, 0);
       lab.textContent = 'Seed ' + seed + ' · open this world';
       cell.addEventListener('click', () => { S.p.seed = seed; S.p.res = res; dlg.close(); refreshControls(); paramChanged(true); });
