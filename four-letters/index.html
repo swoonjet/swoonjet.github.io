@@ -1,0 +1,468 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Four-letter words in the Gazetteer's phoneme grammar. One real word for every four coined ones, all of them built from the same onsets, vowels and codas, with consonants that only meet where they sit well together.">
+<meta name="theme-color" content="#f2f0eb">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 fill=%27%23f2f0eb%27/%3E%3Cpath d=%27M7 24V9h4l5 9 5-9h4v15%27 fill=%27none%27 stroke=%27%2316150f%27 stroke-width=%272.2%27/%3E%3Ccircle cx=%2725%27 cy=%2725%27 r=%272.4%27 fill=%27%23d93d18%27/%3E%3C/svg%3E">
+<title>Four Letters</title>
+</head>
+<body>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,500;1,400&display=swap">
+<style>
+/* Paper and ink, after Pangaea Otherwise. Vermilion means one thing here: this word is in the dictionary.
+   Everything else is ink at different strengths, and separation is done with space; the only rule is the heavy one
+   under the masthead. */
+:root{
+  --paper:#f2f0eb; --field:#fcfbf8;
+  --ink:#16150f;
+  --ink-70:rgba(22,21,15,.70); --ink-45:rgba(22,21,15,.45); --ink-24:rgba(22,21,15,.24); --ink-10:rgba(22,21,15,.10); --ink-06:rgba(22,21,15,.06);
+  --accent:#d93d18;
+  --sans:"Helvetica Neue",Helvetica,Inter,"Segoe UI",Arial,sans-serif;
+  --mono:"SF Mono",ui-monospace,"IBM Plex Mono",Menlo,Consolas,monospace;
+  --serif:"Crimson Pro",Georgia,"Times New Roman",serif;
+  --unit:8px; --gutter:32px;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--paper);color:var(--ink);font:13px/1.45 var(--sans);-webkit-font-smoothing:antialiased;overflow-x:hidden}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:30;opacity:.05;mix-blend-mode:multiply;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/></filter><rect width='180' height='180' filter='url(%23n)'/></svg>")}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:1px solid var(--accent);outline-offset:3px}
+.label{margin:0 0 calc(var(--unit)*1.5);font:500 10px/1.2 var(--sans);letter-spacing:.14em;text-transform:uppercase;color:var(--ink-45)}
+
+/* masthead */
+.top{padding:calc(var(--unit)*5) var(--gutter) 0}
+.top__bar{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px 32px;padding-bottom:14px;border-bottom:2px solid var(--ink)}
+.eyebrow{margin:0 0 10px;font:500 10px/1 var(--sans);letter-spacing:.14em;text-transform:uppercase;color:var(--ink-45)}
+.eyebrow a{color:inherit;text-decoration:none;box-shadow:inset 0 -1px 0 var(--ink-24)}
+.eyebrow a:hover{color:var(--accent);box-shadow:inset 0 -1px 0 var(--accent)}
+h1{margin:0;font:700 clamp(28px,3.4vw,40px)/1.05 var(--sans);letter-spacing:-.02em}
+h1 em{font-style:normal;font-weight:400;color:var(--ink-45)}
+.actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.tag{margin:18px 0 0;max-width:52ch;font:400 clamp(18px,1.7vw,22px)/1.4 var(--serif);color:var(--ink-70)}
+
+/* buttons */
+.btn{appearance:none;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:32px;padding:0 14px;border:0;border-radius:0;background:var(--ink-10);color:var(--ink-70);font:500 10.5px/1 var(--sans);letter-spacing:.1em;text-transform:uppercase;white-space:nowrap;transition:background .2s ease,color .2s ease}
+.btn:hover{color:var(--ink)}
+.btn.primary{background:var(--ink);color:var(--paper);padding:0 20px;min-height:36px}
+.btn.primary:hover{background:var(--accent)}
+.linkbutton{appearance:none;border:0;padding:0;background:none;font:500 10px/1.2 var(--sans);letter-spacing:.12em;text-transform:uppercase;color:var(--ink-45);transition:color .25s ease}
+.linkbutton:hover{color:var(--accent)}
+
+/* fields */
+input[type=text]{appearance:none;-webkit-appearance:none;width:100%;padding:6px 0;border:0;border-bottom:1px solid var(--ink-24);border-radius:0;background:transparent;color:var(--ink);font:400 12px/1.3 var(--mono);letter-spacing:.02em}
+input[type=text]:hover{border-bottom-color:var(--ink-45)}
+input[type=text]:focus{outline:none;border-bottom-color:var(--accent)}
+
+/* the instrument: rail + stage */
+.app{display:grid;grid-template-columns:minmax(220px,250px) minmax(0,1fr);column-gap:calc(var(--gutter)*1.5);align-items:start;padding:calc(var(--unit)*5) var(--gutter) calc(var(--unit)*10)}
+.rail{position:sticky;top:24px;display:flex;flex-direction:column;gap:calc(var(--unit)*4)}
+.stage{min-width:0}
+.ctl{display:flex;flex-direction:column;gap:6px}
+.seed-row{display:flex;gap:6px;align-items:flex-end}
+.seed-row input{flex:1;min-width:0}
+.step{appearance:none;width:28px;min-height:28px;border:0;background:var(--ink-06);color:var(--ink-70);font:400 13px/1 var(--mono)}
+.step:hover{color:var(--ink);background:var(--ink-10)}
+.hint{margin:0;font-size:11px;line-height:1.5;color:var(--ink-45)}
+.tgl{appearance:none;display:inline-flex;align-items:center;gap:8px;padding:4px 0;border:0;background:none;font:500 10px/1.2 var(--sans);letter-spacing:.12em;text-transform:uppercase;color:var(--ink-45);transition:color .2s ease}
+.tgl::before{content:"";width:7px;height:7px;box-shadow:inset 0 0 0 1px var(--ink-24)}
+.tgl:hover{color:var(--ink)}
+.tgl[aria-pressed="true"]{color:var(--ink)}
+.tgl[aria-pressed="true"]::before{background:var(--ink);box-shadow:none}
+.key{display:flex;flex-direction:column;gap:8px;font-size:12px;color:var(--ink-70)}
+.key span{display:flex;align-items:center;gap:10px}
+.key i{flex:none;width:22px;height:14px;display:inline-block}
+.key i.on{background:var(--ink-10)}
+.key i.nu{background:var(--ink)}
+.key i.co{box-shadow:inset 0 0 0 1px var(--ink)}
+.key i.real{width:7px;height:7px;margin:0 7px;border-radius:50%;background:var(--accent)}
+
+/* featured word */
+.feature{padding-bottom:calc(var(--unit)*5)}
+.provenance{display:flex;align-items:center;gap:8px;font:500 10px/1.2 var(--sans);letter-spacing:.14em;text-transform:uppercase;color:var(--ink-45)}
+.provenance.is-real{color:var(--accent)}
+.provenance.is-real::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--accent)}
+.word{margin:6px 0 0;font:400 clamp(88px,15vw,180px)/.9 var(--serif);letter-spacing:-.01em;color:var(--ink)}
+.anatomy{display:flex;flex-wrap:wrap;gap:14px;margin-top:22px}
+.syl{display:flex}
+.sg{font:400 22px/1 var(--serif);padding:6px 10px 8px;min-width:30px;text-align:center}
+.sg.on{background:var(--ink-10);color:var(--ink)}
+.sg.nu{background:var(--ink);color:var(--paper)}
+.sg.co{box-shadow:inset 0 0 0 1px var(--ink);color:var(--ink)}
+.notes{list-style:none;margin:20px 0 0;padding:0;display:flex;flex-direction:column;gap:6px;max-width:60ch}
+.notes li{display:flex;gap:14px;align-items:baseline;font:400 17px/1.4 var(--serif);color:var(--ink-70)}
+.notes b{flex:none;min-width:3.2em;font:400 12px/1 var(--mono);letter-spacing:.04em;color:var(--ink)}
+.feature-actions{display:flex;gap:16px;margin-top:22px}
+
+/* the sheet */
+.sheet-head{display:flex;align-items:baseline;justify-content:space-between;gap:16px;margin-bottom:calc(var(--unit)*1.5)}
+.sheet{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:2px}
+.w{appearance:none;position:relative;border:0;border-radius:0;background:var(--field);padding:18px 12px 16px;text-align:left;font:400 clamp(24px,2.4vw,32px)/1 var(--serif);color:var(--ink);transition:background .15s ease,color .15s ease}
+.w:hover{background:var(--ink);color:var(--paper)}
+.w[aria-current="true"]{box-shadow:inset 0 0 0 1px var(--ink)}
+.w.real::after{content:"";position:absolute;top:10px;right:10px;width:6px;height:6px;border-radius:50%;background:var(--accent)}
+.sheet.hide-real .w.real::after{display:none}
+.foot{margin-top:calc(var(--unit)*6);max-width:64ch;font-size:11px;line-height:1.6;color:var(--ink-45)}
+.foot a{color:inherit}
+
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(12px);background:var(--ink);color:var(--paper);font:500 10.5px/1 var(--sans);letter-spacing:.1em;text-transform:uppercase;padding:11px 16px;opacity:0;pointer-events:none;transition:opacity .2s ease,transform .2s ease;z-index:40}
+.toast.show{opacity:1;transform:translateX(-50%)}
+
+@media (max-width:820px){
+  :root{--gutter:16px}
+  .app{grid-template-columns:1fr;row-gap:calc(var(--unit)*5)}
+  .rail{position:static;order:2}
+  .sheet{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media (max-width:420px){ .sheet{grid-template-columns:repeat(2,minmax(0,1fr))} }
+@media (prefers-reduced-motion:reduce){ *{transition:none !important} }
+</style>
+
+<header class="top">
+  <div class="top__bar">
+    <div class="brand">
+      <p class="eyebrow">After <a href="../gazetteer/">Gazetteer</a> · dialect “core”</p>
+      <h1>Four Letters <em>real and coined</em></h1>
+    </div>
+    <div class="actions">
+      <button class="btn primary" id="new" type="button">New sheet</button>
+    </div>
+  </div>
+  <p class="tag">Four-letter words in the Gazetteer’s phoneme grammar. One in five is in the dictionary; the other four only sound as if they should be.</p>
+</header>
+
+<main class="app">
+  <aside class="rail" aria-label="Settings">
+    <div class="ctl">
+      <p class="label">Seed</p>
+      <div class="seed-row">
+        <button class="step" type="button" data-d="-1" aria-label="Previous seed">–</button>
+        <input type="text" id="seed" inputmode="numeric" aria-label="Seed" value="1">
+        <button class="step" type="button" data-d="1" aria-label="Next seed">+</button>
+      </div>
+      <p class="hint">Every sheet is reproducible from its seed.</p>
+    </div>
+    <div class="ctl">
+      <p class="label">Show</p>
+      <button class="tgl" id="mark" type="button" aria-pressed="true">Mark real words</button>
+      <p class="hint">Turn it off and guess which word in each row of five is real.</p>
+    </div>
+    <div class="ctl">
+      <p class="label">Key</p>
+      <div class="key">
+        <span><i class="on"></i>onset</span>
+        <span><i class="nu"></i>vowel</span>
+        <span><i class="co"></i>coda</span>
+        <span><i class="real"></i>in the dictionary</span>
+      </div>
+    </div>
+  </aside>
+
+  <section class="stage">
+    <div class="feature" aria-live="polite">
+      <div class="provenance" id="prov"></div>
+      <p class="word" id="word">—</p>
+      <div class="anatomy" id="anatomy" aria-label="Syllable anatomy"></div>
+      <ul class="notes" id="notes"></ul>
+      <div class="feature-actions">
+        <button class="linkbutton" id="copy" type="button">Copy word</button>
+        <button class="linkbutton" id="another" type="button">Another coined word</button>
+      </div>
+    </div>
+
+    <div class="sheet-head">
+      <p class="label" style="margin:0">Sheet · forty words</p>
+      <button class="linkbutton" id="copyall" type="button">Copy sheet</button>
+    </div>
+    <div class="sheet" id="sheet"></div>
+
+    <p class="foot">Words are built from the Gazetteer’s inventory: eleven vowels, seventeen single onsets and twenty clusters, and its word-final codas. Where two consonants meet across a syllable break, only pairings that read well are allowed. Sonority falls into the break (l·t, r·d), a nasal takes the place of the stop after it (n·d, m·b), s leads a stop (s·t), or a stop leans on a liquid (t·r). Coined words are checked against a dictionary, so none of them is accidentally real.</p>
+  </section>
+</main>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+/* ---- the Gazetteer's PRNG and seed hash, unchanged ---- */
+const MASK64 = (1n << 64n) - 1n;
+function splitmix64(state) {
+  state = (state + 0x9E3779B97F4A7C15n) & MASK64;
+  let z = state;
+  z = ((z ^ (z >> 30n)) * 0xBF58476D1CE4E5B9n) & MASK64;
+  z = ((z ^ (z >> 27n)) * 0x94D049BB133111EBn) & MASK64;
+  z = z ^ (z >> 31n);
+  return [z & MASK64, state];
+}
+class Rng {
+  constructor(seed) { this.state = seed & MASK64; }
+  next_u64() { const [v, s] = splitmix64(this.state); this.state = s; return v; }
+  below(n) { return Number(this.next_u64() % BigInt(n)); }
+  unit() { return Number(this.next_u64() >> 11n) / 9007199254740992; }
+  pick(seq) { return seq[this.below(seq.length)]; }
+  weighted(items, weights) {
+    let total = 0; for (const w of weights) total += w;
+    const r = this.below(total);
+    let acc = 0;
+    for (let i = 0; i < items.length; i++) { acc += weights[i]; if (r < acc) return items[i]; }
+    return items[items.length - 1];
+  }
+}
+function mix64(h, v) {
+  h ^= v & MASK64;
+  h = (h * 0x100000001B3n) & MASK64;
+  h ^= h >> 33n;
+  h = (h * 0xFF51AFD7ED558CCDn) & MASK64;
+  h ^= h >> 29n;
+  return h & MASK64;
+}
+function hash_seed(value) {
+  let h = 0xCBF29CE484222325n;
+  for (const ch of "four:" + String(value)) h = mix64(h, BigInt(ch.codePointAt(0)));
+  return h || 0x1234567890ABCDEFn;
+}
+
+/* ---- dialect "core", as in the Gazetteer ---- */
+const D = {
+  nuclei: ["a","e","i","o","u","y","ae","ei","ou","ia","au"],
+  nuclei_w: [16,15,14,13,8,4,3,3,2,2,2],
+  simple_onsets: [..."bdfgklmnprstvz","th","sh","ch"],
+  cluster_onsets: ["br","dr","fr","gr","kr","pr","tr","bl","fl","gl","kl","pl","sl","st","sk","sp","sn","sm","thr","vr"],
+  codas: ["n","r","s","l","t","k","m","th","nd","rn","st","ll","ss"],
+  codas_w: [12,12,8,8,6,4,4,3,3,2,2,2,2],
+};
+/* Consonant contact across a syllable break: which onsets may follow a coda. */
+const JOIN = {
+  l: ["b","d","f","g","k","m","p","s","t","v","th"],
+  r: ["b","d","f","g","k","l","m","n","p","s","t","v","z","th","ch","sh"],
+  n: ["d","t","k","g","s","z","th","ch","sh"],
+  m: ["b","p"],
+  s: ["t","k","p","m","n","l"],
+  t: ["r","l","s"], k: ["r","l","s","t"], th: ["r","l"], d: ["r"],
+};
+const MEDIAL_CODAS = Object.keys(JOIN);
+const MEDIAL_W = { l:8, r:9, n:9, m:4, s:6, t:3, k:3, th:1, d:1 };
+const ALL_ONSETS = [...D.cluster_onsets, ...D.simple_onsets].sort((a, b) => b.length - a.length);
+const ALL_NUCLEI = [...D.nuclei].sort((a, b) => b.length - a.length);
+
+const REAL = ["able","ache","also","alto","amen","army","atom","aura","auto","babe","baby","bake","bale","ball","band","bane","bare","barn","base","bass","bath","bell","bend","best","bike","bile","bill","bind","bite","blot","blur","body","bone","bore","born","boss","both","bout","bran","brat","brim","bull","burn","bury","bust","busy","chat","chin","chum","dale","dame","dare","darn","data","date","daze","dell","deny","dial","dime","dine","dire","diva","dive","dole","doll","dome","done","dose","dote","dour","dove","doze","dram","drum","dude","duke","dull","dune","dust","duty","echo","edit","else","emit","even","ever","evil","fade","fake","fall","fame","fare","fast","fate","fell","fern","file","fill","find","fine","fire","fist","five","flat","flit","foul","four","from","fume","fund","fury","fuse","fuss","gala","gale","game","gate","gave","gaze","gene","gist","give","glen","glum","gone","gore","gust","guru","idol","into","iron","isle","item","kale","kind","kite","kiss","kilo","lady","lake","land","lane","last","late","lava","lazy","lend","less","lest","lily","lime","line","live","lobe","lone","lore","lost","love","lure","lust","lute","made","make","male","mall","mane","many","mare","mast","mate","math","maze","mend","menu","mere","mesa","mess","mile","mill","mind","mine","mist","mode","mole","more","moss","most","moth","move","mule","muse","must","myth","name","navy","nest","nine","node","none","nose","note","noun","nude","null","omen","onto","open","opal","oval","oven","over","page","pale","pane","pass","past","path","pave","peso","pest","pile","pill","pine","pity","plan","plot","plum","plus","poke","pole","pond","pony","pore","pose","post","pour","pout","puma","pure","rage","rake","rare","rate","rave","raze","rein","rely","rest","ride","rife","rind","ripe","rise","rite","robe","rode","role","roll","rope","rose","rosy","rove","ruby","rude","rule","rune","ruse","rust","safe","saga","sage","sake","sale","same","sand","sane","save","sell","send","shin","shot","shut","side","silo","sine","sire","site","size","skim","skin","skit","slam","slim","slit","slot","slum","soda","sofa","sole","solo","some","sore","soul","sour","span","spin","spit","spot","spun","spur","star","stem","stir","sure","take","tale","tall","tame","tape","tarn","tell","tend","tern","test","than","that","them","then","thin","this","thou","thus","tide","tidy","tile","till","time","tiny","tire","toga","tome","tone","tore","torn","toss","tour","tram","trek","trim","trot","tuba","tube","tuna","tune","turn","type","undo","unit","upon","urge","user","vale","vane","vary","vase","vast","veil","vein","vest","veto","vial","vile","vine","visa","vole","vote","zero","zest","zone"];
+// the 1934 Webster four-letter words this grammar can spell, plus the ones macOS's current English spell checker
+// knows (modern words, abbreviations, and the profanity a homepage must never coin)
+const LEXICON = new Set(["abae","abas","abet","abir","able","ably","abut","ache","achy","adae","adar","adat","adel","adet","adit","adry","aeba","aebe","aeda","aede","aefa","aefe","aero","aery","afae","afar","agal","agar","agen","ager","ages","agin","agla","agon","agre","akan","akia","akin","akra","alan","alar","alas","alba","albe","alem","alen","ales","alfa","alga","algo","alia","alin","alit","alky","alma","alme","alpa","alpo","also","alto","alum","amar","amba","ambo","amen","amil","amin","amir","amok","amor","amyl","anal","anam","anan","anar","anat","anda","anes","ango","angu","anil","anis","anon","ansa","ansi","ansu","anta","ante","anti","antu","anus","apar","aper","apes","apia","apis","arak","aran","arar","arba","ardu","aren","ares","argo","argy","aria","aril","army","arna","arni","aros","arse","arty","arum","aryl","asak","asem","ashy","asme","asok","asor","asta","ates","atet","atis","atle","atom","atry","aube","auge","aula","aulu","aune","aura","ausu","aute","auth","auto","aval","aver","aves","azon","baba","babe","babu","baby","bada","bade","baes","bafa","bafe","baga","bago","baka","bake","baku","bale","bali","ball","balu","bama","band","bane","bani","bara","bare","bari","barn","baru","base","bass","bast","bata","bate","bath","baul","baun","baze","beba","bebe","beda","bede","befa","befe","bego","bela","bell","bely","bema","bena","bend","bene","beni","beno","bere","beri","bern","besa","bess","best","beta","beth","beti","bevy","bias","bibi","bide","bidi","biga","bike","bile","bill","bilo","bind","bine","bino","biri","birn","biro","bite","biti","bito","blae","blan","blas","blat","blet","blin","blot","blur","boba","bobo","bode","body","boga","bogo","bogy","boke","boku","bola","bole","boll","bolo","boma","bona","bond","bone","bono","bony","bora","bore","born","boro","bose","boss","bota","bote","both","bouk","boun","bout","boza","bozo","brae","bran","bras","brat","brei","bret","brim","brin","bris","brit","bros","brot","brut","buba","bubo","buda","bufo","bull","buna","bund","bure","buri","burn","buro","bury","buss","bust","busy","bygo","byre","byte","byth","chal","cham","chan","char","chat","chem","chia","chil","chin","chis","chit","chol","chum","chun","chut","daba","dabe","dada","dade","dadi","dado","daer","dafa","dafe","dale","dali","daly","dama","dame","dana","dand","dane","dare","dari","darn","dasi","data","date","daut","dave","davy","daze","dazy","deba","debe","deda","dede","dedo","defa","defe","defy","degu","deka","deke","dele","deli","dell","deme","demi","demo","demy","dene","deny","depa","depo","dere","dern","desi","dess","dest","deva","dial","dian","didi","dido","dika","dike","diku","dili","dill","dilo","dime","dimi","dine","dire","diss","dita","dite","diva","dive","divi","divo","dobe","doby","dodo","doge","dogy","doke","dola","dole","doli","doll","dome","domy","done","dopa","dope","dopy","dora","dorn","dory","dosa","dose","doss","dost","dote","doth","doty","doum","dour","dout","dove","doze","dozy","dram","drat","drum","drys","dude","duke","dull","duly","duma","dune","duny","dupe","dura","dure","durn","duro","dust","duty","dyke","dyne","ebae","ebon","eche","echo","edae","edam","eden","edit","efae","egis","egol","egos","eire","eker","ekes","elan","elbe","elmy","else","emir","emit","emus","enam","enol","enos","ense","enum","epos","eral","eras","erat","ergo","eria","erne","eros","esne","espy","etas","etym","eval","even","ever","eves","evil","faba","fabe","fada","fade","fado","fady","faer","fafa","fafe","fage","fake","faky","fall","fame","fana","fand","fane","fare","faro","fass","fast","fate","faun","fava","fave","faze","feba","febe","feda","fede","fefa","fefe","feil","fein","feis","fell","feme","fend","feni","fern","feru","fess","fest","feta","fete","fiar","fiat","fide","fido","fife","fifo","fike","file","fill","filo","fina","find","fine","fino","fire","firn","fise","fist","five","flak","flam","flan","flat","flet","flit","flor","flot","flus","flys","fogo","fogy","fole","fomo","fond","fono","fora","fore","foto","foul","foun","four","fozy","frae","frat","fren","fret","frim","frit","from","fros","frot","fufu","fugu","fula","full","fume","fumy","fund","fury","fuse","fuss","fust","fute","fuze","fyke","gabi","gaby","gade","gaen","gaet","gaga","gage","gala","gale","gali","gall","game","gamy","gane","gapa","gape","gapo","gapy","gara","gare","garn","gast","gata","gate","gato","gaul","gaum","gaun","gaur","gaus","gaut","gave","gaze","gazi","gazy","gein","gell","gena","gene","genu","geri","gest","geta","giar","gibe","giga","gigo","gila","gill","gilo","gina","girn","giro","gist","gith","give","glam","glar","glen","glia","glom","glor","glum","glut","gobi","gobo","goby","gode","gogo","gola","goli","gone","gony","gora","gore","gory","gote","goth","goto","gout","gove","gram","gran","gras","grat","grim","grin","gris","grit","grok","gros","grot","grum","grun","gude","gufa","gugu","gula","gule","gull","gumi","guna","guru","guss","gust","guze","gybe","gyle","gyne","gyno","gype","gyre","gyri","gyro","gyte","gyve","iata","ibis","ichi","icho","ichu","idek","idem","ides","idil","idim","idol","idyl","ikat","ikon","ikra","ildi","ilia","ilil","ilim","ilka","ilmi","ilot","ilvi","imam","imbe","imil","imim","impi","impy","inde","indy","inga","inis","init","inky","inso","into","ipil","iras","ires","iris","irma","irok","iron","isis","isle","ismy","item","iter","ivar","ives","ivil","ivim","ivin","izar","izou","kago","kagu","kaka","kaki","kako","kala","kale","kali","kalo","kame","kana","kano","kapa","kara","karo","kasa","kata","kath","kati","kaum","kava","kazi","keko","kela","kele","kell","kend","keno","kepi","kere","keri","kern","keta","keto","kibe","kiby","kike","kiki","kiku","kill","kilo","kina","kind","kine","kino","kipe","kiri","kirn","kiss","kist","kite","kith","kiva","kivu","klam","klan","klom","kobi","kobo","kobu","koda","koko","koku","kola","kolo","kona","kopi","kora","kore","kori","koto","kozo","kral","kran","kras","kris","kuba","kudu","kuge","kuku","kula","kuna","kuru","kusa","kuso","kyle","kyte","lade","lady","laet","lake","laky","lall","lalo","lama","lame","land","lane","lari","lasa","lass","last","lata","late","lath","laun","laur","lava","lave","laze","lazy","leda","lede","lego","leis","lela","lena","lend","lene","leno","lepa","less","lest","lete","leva","levo","levy","liar","lidi","lido","life","lifo","like","lile","lili","lill","lily","lima","lime","limi","limo","limu","limy","lina","line","lino","liny","lipa","lira","lire","liss","list","lite","lith","live","livi","lobe","lobo","lode","loge","logo","logy","loka","loke","loll","loma","lone","lope","lora","lore","lori","lorn","loro","lory","lose","loss","lost","lota","lote","loth","loti","louk","lour","lout","love","luba","lube","ludo","luge","luke","lull","lulu","luma","luna","lune","luny","lupe","lura","lure","lust","lute","luva","lyle","lyra","lyre","lyse","mabi","made","mado","mage","magi","make","maki","mako","mala","male","mali","mall","malo","mama","mamo","mana","mand","mane","mani","mano","many","mapo","mara","mare","maro","maru","mary","masa","mass","mast","masu","mate","math","maty","maul","maun","maza","maze","mazy","mede","mega","mein","mela","mele","mell","meme","memo","mend","menu","meny","mere","mero","mesa","mese","meso","mess","meta","mete","meth","mian","mias","mide","midi","mike","mila","mile","mili","mill","milo","mima","mime","mimi","mina","mind","mine","mini","mino","miny","mire","miro","miry","mise","miso","miss","mist","mite","mity","mivi","mobi","mode","modi","modo","mogo","moke","moki","moko","moky","mola","mole","moll","moly","mome","momo","mona","mone","mono","mope","mora","more","morn","moro","moss","most","mote","moth","moto","moul","mout","move","muga","mule","mull","mund","muni","mura","mure","muse","muss","must","muta","mute","muth","myna","myra","myst","myth","nabe","nada","nael","naga","naka","nake","nako","name","nana","nane","nano","napa","nape","napu","nary","nasa","nasi","nast","nato","naus","naut","nave","navy","naze","nazi","nell","nema","nene","nese","ness","nest","nete","neth","neti","neve","nevi","nevo","nide","nidi","nife","nike","niko","nile","nine","nipa","nite","nito","nizy","node","nodi","noli","noll","nolo","noma","nome","nomo","nona","none","nope","nori","nose","nosy","nota","note","noun","nous","nova","novo","nude","nuke","null","numa","nyse","oban","obis","obit","obol","odal","odel","oden","oder","odes","odin","odor","odum","odyl","ogam","ogle","ogre","ogum","oket","okia","okra","olam","olde","oles","olin","olpe","omen","omer","omit","ondy","oner","ones","onto","onus","onym","onza","opal","open","opes","opus","oral","oran","orby","ordu","orem","oren","ores","orgy","orin","orle","orlo","orly","orna","orzo","osha","ouse","oust","outa","ouzo","oval","oven","over","ovum","paga","page","pale","pali","pall","palo","paly","pand","pane","pano","papa","pape","papi","para","pare","pari","pasi","pass","past","pata","pate","path","pati","pato","patu","paty","paut","pave","pavy","peba","peda","pedi","pedo","pega","pell","pelu","pend","pepo","peri","pern","pesa","peso","pess","pest","peta","pete","peto","pial","pian","pika","pike","piki","piky","pile","pili","pill","pily","pima","pina","pind","pine","pino","piny","pipa","pipe","pipi","pipy","pirn","pise","piso","piss","pist","pita","pith","pity","pize","plak","plan","plat","plim","plot","plum","plus","pogo","pogy","poke","poky","pole","poll","polo","poly","pome","pond","pone","pony","pope","pore","porn","pory","pose","poss","post","posy","pote","pour","pout","pram","prat","prau","prim","prom","pros","prut","pudu","puka","puke","puku","puky","pula","pule","puli","pull","pulu","puly","puma","puna","puny","pupa","pure","puri","puss","pyke","pyla","pyre","pyro","rabe","rada","raga","rage","rake","raki","raku","rale","rame","rami","rana","rand","rane","rani","rape","rare","rasa","rase","rata","rate","rath","rauk","raun","rave","raze","reba","rede","redo","refi","reim","rein","reis","reit","rely","rend","repo","rero","rest","reti","reve","rial","ribe","ride","rife","rile","rill","rima","rime","rimu","rimy","rind","rine","ripa","ripe","rise","rist","rita","rite","riva","rive","robe","rode","roka","roke","roky","role","roll","rona","rond","rone","rope","ropy","rory","rosa","rose","ross","rosy","rota","rote","roti","roto","roun","rout","rove","rube","ruby","rude","ruga","rule","rull","rune","rupa","ruru","ruse","russ","rust","ruth","ryme","rynd","rype","sabe","sade","sado","safe","safi","saga","sage","sago","sagy","sake","saki","sale","same","sand","sane","sapa","sapo","sare","sari","sasa","sase","sass","sate","sati","saum","saur","saut","save","sego","seis","seit","sele","sell","seme","semi","send","sene","sera","sere","seri","sero","sess","seta","seth","sham","shan","shat","shel","sher","shim","shin","shit","shor","shot","shou","shul","shun","shut","siak","sial","siam","side","sidi","sidy","sife","sika","sike","sile","sill","silo","sima","sime","sina","sind","sine","sipe","sire","sise","sisi","siss","sist","site","sith","situ","siva","size","sizy","skal","skas","skat","skel","sken","sker","skil","skim","skin","skis","skit","skun","slae","slam","slat","slim","slit","slon","slot","slum","slur","slut","smit","smur","smut","snit","snot","snum","snur","soba","soda","sody","sofa","soka","soke","sola","sole","soli","solo","soma","some","sond","sone","sope","sora","sore","sori","sorn","sory","soso","soss","souk","soul","soum","sour","sous","spae","spak","spam","span","spar","spas","spat","spet","spin","spit","spor","spot","spun","spur","sput","stam","star","stat","stem","sten","stet","stim","stir","stot","stum","stun","stut","sudo","sugi","sull","sulu","sumo","sune","supa","supe","sura","sure","susi","suss","susu","suva","suzy","syne","syre","tabu","tada","tade","tael","taen","take","taky","tala","tale","tali","tall","tame","tana","tane","tapa","tape","tapu","tara","tare","tari","tarn","taro","tase","tass","tasu","tate","tath","tatu","taum","taun","taur","taus","taut","tave","tegu","teil","tele","teli","tell","tend","tera","tern","test","tete","teth","than","thar","that","them","then","thin","thir","this","thon","thot","thou","thro","thus","tian","tiar","tias","tide","tidy","tige","tike","tiki","tile","till","time","tind","tine","tiny","tipe","tipi","tire","tiro","tite","titi","tivy","tiza","tobe","toby","tode","todo","tody","tofu","toga","togo","toke","toko","tole","toll","tolu","tome","tone","tony","tope","topi","topo","tora","tore","tori","torn","toro","toru","tory","tosa","toss","tost","tosy","tote","toto","toty","tour","tout","toze","tram","trek","tres","tret","trim","trin","tris","tron","trot","trun","tryt","tuba","tube","tufa","tuke","tula","tule","tume","tuna","tund","tune","tuno","tunu","tuny","turn","tusi","tute","tuth","tutu","tuza","tyke","tynd","tyne","type","typo","typy","tyre","tyro","uber","udal","udon","ufos","ugly","ulan","ulmo","ulus","umbo","umol","unal","unau","unde","undo","undy","unit","unto","unum","unze","upas","upla","upon","ural","uran","urde","urge","urna","urus","urva","usar","user","uses","usia","utas","util","utum","uval","uzan","uzis","vade","vady","vage","vagi","vale","vali","vall","vane","vape","vara","vare","vari","vary","vasa","vase","vast","vasu","veda","veil","vein","veir","vela","vell","velo","vena","vend","vera","veri","vern","very","vest","veta","veto","vial","vibe","vida","vide","vidi","viga","vila","vile","vili","vill","vimi","vina","vine","vino","viny","vire","visa","vise","vita","viva","vive","vivi","vivo","vole","vota","vote","vous","zane","zany","zati","zebu","zein","zemi","zend","zenu","zero","zest","zeta","zibo","zika","zine","zira","ziti","zobo","zogo","zoll","zone","zori","zouk","zuza","zyga","zyme"]);
+
+/* Parse a word into syllables under the grammar (fewest syllables first). Used for anatomy and to vet every coinage. */
+function parse(w) {
+  const out = [];
+  (function syl(i, acc, prev) {
+    if (i === w.length && acc.length) { out.push(acc); return; }
+    if (acc.length === 2) return;
+    for (const on of ["", ...ALL_ONSETS]) {
+      if (!w.startsWith(on, i)) continue;
+      if (acc.length) {
+        if (!on && !prev) continue;                                // no vowel-to-vowel hiatus
+        if (prev && on && !(JOIN[prev] || []).includes(on)) continue;
+      }
+      const j = i + on.length;
+      for (const nu of ALL_NUCLEI) {
+        if (!w.startsWith(nu, j)) continue;
+        const k = j + nu.length;
+        if (k === w.length) { syl(k, [...acc, { on, nu, co: "" }], ""); continue; }
+        for (const co of [...D.codas, ...MEDIAL_CODAS.filter(c => !D.codas.includes(c)), ""]) {
+          if (co && !w.startsWith(co, k)) continue;
+          const kk = k + co.length;
+          if (co && kk !== w.length && !JOIN[co]) continue;
+          if (co && kk === w.length && !D.codas.includes(co)) continue;
+          syl(kk, [...acc, { on, nu, co }], co);
+        }
+      }
+    }
+  })(0, [], "");
+  // fewest syllables first; then give later syllables their consonant (pu·re, not pur·e)
+  const bare = (p) => p.slice(1).filter(s => !s.on).length;
+  out.sort((a, b) => a.length - b.length || bare(a) - bare(b));
+  return out[0] || null;
+}
+
+/* Coin one four-letter word: a one-syllable shape (CVCC, CCVC, CVVC, CCVV) or a two-syllable one (CVCV, VCCV, VCVC). */
+function onset(rng, clusterP) {
+  if (rng.unit() < clusterP) return rng.pick(D.cluster_onsets);
+  return rng.pick(D.simple_onsets);
+}
+function coinOnce(rng) {
+  const two = rng.unit() < 0.5;
+  let w;
+  if (!two) {
+    const on = rng.unit() < 0.92 ? onset(rng, 0.4) : "";
+    const nu = rng.weighted(D.nuclei, D.nuclei_w);
+    const co = rng.weighted(D.codas, D.codas_w);
+    w = on + nu + co;
+  } else {
+    const on1 = rng.unit() < 0.8 ? rng.pick(D.simple_onsets) : "";
+    const nu1 = rng.weighted(D.nuclei, D.nuclei_w);
+    let co1 = "", on2;
+    if (rng.unit() < 0.4) {
+      co1 = rng.weighted(MEDIAL_CODAS, MEDIAL_CODAS.map(c => MEDIAL_W[c]));
+      on2 = rng.pick(JOIN[co1]);
+    } else {
+      on2 = rng.pick(D.simple_onsets);
+    }
+    const nu2 = rng.weighted(D.nuclei, D.nuclei_w);
+    const co2 = rng.unit() < 0.45 ? rng.weighted(D.codas, D.codas_w) : "";
+    w = on1 + nu1 + co1 + on2 + nu2 + co2;
+  }
+  return w;
+}
+function wellFormed(w) {
+  if (w.length !== 4) return false;
+  if (/(.)\1\1/.test(w)) return false;                   // no tripled letters
+  if (/[aeiouy]{3}/.test(w)) return false;               // no three vowels running
+  if (/^(.)\1/.test(w)) return false;                    // no doubled first letter
+  if (/yy|iy|yi|uu|ii/.test(w)) return false;            // vowel pairs that don't read
+  if (/^y/.test(w)) return false;                        // y is a vowel in this dialect, so never a first letter
+  if (/n[iy]g|f[aeiy]g|fu[ck]|[ck]um|d[iy][ck]|kik|kyk|spi[ck]|coon/.test(w)) return false;   // nothing that sounds like a slur or an obscenity
+  const syls = parse(w);
+  if (!syls) return false;
+  // a cluster ending in a liquid doesn't close on the same liquid: "brir", "plel" stumble
+  return !syls.some(s => s.on.length > 1 && s.co && "lr".includes(s.co[0]) && s.on.endsWith(s.co[0]));
+}
+function coin(rng, taken) {
+  for (let tries = 0; tries < 400; tries++) {
+    const w = coinOnce(rng);
+    if (wellFormed(w) && !LEXICON.has(w) && !REAL.includes(w) && !taken.has(w)) return w;
+  }
+  return null;
+}
+
+/* A sheet is eight rows of five: in each row, exactly one real word at a random position. */
+function makeSheet(seed) {
+  const rng = new Rng(hash_seed(seed));
+  const taken = new Set(), out = [];
+  for (let row = 0; row < 8; row++) {
+    const realAt = rng.below(5);
+    for (let c = 0; c < 5; c++) {
+      let w, real = c === realAt;
+      if (real) { do { w = rng.pick(REAL); } while (taken.has(w)); }
+      else w = coin(rng, taken);
+      taken.add(w);
+      out.push({ w, real });
+    }
+  }
+  return out;
+}
+
+/* ---- describing how the consonants sit together ---- */
+const CLASS = { p:"stop", b:"stop", t:"stop", d:"stop", k:"stop", g:"stop", f:"fricative", v:"fricative", s:"sibilant", z:"sibilant",
+  th:"fricative", sh:"sibilant", ch:"affricate", m:"nasal", n:"nasal", l:"liquid", r:"liquid" };
+function onsetNote(on) {
+  if (on.length < 2 || on === "th" || on === "sh" || on === "ch") return null;
+  if (on === "thr") return "th leans on r to open the syllable";
+  if (on[0] === "s" && "tkp".includes(on[1])) return "s leads a stop into the vowel";
+  if (on[0] === "s") return "s leads into a " + CLASS[on[1]];
+  return on[0] + " leans on " + on[1] + ": a " + CLASS[on[0]] + " rising into a liquid";
+}
+function codaNote(co, final) {
+  if (!co) return null;
+  if (co === "nd") return "n and d share a place in the mouth, so the nasal runs straight into the stop";
+  if (co === "rn") return "r falls into n: liquid, then nasal, sonority stepping down";
+  if (co === "st") return "s and t close together, the commonest cluster at a word's end";
+  if (co === "ll" || co === "ss") return co[0] + " doubled to close the word";
+  return null;
+}
+function joinNote(co, on) {
+  const a = CLASS[co], b = CLASS[on];
+  if (a === "nasal") return co + " takes the place of the " + on + " that follows";
+  if (a === "liquid") return co + " falls into " + on + " across the break, sonority going down";
+  if (co === "s") return "s closes the first syllable and leads " + on + " into the next";
+  return co + " leans on " + on + " to start the second syllable";
+}
+function describe(syls) {
+  const notes = [];
+  syls.forEach((s, i) => {
+    const prev = syls[i - 1];
+    if (prev && prev.co && s.on) notes.push([prev.co + "·" + s.on, joinNote(prev.co, s.on)]);
+    else if (prev && !prev.co && s.on) notes.push(["·" + s.on, "a single consonant between vowels opens the second syllable"]);
+    const o = onsetNote(s.on); if (o) notes.push([s.on, o]);
+    const c = codaNote(s.co, i === syls.length - 1); if (c && (i === syls.length - 1)) notes.push([s.co, c]);
+  });
+  if (!notes.length) notes.push(["", "no consonants meet: every consonant stands next to a vowel"]);
+  return notes;
+}
+
+/* ---- UI ---- */
+const $ = (id) => document.getElementById(id);
+let seed = 1, sheet = [], featured = null;
+
+function feature(item) {
+  featured = item;
+  $("word").textContent = item.w;
+  const prov = $("prov");
+  prov.textContent = item.real ? "In the dictionary" : "Coined";
+  prov.classList.toggle("is-real", item.real);
+  const syls = parse(item.w) || [];
+  const an = $("anatomy"); an.innerHTML = "";
+  for (const s of syls) {
+    const g = document.createElement("div"); g.className = "syl";
+    if (s.on) g.append(seg("on", s.on));
+    g.append(seg("nu", s.nu));
+    if (s.co) g.append(seg("co", s.co));
+    an.append(g);
+  }
+  const notes = $("notes"); notes.innerHTML = "";
+  for (const [k, v] of describe(syls)) {
+    const li = document.createElement("li");
+    li.innerHTML = (k ? `<b>${k}</b>` : "") + `<span>${v}</span>`;
+    notes.append(li);
+  }
+  document.querySelectorAll(".w").forEach(b => b.setAttribute("aria-current", String(b.textContent === item.w)));
+}
+function seg(cls, t) { const e = document.createElement("span"); e.className = "sg " + cls; e.textContent = t; return e; }
+
+function render() {
+  sheet = makeSheet(seed);
+  const el = $("sheet"); el.innerHTML = "";
+  sheet.forEach((item) => {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "w" + (item.real ? " real" : "");
+    b.textContent = item.w;
+    b.addEventListener("click", () => feature(item));
+    el.append(b);
+  });
+  // open on a coinage whose consonants actually meet, so the notes have something to say
+  const meets = (i, re) => !i.real && describe(parse(i.w)).some(([k]) => re.test(k));
+  feature(sheet.find(i => meets(i, /\w·\w/)) || sheet.find(i => meets(i, /^\w{2,}$/)) || sheet.find(i => !i.real));
+}
+function setSeed(n) { seed = n; $("seed").value = n; history.replaceState(null, "", "#" + n); render(); }
+
+$("new").addEventListener("click", () => setSeed(Math.floor(Math.random() * 999999) + 1));
+document.querySelectorAll(".step").forEach(b => b.addEventListener("click", () => setSeed(Math.max(0, seed + Number(b.dataset.d)))));
+$("seed").addEventListener("input", e => { const n = parseInt(e.target.value.replace(/\D/g, ""), 10); if (Number.isFinite(n)) { seed = n; history.replaceState(null, "", "#" + n); render(); } });
+$("mark").addEventListener("click", e => {
+  const on = e.currentTarget.getAttribute("aria-pressed") !== "true";
+  e.currentTarget.setAttribute("aria-pressed", String(on));
+  $("sheet").classList.toggle("hide-real", !on);
+  $("prov").hidden = !on;
+});
+$("another").addEventListener("click", () => {
+  const rng = new Rng(hash_seed(seed + ":" + Math.random()));
+  const w = coin(rng, new Set(sheet.map(i => i.w)));
+  if (w) feature({ w, real: false });
+});
+$("copy").addEventListener("click", () => copy(featured.w, `Copied “${featured.w}”`));
+$("copyall").addEventListener("click", () => copy(sheet.map(i => i.w).join(" "), "Copied forty words"));
+
+let toastTimer;
+function copy(text, msg) { navigator.clipboard?.writeText(text).then(() => toast(msg)).catch(() => toast("Copy blocked by the browser")); }
+function toast(msg) { const t = $("toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("show"), 1500); }
+
+const fromHash = parseInt(location.hash.slice(1), 10);
+setSeed(Number.isFinite(fromHash) ? fromHash : 1);
+window.addEventListener("hashchange", () => { const n = parseInt(location.hash.slice(1), 10); if (Number.isFinite(n)) setSeed(n); });
+</script>
+</body>
+</html>

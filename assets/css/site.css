@@ -4,6 +4,12 @@
    so text starts exactly on a drawn column line. */
 
 @font-face {
+  font-family: "Trapu Tall";
+  src: url("../fonts/type/TrapuTall-Regular.woff2") format("woff2");
+  font-display: block;   /* only fetched once a word is asked for */
+}
+
+@font-face {
   font-family: "Culvert";
   src: url("../fonts/Culvert.woff2") format("woff2");
   font-display: swap;
@@ -143,6 +149,51 @@ main, header, footer { position: relative; z-index: 1; }
 .hero .headline { margin-top: 88px; }
 @media (max-width: 1023px) { .hero__meta { grid-column: 5 / span 2; } }
 @media (max-width: 639px)  { .hero { padding-top: 48px; } .hero__meta { grid-column: 1 / -1; } .hero .headline { margin-top: 72px; } }
+
+/* ---------- the hero carousel: headline | four-letter words (assets/js/words.js) ---------- */
+.slides { grid-column: 1 / -1; position: relative; margin-top: 136px;
+          overflow: clip; overflow-clip-margin: 12px; }   /* the pane waiting to the right is cut off; the headline's optical overhang isn't */
+.slides__track { display: flex; align-items: stretch; transition: transform 0.7s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.slides.is-words .slides__track { transform: translateX(-100%); }
+.slide { flex: 0 0 100%; min-width: 0; position: relative; transition: visibility 0s linear 0.7s; }
+.slides:not(.is-words) .slide--words, .slides.is-words .slide:first-child { visibility: hidden; }
+.slides.is-words .slide--words, .slides:not(.is-words) .slide:first-child { visibility: visible; transition-delay: 0s; }
+.hero .slide .headline { margin-top: 0; }
+/* the chevron: a hairline glyph on the right column line; on the words pane it turns to point back */
+.slides__go { all: unset; position: absolute; right: 0; top: 50%; width: 44px; height: 88px; margin-top: -44px;
+              display: grid; place-items: center end; cursor: pointer; color: var(--ink); z-index: 2; }
+.slides__go svg { width: 16px; height: 32px; fill: none; stroke: currentColor; stroke-width: 1.5;
+                  transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1), color 0.2s ease; }
+.slides__go:hover, .slides__go:focus-visible { color: var(--accent); }
+.slides__go:hover svg { transform: translateX(4px); }
+.slides.is-words .slides__go svg { transform: rotate(180deg); }
+.slides.is-words .slides__go:hover svg { transform: rotate(180deg) translateX(4px); }
+.slides__go:focus-visible { outline: 1px solid var(--accent); outline-offset: 2px; }
+/* the words pane */
+/* a small hairline button under the word */
+.words-more { all: unset; box-sizing: border-box; display: inline-flex; align-items: center; gap: 10px;
+              margin-top: 24px; padding: 7px 10px 7px 11px; border: 1px solid var(--rule); cursor: pointer;
+              font-size: 10px; line-height: 14px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted);
+              transition: color 0.2s ease, border-color 0.2s ease; }
+.words-more svg { flex: none; width: 5px; height: 10px; fill: none; stroke: currentColor; stroke-width: 1.5;
+                  transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.words-more:hover { color: var(--accent); border-color: var(--accent); }
+.words-more:hover svg { transform: translateX(3px); }
+.words-more:focus-visible { outline: 1px solid var(--accent); outline-offset: 3px; }
+@media (max-width: 639px) { .words-more { margin-top: 16px; } .words-more__2 { display: block; } }   /* two set lines, not a full-width wrap */
+.word {
+  margin: 0;
+  font: 400 var(--word-size, 300px) / 1.4 "Trapu Tall", var(--sans);   /* lowercase: Trapu's Solid cut */
+  text-box: trim-both cap alphabetic;   /* the box hugs the 1.4em capitals */
+  white-space: nowrap; cursor: pointer; user-select: none; -webkit-tap-highlight-color: transparent;
+  min-height: var(--word-box, 0px);   /* a fixed box: narrower words don't pull the button up */
+  transition: opacity 0.26s ease;
+}
+.word__in { display: inline-block; }
+.word__in:empty { display: none; }   /* no word yet: no 300px line box holding the hero open */
+.word.is-turning { opacity: 0; }
+@media (max-width: 639px) { .slides { margin-top: 120px; } }
+@media (prefers-reduced-motion: reduce) { .slides__track, .slide, .word, .slides__go svg { transition: none; } }
 
 .strip { margin-top: 88px; padding-top: 24px; border-top: 1px solid var(--rule); row-gap: 32px; }
 .strip .label { margin-bottom: 8px; }
@@ -325,3 +376,26 @@ a.spec__sample:hover { color: var(--accent); }
 .tuner__row { display: flex; gap: 8px; margin-top: 14px; }
 .tuner pre { margin: 12px 0 0; font: 500 11px/15px ui-monospace, Menlo, monospace; white-space: pre-wrap; color: var(--muted); }
 @media (max-width: 639px) { .tuner { left: 12px; right: 12px; width: auto; bottom: 12px; } }
+
+/* ---------- easter egg: the Magpies (assets/js/magpies.js) ---------- */
+.egg { all: unset; position: fixed; left: 0; top: 0; z-index: 3; width: 40px; height: 40px; margin: -20px 0 0 -20px;
+       cursor: pointer; display: grid; place-items: center; -webkit-tap-highlight-color: transparent; }
+.egg::before { content: ""; width: 10px; height: 10px; border-radius: 50%; box-sizing: border-box;
+               border: 1px solid var(--accent); transition: transform 0.3s cubic-bezier(.2,.7,.2,1); }
+.egg:hover::before, .egg:focus-visible::before { transform: scale(1.35); }
+.egg:focus-visible { outline: 1px solid var(--accent); outline-offset: 2px; border-radius: 50%; }
+.egg.is-out::after { content: ""; position: absolute; inset: 14px; border-radius: 50%; border: 1px solid var(--accent);
+                     animation: egg-call 2.4s cubic-bezier(.2,.7,.2,1) infinite; pointer-events: none; }
+@keyframes egg-call { from { transform: scale(1); opacity: 0.9; } to { transform: scale(4.5); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .egg.is-out::after { animation: none; transform: scale(1.8); } }
+.egg__label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.egg-frame { position: fixed; left: -10px; top: -10px; width: 1px; height: 1px; border: 0; opacity: 0; pointer-events: none; }
+.foot-egg { grid-column: 5 / span 4; color: var(--muted); font-size: 14px; line-height: 1.5; max-width: 44ch; margin: 0; }
+.foot-egg__go { grid-column: 9 / span 4; }
+@media (min-width: 1024px) {
+  .foot-egg, .foot-egg__go { grid-row: 2; margin-top: 40px; align-self: baseline; }
+}
+.foot-egg i { font-style: normal; display: inline-block; width: 8px; height: 8px; border-radius: 50%; box-sizing: border-box; border: 1px solid var(--accent);
+              vertical-align: 0.05em; margin: 0 2px; }
+@media (max-width: 1023px) { .foot-egg { grid-column: 3 / span 4; } .foot-egg__go { grid-column: 3 / span 4; } }
+@media (max-width: 639px)  { .foot-egg, .foot-egg__go { grid-column: 1 / -1; } }
