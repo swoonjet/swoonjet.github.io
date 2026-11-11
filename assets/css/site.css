@@ -151,8 +151,10 @@ main, header, footer { position: relative; z-index: 1; }
 @media (max-width: 639px)  { .hero { padding-top: 48px; } .hero__meta { grid-column: 1 / -1; } .hero .headline { margin-top: 72px; } }
 
 /* ---------- the hero carousel: headline | four-letter words (assets/js/words.js) ---------- */
-.slides { grid-column: 1 / -1; position: relative; margin-top: 136px;
-          overflow: clip; overflow-clip-margin: 12px; }   /* the pane waiting to the right is cut off; the headline's optical overhang isn't */
+.slides { grid-column: 1 / -1; position: relative; margin: 96px 0 -40px; padding: 40px 0;
+          overflow: clip; overflow-clip-margin: 12px; }   /* the pane waiting to the right is cut off; the headline's optical overhang isn't.
+             The 40px padding (paid back by the margins) is headroom: where text-box trim lands differently (WebKit), Trapu Tall's
+             tops stand ~0.06em above the line and would otherwise be sliced flat */
 .slides__track { display: flex; align-items: stretch; transition: transform 0.7s cubic-bezier(0.2, 0.8, 0.2, 1); }
 .slides.is-words .slides__track { transform: translateX(-100%); }
 .slide { flex: 0 0 100%; min-width: 0; position: relative; transition: visibility 0s linear 0.7s; }
@@ -192,7 +194,7 @@ main, header, footer { position: relative; z-index: 1; }
 .word__in { display: inline-block; }
 .word__in:empty { display: none; }   /* no word yet: no 300px line box holding the hero open */
 .word.is-turning { opacity: 0; }
-@media (max-width: 639px) { .slides { margin-top: 120px; } }
+@media (max-width: 639px) { .slides { margin-top: 80px; } }
 @media (prefers-reduced-motion: reduce) { .slides__track, .slide, .word, .slides__go svg { transition: none; } }
 
 .strip { margin-top: 88px; padding-top: 24px; border-top: 1px solid var(--rule); row-gap: 32px; }
