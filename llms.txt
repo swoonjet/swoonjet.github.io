@@ -41,7 +41,7 @@ Contact: jontoews@gmail.com
 Experiments in emergence: simple rules and small systems that grow into instruments, worlds and language.
 
 - [Earshot](https://jontoews.com/earshot/): Four live field mics, thousands of kilometres apart, streaming right now. Nothing is pre-recorded — every layer comes from whatever happens to coincide.
-- [Heliosphere](https://jontoews.com/heliosphere/): Live solar wind and geomagnetic data, translated into sound. The sun, audible.
+- [Heliosphere](https://jontoews.com/heliosphere/): Live solar wind and geomagnetic data, translated into sound. The sun, audible. NOAA’s feed from 1.5 million kilometres out tunes a stack of drones: wind speed sets the pitch, the magnetic field pulls it out of tune, and a geomagnetic storm pushes it into distortion.
 - [Cadastre](https://jontoews.com/cadastre/): Generate a whole city from a seed — terrain, streets, parcels, parks, every place named. Pan, zoom, export it poster-size.
 - [Linger](https://jontoews.com/linger/): Short fiction and poetry at the speed of reflection. No scrolling, no skimming — just the prose.
 - [Weather Reports](https://jontoews.com/Weather-Reports-Field-Guide/): Forty-six writers, one premise: an unexplained weather phenomenon over World C6H-ɛ. Read it as anthology, archive, or apply for a researcher post.

@@ -1,10 +1,11 @@
 // Masthead hover: the hovered item's letter-spacing opens up until its whole line meets the
 // right edge of its grid cell, so the word stretches across the columns it sits on.
+// Index rows do the same with their Field label whenever the row is hovered or focused.
 (() => {
   const items = document.querySelectorAll(".masthead .stretch");
   const range = document.createRange();
   function open(el) {
-    const cell = el.closest(".a, .b, .c"), line = el.parentElement;
+    const cell = el.closest(".a, .b, .c, .i-field"), line = el.parentElement;
     if (!cell || getComputedStyle(cell).gridColumnStart === "1" && innerWidth < 640) return; // phones: cells are full width
     if (el.classList.contains("is-stretched")) return;
     // measure the line at rest: pause transitions so nothing mid-animation is counted
@@ -32,5 +33,13 @@
     el.addEventListener("pointerleave", () => close(el));
     el.addEventListener("focus", () => open(el));
     el.addEventListener("blur", () => close(el));
+  });
+  document.querySelectorAll(".row").forEach((row) => {
+    const el = row.querySelector(".i-field .stretch");
+    if (!el) return;
+    row.addEventListener("pointerenter", (e) => e.pointerType === "mouse" && open(el));
+    row.addEventListener("pointerleave", () => close(el));
+    row.addEventListener("focus", () => open(el));
+    row.addEventListener("blur", () => close(el));
   });
 })();

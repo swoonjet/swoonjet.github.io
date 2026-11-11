@@ -4,7 +4,7 @@
   "tags": [
    "Sonification"
   ],
-  "desc": "Live solar wind and geomagnetic data, translated into sound. The sun, audible.",
+  "desc": "Live solar wind and geomagnetic data, translated into sound. The sun, audible. NOAA’s feed from 1.5 million kilometres out tunes a stack of drones: wind speed sets the pitch, the magnetic field pulls it out of tune, and a geomagnetic storm pushes it into distortion.",
   "url": "https://jontoews.com/heliosphere/",
   "thumb": "heliosphere.jpg"
  },
