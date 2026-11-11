@@ -160,6 +160,8 @@
 .cut .label { grid-column: 1 / span 2; font-family: var(--sans); }
 .cut__w { grid-column: 3 / -1; font-size: min(calc(var(--content) / 12.5), 110px); line-height: 1; color: #e9c46a; white-space: nowrap; }
 .cuts.ss01 { font-feature-settings: "ss01"; }
+.cuts--tall { font-family: "Trapu Tall"; }
+.cuts--tall .cut__w { font-size: min(calc(var(--content) / 15), 92px); line-height: 1.5; }   /* capitals stand 1.4em */
 .cuts__toggle { grid-column: 1 / span 4; }
 @media (max-width: 1023px) { .cut .label { grid-column: 1 / -1; } .cut__w { grid-column: 1 / -1; font-size: calc(var(--content) / 8.6); } .cuts__toggle { grid-column: 1 / -1; } }
 
@@ -187,6 +189,8 @@
   border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); padding: 24px 0; min-height: 1.3em;
 }
 .tt__out:focus { border-color: var(--accent); }
+.tt__out[data-face="trapu-tall"] { line-height: 1.5; }
+@media (max-width: 639px) { .tt__out[data-face="trapu-tall"] { font-size: calc(var(--tt, 120px) * 0.5); } }   /* twice the height: half the size keeps words whole on a phone */
 @media (max-width: 639px) { .tt__size input { width: 140px; } }
 @media (pointer: coarse) { .tt__size input { height: 32px; } }   /* a slider you can actually grab with a thumb */
 

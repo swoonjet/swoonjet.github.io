@@ -182,7 +182,13 @@ main, header, footer { position: relative; z-index: 1; }
 .words-more:hover { color: var(--accent); border-color: var(--accent); }
 .words-more:hover svg { transform: translateX(3px); }
 .words-more:focus-visible { outline: 1px solid var(--accent); outline-offset: 3px; }
-@media (max-width: 639px) { .words-more { margin-top: 16px; } .words-more__2 { display: block; } }   /* two set lines, not a full-width wrap */
+/* button left, the type credit across on the right, both hung from the same line under the word */
+.words-foot { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; margin-top: 24px; }
+.words-foot .words-more { margin-top: 0; }
+.words-credit { max-width: 34ch; margin: 0; font-size: 12px; line-height: 17px; color: var(--muted); text-align: right; }
+.words-credit a { color: var(--ink); text-decoration: none; border-bottom: 1px solid var(--rule); white-space: nowrap; }
+.words-credit a:hover { color: var(--accent); border-color: var(--accent); }
+@media (max-width: 639px) { .words-foot { flex-direction: column; gap: 16px; margin-top: 16px; } .words-credit { text-align: left; } }
 .word {
   margin: 0;
   font: 400 var(--word-size, 300px) / 1.4 "Trapu Tall", var(--sans);   /* lowercase: Trapu's Solid cut */
@@ -332,6 +338,7 @@ a.spec__sample:hover { color: var(--accent); }
   font-size: min(calc(var(--content) / 6.5), 200px); line-height: 1.05;
   font-weight: 400; letter-spacing: 0; overflow-wrap: anywhere;
 }
+.spec__sample[data-face="trapu-tall"] { font-size: min(calc(var(--content) / 11), 124px); line-height: 1.5; }   /* capitals stand 1.4em */
 .spec__alts { grid-column: 1 / -1; }
 .spec__alt { font-size: min(calc(var(--content) / 13), 100px); margin-top: 16px; color: var(--muted); }
 .spec__desc { grid-column: 9 / span 4; margin-top: 24px; font-size: 16px; line-height: 24px; color: var(--muted); }

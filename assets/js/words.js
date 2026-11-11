@@ -170,12 +170,12 @@ if (slides) {
     return w;
   }
   // The word sits in a box of fixed height, set from page load, so neither the hero nor the page below ever moves:
-  // the box plus the button match the headline (on phones, where the headline is short, the box is sized for a word
+  // the box plus the button row (button and type credit) match the headline (on phones, where the headline is short, the box is sized for a word
   // of average width instead and the hero is that much taller from the start). Within it the word is as wide as the
   // pane allows short of the chevron. Trapu Tall's capitals stand 1.4em.
   const room = () => panes[1].getBoundingClientRect().width - go.offsetWidth - 8;
   function box() {
-    const btn = more.offsetHeight + parseFloat(getComputedStyle(more).marginTop);
+    const foot = more.closest(".words-foot") || more, btn = foot.offsetHeight + parseFloat(getComputedStyle(foot).marginTop);
     let h = Math.min(panes[0].querySelector(".headline").offsetHeight - btn, innerHeight * 0.58);
     if (innerWidth < 640) h = Math.max(h, 1.4 * room() / 4.2);
     word.style.setProperty("--word-box", Math.floor(h) + "px");

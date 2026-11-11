@@ -70,7 +70,7 @@ Experiments in emergence: simple rules and small systems that grow into instrume
 
 ## Typefaces
 
-Nine original typefaces, free for personal and commercial use on Utypeia.
+Ten original typefaces, free for personal and commercial use on Utypeia.
 
 - [Annulet](https://jontoews.com/type/annulet/): Display. Ultra-heavy capitals and figures cut from one unit grid, every stroke end bitten by a quarter-disc notch, so the alphabet turns like an iris.
 - [Balkenfeder](https://jontoews.com/type/balkenfeder/): Display. A reverse-contrast display face: heavy horizontal bars, fine upright strokes, rounded corners and feet that kick outward.
@@ -80,10 +80,11 @@ Nine original typefaces, free for personal and commercial use on Utypeia.
 - [Rasoir](https://jontoews.com/type/rasoir/): Serif. A razor-edged Didone: thick upright stems, hairlines as thin as the cut allows, flat unbracketed serifs and ball dots.
 - [Schilf](https://jontoews.com/type/schilf/): Condensed. A tall, narrow Jugendstil-inspired face, with flared feet, high crossbars and swinging terminals.
 - [Trapu](https://jontoews.com/type/trapu/): Display. A heavy Art Deco face, squat and stocky, cut three ways: Solid on the plain keys, Single line with Shift, Multiple line with Option.
+- [Trapu Tall](https://jontoews.com/type/trapu-tall/): Display. A heavy, compressed display face of massive stems and hairline counters, cut three ways with figures in each: Solid, Single line with Shift, Multiple line with Option.
 - [Unkelchunk](https://jontoews.com/type/unkelchunk/): Slab. A heavy slab face of capitals and figures built only from rectangles and right-angled triangles, like carved masonry.
 
 ## Pages
 
 - [Home](https://jontoews.com/): overview and contact
 - [Projects](https://jontoews.com/projects/): every experiment
-- [Type](https://jontoews.com/type/): the nine typefaces
+- [Type](https://jontoews.com/type/): the ten typefaces
