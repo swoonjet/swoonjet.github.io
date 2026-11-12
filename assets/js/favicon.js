@@ -1,5 +1,5 @@
-// The tab icon: "JT" in Host Grotesk on claret. Every so often it flickers through Jon's nine typefaces and lands back
-// on Host Grotesk. Outlines come from assets/favicon-faces.json (built by tools/favicon.py), fetched only once the page
+// The tab icon: "JT" in Trapu Tall on claret. Every so often it flickers through Jon's nine typefaces and lands back
+// on Trapu Tall. Outlines come from assets/favicon-faces.json (built by tools/favicon.py), fetched only once the page
 // has settled. Browsers that ignore favicon changes (Safari) simply keep the static icon.
 (() => {
   if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
