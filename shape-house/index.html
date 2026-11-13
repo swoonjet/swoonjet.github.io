@@ -1,0 +1,3183 @@
+<!doctype html>
+<html lang="en-CA">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pegbelt Shape House</title>
+<meta name="description" content="Pegbelt Shape House: shapes made of a belt pulled tight round pegs on a grid. Generate, animate, pluck and take away SVG, PNG, pegs and video.">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Host+Grotesk:wght@400;500;600;700;800&display=swap">
+<style>
+/* Pegbelt Shape House — set on the jontoews.com grid: one 12-column grid drives the drawn column lines and every row */
+
+:root {
+  --paper: #f2f1ee;
+  --ink: #111110;
+  --muted: #6b6964;
+  --accent: #7b1838;
+  --line: rgba(17, 17, 16, 0.08);
+  --rule: rgba(17, 17, 16, 0.45);
+  --max: 1600px; --m: 72px; --g: 24px; --cols: 12;
+  --content: min(calc(var(--max) - 2 * var(--m)), calc(100vw - 2 * var(--m)));
+  --sans: "Host Grotesk", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@media (max-width: 1023px) { :root { --m: 40px; --cols: 6; } }
+@media (max-width: 639px)  { :root { --m: 20px; --g: 16px; --cols: 4; } }
+
+*, *::before, *::after { box-sizing: border-box; }
+body { margin: 0; background: var(--paper); color: var(--ink); font: 400 15px/1.5 var(--sans);
+       -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+::selection { background: var(--accent); color: var(--paper); }
+:focus-visible { outline: 1px solid var(--accent); outline-offset: 3px; }
+
+.wrap, .cols__inner { width: var(--content); margin-inline: auto; display: grid;
+  grid-template-columns: repeat(var(--cols), minmax(0, 1fr)); column-gap: var(--g); }
+.cols { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
+.cols__inner { height: 100%; border-right: 1px solid var(--line); }
+.cols__inner span { border-left: 1px solid var(--line); }
+@media (max-width: 1023px) { .cols__inner span:nth-child(n+7) { display: none; } }
+@media (max-width: 639px)  { .cols__inner span:nth-child(n+5) { display: none; } }
+header, main { position: relative; z-index: 1; }
+
+.label { font-size: 12px; line-height: 16px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; margin: 0; }
+.meta  { font-size: 11px; line-height: 16px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; margin: 0; }
+.muted { color: var(--muted); }
+.tag { display: inline-block; background: var(--accent); color: var(--paper); font-size: 9px; line-height: 13px; font-weight: 600;
+       letter-spacing: 0.12em; text-transform: uppercase; text-box: trim-both cap alphabetic;
+       padding: 4px calc(6px - 0.12em) 4px 6px; margin-bottom: 10px; }
+
+/* ---------- masthead ---------- */
+.masthead { padding-top: 44px; row-gap: 24px; }
+.masthead > div { grid-column: span 4; }
+.masthead button { all: unset; cursor: pointer; transition: color 0.2s ease, letter-spacing 0.6s var(--ease); }
+.masthead button:hover { color: var(--accent); letter-spacing: 0.14em; }
+.masthead button:focus-visible { outline: 1px solid var(--accent); outline-offset: 3px; }
+.masthead .sep { color: var(--muted); padding-inline: 0.35em; }
+.rec { color: var(--accent); }
+@media (max-width: 1023px) { .masthead > div { grid-column: span 2; } }
+@media (max-width: 639px)  { .masthead > div { grid-column: 1 / -1; } }
+
+/* ---------- the house: controls | preview | neighbours ---------- */
+.house { padding-top: 72px; padding-bottom: 72px; align-items: start; }
+.rail { grid-column: 1 / span 3; }
+/* the board fits the first screen under the masthead, then rides along as the controls scroll */
+.stage { grid-column: 4 / span 7; position: sticky; top: 24px; height: max(480px, calc(100vh - 214px)); }
+.side { grid-column: 11 / span 2; position: sticky; top: 24px; }
+@media (max-width: 1023px) {
+  .stage { grid-column: 1 / -1; position: relative; top: 0; height: 78vh; order: -1; margin-bottom: 48px; }
+  .rail { grid-column: 1 / span 4; } .side { grid-column: 5 / span 2; position: relative; }
+}
+@media (max-width: 639px) { .stage { height: 70vh; } .rail, .side { grid-column: 1 / -1; } .side { margin-top: 48px; } }
+
+.mark { font: 800 var(--mark, 72px) / 0.88 var(--sans); text-transform: uppercase; letter-spacing: -0.04em;
+        margin: 0 0 64px -0.04em; }   /* optical: the stem sits on the column line */
+.mark span { display: block; white-space: nowrap; width: max-content; }
+
+.group { margin-bottom: 48px; }
+.ctl { margin-top: 18px; }
+.ctl__head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+.ctl__val { font-size: 12px; font-weight: 600; letter-spacing: 0.04em; font-variant-numeric: tabular-nums; }
+
+/* hairline range: a 1px rule with a small square ink thumb */
+input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; height: 20px; background: transparent; margin: 0; cursor: pointer; }
+input[type=range]::-webkit-slider-runnable-track { height: 1px; background: var(--rule); }
+input[type=range]::-moz-range-track { height: 1px; background: var(--rule); }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 11px; height: 11px; margin-top: -5px; background: var(--ink); border: 0; border-radius: 0; transition: background 0.2s ease; }
+input[type=range]::-moz-range-thumb { width: 11px; height: 11px; background: var(--ink); border: 0; border-radius: 0; }
+input[type=range]:hover::-webkit-slider-thumb, input[type=range]:focus-visible::-webkit-slider-thumb { background: var(--accent); }
+input[type=range]:hover::-moz-range-thumb { background: var(--accent); }
+
+/* choices: hairline boxes; the chosen one takes the claret tag */
+.seg { display: flex; flex-wrap: wrap; gap: 6px; }
+.seg button, .hair { all: unset; box-sizing: border-box; cursor: pointer; border: 1px solid var(--rule);
+  font-size: 10px; line-height: 14px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase;
+  padding: 6px 9px 6px 10px; color: var(--ink); transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease; }
+.seg button:hover, .hair:hover { color: var(--accent); border-color: var(--accent); }
+.seg button[aria-pressed=true] { background: var(--accent); border-color: var(--accent); color: var(--paper); }
+.seg button:focus-visible, .hair:focus-visible { outline: 1px solid var(--accent); outline-offset: 2px; }
+.checks { display: flex; flex-wrap: wrap; gap: 6px; }
+.checks button[aria-pressed=true] { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+
+/* actions */
+.go { display: flex; flex-wrap: wrap; gap: 6px; align-items: stretch; margin-top: 18px; }
+.chip { all: unset; cursor: pointer; background: var(--ink); color: var(--paper); font-size: 13px; line-height: 20px; font-weight: 600;
+        letter-spacing: 0.03em; padding: 10px 16px; transition: background 0.2s ease; }
+.chip:hover { background: var(--accent); }
+.chip:focus-visible { outline: 1px solid var(--accent); outline-offset: 2px; }
+.chev { all: unset; cursor: pointer; width: 40px; display: grid; place-items: center; border: 1px solid var(--rule); transition: color 0.2s ease, border-color 0.2s ease; }
+.chev svg { width: 7px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.5; transition: transform 0.4s var(--ease); }
+.chev:hover { color: var(--accent); border-color: var(--accent); }
+.chev:hover svg { transform: translateX(2px); }
+.chev--back svg { transform: rotate(180deg); }
+.chev--back:hover svg { transform: rotate(180deg) translateX(2px); }
+.chev:focus-visible { outline: 1px solid var(--accent); outline-offset: 2px; }
+.seed { all: unset; display: block; width: 100%; font-size: 32px; line-height: 1.1; font-weight: 600; letter-spacing: -0.01em;
+        font-variant-numeric: tabular-nums; border-bottom: 1px solid transparent; transition: border-color 0.2s ease; }
+.seed:hover, .seed:focus { border-bottom-color: var(--rule); }
+.note { font-size: 12px; line-height: 17px; color: var(--muted); margin: 14px 0 0; max-width: 32ch; }
+
+/* ---------- preview ---------- */
+.board { width: 100%; height: 100%; display: block; cursor: crosshair; touch-action: manipulation; }
+
+/* neighbours and the spec */
+.vars { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.vars button { all: unset; cursor: pointer; position: relative; line-height: 0; }
+.vars svg { width: 100%; height: auto; display: block; }
+/* the site's focus marks: corner ticks close in on hover */
+.vars button::after { content: ""; position: absolute; inset: -10px; pointer-events: none; opacity: 0; --k: rgba(17, 17, 16, 0.7);
+  background:
+    linear-gradient(var(--k), var(--k)) left top / 8px 1px, linear-gradient(var(--k), var(--k)) left top / 1px 8px,
+    linear-gradient(var(--k), var(--k)) right top / 8px 1px, linear-gradient(var(--k), var(--k)) right top / 1px 8px,
+    linear-gradient(var(--k), var(--k)) left bottom / 8px 1px, linear-gradient(var(--k), var(--k)) left bottom / 1px 8px,
+    linear-gradient(var(--k), var(--k)) right bottom / 8px 1px, linear-gradient(var(--k), var(--k)) right bottom / 1px 8px;
+  background-repeat: no-repeat; transition: opacity 0.3s ease, inset 0.35s var(--ease); }
+.vars button:hover::after, .vars button:focus-visible::after { opacity: 1; inset: -5px; }
+.spec { margin: 40px 0 0; display: grid; gap: 14px; }
+.spec div { display: grid; gap: 2px; }
+.spec dd { margin: 0; font-size: 13px; font-weight: 500; font-variant-numeric: tabular-nums; }
+
+/* ---------- phone: the shape stays on screen, the controls sit in tabs under it, the main actions in a thumb bar ---------- */
+.tabs, .mtitle, .dock { display: none; }
+@media (max-width: 639px) {
+  :root { --stageH: 50svh; }
+  .masthead { display: none; }
+  .house { padding-top: 0; padding-bottom: calc(84px + env(safe-area-inset-bottom)); }
+  .stage { position: sticky; top: 0; z-index: 3; height: var(--stageH); order: -1; margin: 0 calc(-1 * var(--m));
+           padding: 30px var(--m) 10px; background: var(--paper); }
+  .mtitle { display: block; position: absolute; top: 12px; left: var(--m); right: var(--m); pointer-events: none;
+            display: flex; justify-content: space-between; }
+  .mtitle a { pointer-events: auto; color: var(--muted); text-decoration: none; }
+  .mark, .rail > .group > .tag, .side, .seed-note { display: none; }
+  .tabs { display: flex; position: sticky; top: var(--stageH); z-index: 3; background: var(--paper); overflow-x: auto;
+          scrollbar-width: none; margin: 0 calc(-1 * var(--m)); padding: 0 var(--m); border-top: 1px solid var(--line);
+          border-bottom: 1px solid var(--rule); }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tabs button { all: unset; cursor: pointer; flex: 0 0 auto; font-size: 11px; line-height: 16px; font-weight: 600;
+                 letter-spacing: 0.12em; text-transform: uppercase; padding: 14px 12px 12px; color: var(--muted);
+                 border-bottom: 2px solid transparent; margin-bottom: -1px; }
+  .tabs button:first-child { padding-left: 0; }
+  .tabs button[aria-selected=true] { color: var(--accent); border-bottom-color: var(--accent); }
+  .rail { padding-top: 18px; }
+  .rail > .group { display: none; margin-bottom: 24px; }
+  .rail > .group.on { display: block; }
+  .seg { gap: 8px; }
+  .seg button, .hair { font-size: 11px; padding: 10px 12px 10px 13px; min-height: 40px; display: inline-flex; align-items: center; }
+  input[type=range] { height: 40px; }
+  input[type=range]::-webkit-slider-thumb { width: 22px; height: 22px; margin-top: -11px; }
+  input[type=range]::-moz-range-thumb { width: 22px; height: 22px; }
+  .ctl { margin-top: 14px; }
+  .ctl__head { margin-bottom: 0; }
+  .seed { font-size: 28px; }
+  .vars { grid-template-columns: repeat(3, 1fr); gap: 18px; margin-top: 22px; }
+  .takeaway { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+  .takeaway .sep { display: none; }
+  .takeaway button { all: unset; box-sizing: border-box; cursor: pointer; border: 1px solid var(--rule); font-size: 11px;
+                     font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; padding: 10px 14px; min-height: 40px; }
+  .takeaway button.rec { color: var(--accent); border-color: var(--accent); }
+  .dock { display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; gap: 8px; background: var(--paper);
+          border-top: 1px solid var(--rule); padding: 10px var(--m) calc(10px + env(safe-area-inset-bottom)); }
+  .dock .go { margin: 0; flex: 1; flex-wrap: nowrap; gap: 8px; }
+  .dock .chip { flex: 1; text-align: center; padding: 12px 14px; white-space: nowrap; }
+  .dock .hair { padding: 0 12px; white-space: nowrap; }
+  .dock .chev { width: 46px; }
+}
+
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="cols" aria-hidden="true"><div class="cols__inner"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div></div>
+
+<header class="wrap masthead">
+  <div><span class="tag">House:</span><p class="meta">Pegbelt Shape House</p></div>
+  <div><span class="tag">System:</span><p class="meta">Peg <span class="sep">·</span> Belt <span class="sep">·</span> Tangent</p></div>
+  <div><span class="tag">Take away:</span><p class="meta"><button data-dl="svg">SVG</button><span class="sep">·</span><button data-dl="png">PNG</button><span class="sep">·</span><button data-dl="json">Pegs</button><span class="sep">·</span><button id="record">Video</button></p></div>
+</header>
+
+<main class="wrap house">
+  <div class="rail">
+    <h1 class="mark" id="mark"><span>Pegbelt</span><span>Shape</span><span>House</span></h1>
+
+    <div class="group">
+      <span class="tag">Seed:</span>
+      <input class="seed" id="seed" type="number" min="1" aria-label="Seed">
+      <div class="go">
+        <button class="chip" id="new">New shape</button>
+        <button class="hair" id="roll" title="Randomise every setting (R)">Roll the house</button>
+        <button class="chev chev--back" id="prev" aria-label="Previous seed"><svg viewBox="0 0 7 14"><path d="M1 1l5 6-5 6"/></svg></button>
+        <button class="chev" id="next" aria-label="Next seed"><svg viewBox="0 0 7 14"><path d="M1 1l5 6-5 6"/></svg></button>
+      </div>
+      <p class="note seed-note">Space for a new shape, R rolls every setting, arrows step the seed. Click a cut in the shape to pluck it.</p>
+    </div>
+
+    <div class="group">
+      <span class="tag">Motion:</span>
+      <div class="ctl"><div class="seg" data-key="motion"></div></div>
+      <div class="ctl checks"><button class="hair" data-view="drive">Drive belt</button></div>
+      <div class="ctl"><div class="ctl__head"><span class="label muted">Belt runs</span></div><div class="seg" data-key="beltDir"></div></div>
+      <p class="note" id="motionNote"></p>
+      <div class="ctl"><div class="ctl__head"><span class="label muted">Speed</span><span class="ctl__val"></span></div><input type="range" data-key="tempo" min="0.25" max="2" step="0.05"></div>
+      <div class="ctl"><div class="ctl__head"><span class="label muted">Throw</span><span class="ctl__val"></span></div><input type="range" data-key="swing" min="0.1" max="0.8" step="0.05"></div>
+    </div>
+
+    <div class="group">
+      <span class="tag">Shape:</span>
+      <div class="ctl"><div class="ctl__head"><span class="label muted">Build</span></div><div class="seg" data-key="family"></div></div>
+      <div class="ctl"><div class="ctl__head"><span class="label muted">Symmetry</span></div><div class="seg" data-key="symmetry"></div></div>
+      <div class="ctl"><div class="ctl__head"><span class="label muted">Bite form</span></div><div class="seg" data-key="form"></div></div>
+      <div class="ctl"><div class="ctl__head"><span class="label muted">Bites</span><span class="ctl__val"></span></div><input type="range" data-key="bites" min="0" max="40" step="1"></div>
+      <div class="ctl"><div class="ctl__head"><span class="label muted">Depth</span><span class="ctl__val"></span></div><input type="range" data-key="depth" min="0.1" max="0.95" step="0.05"></div>
+      <div class="ctl"><div class="ctl__head"><span class="label muted">Lean</span><span class="ctl__val"></span></div><input type="range" data-key="skew" min="0" max="1.5" step="0.05"></div>
+      <div class="ctl"><div class="ctl__head"><span class="label muted">Necks</span><span class="ctl__val"></span></div><input type="range" data-key="neck" min="0" max="1" step="0.05"></div>
+    </div>
+
+    <div class="group">
+      <span class="tag">Grid:</span>
+      <div class="ctl"><div class="ctl__head"><span class="label muted">Width</span><span class="ctl__val"></span></div><input type="range" data-key="W" min="8" max="48" step="1"></div>
+      <div class="ctl"><div class="ctl__head"><span class="label muted">Height</span><span class="ctl__val"></span></div><input type="range" data-key="H" min="8" max="64" step="1"></div>
+      <div class="ctl"><div class="ctl__head"><span class="label muted">Peg radius</span><span class="ctl__val"></span></div><input type="range" data-key="R" min="0.3" max="0.9" step="0.05"></div>
+      <div class="ctl"><div class="ctl__head"><span class="label muted">Hairline</span><span class="ctl__val"></span></div><input type="range" data-key="gap" min="0.04" max="0.5" step="0.02"></div>
+      <div class="ctl"><div class="ctl__head"><span class="label muted">Snap</span></div><div class="seg" data-key="snap"></div></div>
+    </div>
+
+    <div class="group">
+      <span class="tag">View:</span>
+      <div class="ctl checks">
+        <button class="hair" data-view="grid">Grid</button>
+        <button class="hair" data-view="pegs">Pegs</button>
+        <button class="hair" data-view="invert">Invert</button>
+        <button class="hair" data-view="outline">Outline</button>
+        <button class="hair" data-view="tile">Tile</button>
+        <button class="hair" data-view="sound">Sound</button>
+      </div>
+      <p class="note">Take-aways follow the view: grid and pegs come along when shown. PNG is 4096 px on the long side. Video records one cycle of the motion, with the belt running if it's on.</p>
+    </div>
+  </div>
+
+  <div class="stage"><p class="mtitle meta"><span>Pegbelt Shape House</span><a href="/">jontoews.com</a></p><svg class="board" id="board" role="img" aria-label="Generated shape"></svg></div>
+
+  <aside class="side">
+    <span class="tag">Neighbours:</span>
+    <div class="vars" id="vars" aria-label="Neighbouring seeds"></div>
+    <dl class="spec" id="spec"></dl>
+  </aside>
+</main>
+
+<script>
+"use strict";
+var Mp4Muxer = (() => {
+  var __defProp = Object.defineProperty;
+  var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+  var __getOwnPropNames = Object.getOwnPropertyNames;
+  var __hasOwnProp = Object.prototype.hasOwnProperty;
+  var __export = (target, all) => {
+    for (var name in all)
+      __defProp(target, name, { get: all[name], enumerable: true });
+  };
+  var __copyProps = (to, from, except, desc) => {
+    if (from && typeof from === "object" || typeof from === "function") {
+      for (let key of __getOwnPropNames(from))
+        if (!__hasOwnProp.call(to, key) && key !== except)
+          __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+    }
+    return to;
+  };
+  var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+  var __accessCheck = (obj, member, msg) => {
+    if (!member.has(obj))
+      throw TypeError("Cannot " + msg);
+  };
+  var __privateGet = (obj, member, getter) => {
+    __accessCheck(obj, member, "read from private field");
+    return getter ? getter.call(obj) : member.get(obj);
+  };
+  var __privateAdd = (obj, member, value) => {
+    if (member.has(obj))
+      throw TypeError("Cannot add the same private member more than once");
+    member instanceof WeakSet ? member.add(obj) : member.set(obj, value);
+  };
+  var __privateSet = (obj, member, value, setter) => {
+    __accessCheck(obj, member, "write to private field");
+    setter ? setter.call(obj, value) : member.set(obj, value);
+    return value;
+  };
+  var __privateWrapper = (obj, member, setter, getter) => ({
+    set _(value) {
+      __privateSet(obj, member, value, setter);
+    },
+    get _() {
+      return __privateGet(obj, member, getter);
+    }
+  });
+  var __privateMethod = (obj, member, method) => {
+    __accessCheck(obj, member, "access private method");
+    return method;
+  };
+
+  // src/index.ts
+  var src_exports = {};
+  __export(src_exports, {
+    ArrayBufferTarget: () => ArrayBufferTarget,
+    FileSystemWritableFileStreamTarget: () => FileSystemWritableFileStreamTarget,
+    Muxer: () => Muxer,
+    StreamTarget: () => StreamTarget
+  });
+
+  // src/misc.ts
+  var bytes = new Uint8Array(8);
+  var view = new DataView(bytes.buffer);
+  var u8 = (value) => {
+    return [(value % 256 + 256) % 256];
+  };
+  var u16 = (value) => {
+    view.setUint16(0, value, false);
+    return [bytes[0], bytes[1]];
+  };
+  var i16 = (value) => {
+    view.setInt16(0, value, false);
+    return [bytes[0], bytes[1]];
+  };
+  var u24 = (value) => {
+    view.setUint32(0, value, false);
+    return [bytes[1], bytes[2], bytes[3]];
+  };
+  var u32 = (value) => {
+    view.setUint32(0, value, false);
+    return [bytes[0], bytes[1], bytes[2], bytes[3]];
+  };
+  var i32 = (value) => {
+    view.setInt32(0, value, false);
+    return [bytes[0], bytes[1], bytes[2], bytes[3]];
+  };
+  var u64 = (value) => {
+    view.setUint32(0, Math.floor(value / 2 ** 32), false);
+    view.setUint32(4, value, false);
+    return [bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7]];
+  };
+  var fixed_8_8 = (value) => {
+    view.setInt16(0, 2 ** 8 * value, false);
+    return [bytes[0], bytes[1]];
+  };
+  var fixed_16_16 = (value) => {
+    view.setInt32(0, 2 ** 16 * value, false);
+    return [bytes[0], bytes[1], bytes[2], bytes[3]];
+  };
+  var fixed_2_30 = (value) => {
+    view.setInt32(0, 2 ** 30 * value, false);
+    return [bytes[0], bytes[1], bytes[2], bytes[3]];
+  };
+  var ascii = (text, nullTerminated = false) => {
+    let bytes2 = Array(text.length).fill(null).map((_, i) => text.charCodeAt(i));
+    if (nullTerminated)
+      bytes2.push(0);
+    return bytes2;
+  };
+  var last = (arr) => {
+    return arr && arr[arr.length - 1];
+  };
+  var lastPresentedSample = (samples) => {
+    let result = void 0;
+    for (let sample of samples) {
+      if (!result || sample.presentationTimestamp > result.presentationTimestamp) {
+        result = sample;
+      }
+    }
+    return result;
+  };
+  var intoTimescale = (timeInSeconds, timescale, round = true) => {
+    let value = timeInSeconds * timescale;
+    return round ? Math.round(value) : value;
+  };
+  var rotationMatrix = (rotationInDegrees) => {
+    let theta = rotationInDegrees * (Math.PI / 180);
+    let cosTheta = Math.cos(theta);
+    let sinTheta = Math.sin(theta);
+    return [
+      cosTheta,
+      sinTheta,
+      0,
+      -sinTheta,
+      cosTheta,
+      0,
+      0,
+      0,
+      1
+    ];
+  };
+  var IDENTITY_MATRIX = rotationMatrix(0);
+  var matrixToBytes = (matrix) => {
+    return [
+      fixed_16_16(matrix[0]),
+      fixed_16_16(matrix[1]),
+      fixed_2_30(matrix[2]),
+      fixed_16_16(matrix[3]),
+      fixed_16_16(matrix[4]),
+      fixed_2_30(matrix[5]),
+      fixed_16_16(matrix[6]),
+      fixed_16_16(matrix[7]),
+      fixed_2_30(matrix[8])
+    ];
+  };
+  var deepClone = (x) => {
+    if (!x)
+      return x;
+    if (typeof x !== "object")
+      return x;
+    if (Array.isArray(x))
+      return x.map(deepClone);
+    return Object.fromEntries(Object.entries(x).map(([key, value]) => [key, deepClone(value)]));
+  };
+  var isU32 = (value) => {
+    return value >= 0 && value < 2 ** 32;
+  };
+
+  // src/box.ts
+  var box = (type, contents, children) => ({
+    type,
+    contents: contents && new Uint8Array(contents.flat(10)),
+    children
+  });
+  var fullBox = (type, version, flags, contents, children) => box(
+    type,
+    [u8(version), u24(flags), contents ?? []],
+    children
+  );
+  var ftyp = (details) => {
+    let minorVersion = 512;
+    if (details.fragmented)
+      return box("ftyp", [
+        ascii("iso5"),
+        // Major brand
+        u32(minorVersion),
+        // Minor version
+        // Compatible brands
+        ascii("iso5"),
+        ascii("iso6"),
+        ascii("mp41")
+      ]);
+    return box("ftyp", [
+      ascii("isom"),
+      // Major brand
+      u32(minorVersion),
+      // Minor version
+      // Compatible brands
+      ascii("isom"),
+      details.holdsAvc ? ascii("avc1") : [],
+      ascii("mp41")
+    ]);
+  };
+  var mdat = (reserveLargeSize) => ({ type: "mdat", largeSize: reserveLargeSize });
+  var free = (size) => ({ type: "free", size });
+  var moov = (tracks, creationTime, fragmented = false) => box("moov", null, [
+    mvhd(creationTime, tracks),
+    ...tracks.map((x) => trak(x, creationTime)),
+    fragmented ? mvex(tracks) : null
+  ]);
+  var mvhd = (creationTime, tracks) => {
+    let duration = intoTimescale(Math.max(
+      0,
+      ...tracks.filter((x) => x.samples.length > 0).map((x) => {
+        const lastSample = lastPresentedSample(x.samples);
+        return lastSample.presentationTimestamp + lastSample.duration;
+      })
+    ), GLOBAL_TIMESCALE);
+    let nextTrackId = Math.max(...tracks.map((x) => x.id)) + 1;
+    let needsU64 = !isU32(creationTime) || !isU32(duration);
+    let u32OrU64 = needsU64 ? u64 : u32;
+    return fullBox("mvhd", +needsU64, 0, [
+      u32OrU64(creationTime),
+      // Creation time
+      u32OrU64(creationTime),
+      // Modification time
+      u32(GLOBAL_TIMESCALE),
+      // Timescale
+      u32OrU64(duration),
+      // Duration
+      fixed_16_16(1),
+      // Preferred rate
+      fixed_8_8(1),
+      // Preferred volume
+      Array(10).fill(0),
+      // Reserved
+      matrixToBytes(IDENTITY_MATRIX),
+      // Matrix
+      Array(24).fill(0),
+      // Pre-defined
+      u32(nextTrackId)
+      // Next track ID
+    ]);
+  };
+  var trak = (track, creationTime) => box("trak", null, [
+    tkhd(track, creationTime),
+    mdia(track, creationTime)
+  ]);
+  var tkhd = (track, creationTime) => {
+    let lastSample = lastPresentedSample(track.samples);
+    let durationInGlobalTimescale = intoTimescale(
+      lastSample ? lastSample.presentationTimestamp + lastSample.duration : 0,
+      GLOBAL_TIMESCALE
+    );
+    let needsU64 = !isU32(creationTime) || !isU32(durationInGlobalTimescale);
+    let u32OrU64 = needsU64 ? u64 : u32;
+    let matrix;
+    if (track.info.type === "video") {
+      matrix = typeof track.info.rotation === "number" ? rotationMatrix(track.info.rotation) : track.info.rotation;
+    } else {
+      matrix = IDENTITY_MATRIX;
+    }
+    return fullBox("tkhd", +needsU64, 3, [
+      u32OrU64(creationTime),
+      // Creation time
+      u32OrU64(creationTime),
+      // Modification time
+      u32(track.id),
+      // Track ID
+      u32(0),
+      // Reserved
+      u32OrU64(durationInGlobalTimescale),
+      // Duration
+      Array(8).fill(0),
+      // Reserved
+      u16(0),
+      // Layer
+      u16(0),
+      // Alternate group
+      fixed_8_8(track.info.type === "audio" ? 1 : 0),
+      // Volume
+      u16(0),
+      // Reserved
+      matrixToBytes(matrix),
+      // Matrix
+      fixed_16_16(track.info.type === "video" ? track.info.width : 0),
+      // Track width
+      fixed_16_16(track.info.type === "video" ? track.info.height : 0)
+      // Track height
+    ]);
+  };
+  var mdia = (track, creationTime) => box("mdia", null, [
+    mdhd(track, creationTime),
+    hdlr(track.info.type === "video" ? "vide" : "soun"),
+    minf(track)
+  ]);
+  var mdhd = (track, creationTime) => {
+    let lastSample = lastPresentedSample(track.samples);
+    let localDuration = intoTimescale(
+      lastSample ? lastSample.presentationTimestamp + lastSample.duration : 0,
+      track.timescale
+    );
+    let needsU64 = !isU32(creationTime) || !isU32(localDuration);
+    let u32OrU64 = needsU64 ? u64 : u32;
+    return fullBox("mdhd", +needsU64, 0, [
+      u32OrU64(creationTime),
+      // Creation time
+      u32OrU64(creationTime),
+      // Modification time
+      u32(track.timescale),
+      // Timescale
+      u32OrU64(localDuration),
+      // Duration
+      u16(21956),
+      // Language ("und", undetermined)
+      u16(0)
+      // Quality
+    ]);
+  };
+  var hdlr = (componentSubtype) => fullBox("hdlr", 0, 0, [
+    ascii("mhlr"),
+    // Component type
+    ascii(componentSubtype),
+    // Component subtype
+    u32(0),
+    // Component manufacturer
+    u32(0),
+    // Component flags
+    u32(0),
+    // Component flags mask
+    ascii("mp4-muxer-hdlr", true)
+    // Component name
+  ]);
+  var minf = (track) => box("minf", null, [
+    track.info.type === "video" ? vmhd() : smhd(),
+    dinf(),
+    stbl(track)
+  ]);
+  var vmhd = () => fullBox("vmhd", 0, 1, [
+    u16(0),
+    // Graphics mode
+    u16(0),
+    // Opcolor R
+    u16(0),
+    // Opcolor G
+    u16(0)
+    // Opcolor B
+  ]);
+  var smhd = () => fullBox("smhd", 0, 0, [
+    u16(0),
+    // Balance
+    u16(0)
+    // Reserved
+  ]);
+  var dinf = () => box("dinf", null, [
+    dref()
+  ]);
+  var dref = () => fullBox("dref", 0, 0, [
+    u32(1)
+    // Entry count
+  ], [
+    url()
+  ]);
+  var url = () => fullBox("url ", 0, 1);
+  var stbl = (track) => {
+    const needsCtts = track.compositionTimeOffsetTable.length > 1 || track.compositionTimeOffsetTable.some((x) => x.sampleCompositionTimeOffset !== 0);
+    return box("stbl", null, [
+      stsd(track),
+      stts(track),
+      stss(track),
+      stsc(track),
+      stsz(track),
+      stco(track),
+      needsCtts ? ctts(track) : null
+    ]);
+  };
+  var stsd = (track) => fullBox("stsd", 0, 0, [
+    u32(1)
+    // Entry count
+  ], [
+    track.info.type === "video" ? videoSampleDescription(
+      VIDEO_CODEC_TO_BOX_NAME[track.info.codec],
+      track
+    ) : soundSampleDescription(
+      AUDIO_CODEC_TO_BOX_NAME[track.info.codec],
+      track
+    )
+  ]);
+  var videoSampleDescription = (compressionType, track) => box(compressionType, [
+    Array(6).fill(0),
+    // Reserved
+    u16(1),
+    // Data reference index
+    u16(0),
+    // Pre-defined
+    u16(0),
+    // Reserved
+    Array(12).fill(0),
+    // Pre-defined
+    u16(track.info.width),
+    // Width
+    u16(track.info.height),
+    // Height
+    u32(4718592),
+    // Horizontal resolution
+    u32(4718592),
+    // Vertical resolution
+    u32(0),
+    // Reserved
+    u16(1),
+    // Frame count
+    Array(32).fill(0),
+    // Compressor name
+    u16(24),
+    // Depth
+    i16(65535)
+    // Pre-defined
+  ], [
+    VIDEO_CODEC_TO_CONFIGURATION_BOX[track.info.codec](track)
+  ]);
+  var avcC = (track) => track.info.decoderConfig && box("avcC", [
+    // For AVC, description is an AVCDecoderConfigurationRecord, so nothing else to do here
+    ...new Uint8Array(track.info.decoderConfig.description)
+  ]);
+  var hvcC = (track) => track.info.decoderConfig && box("hvcC", [
+    // For HEVC, description is a HEVCDecoderConfigurationRecord, so nothing else to do here
+    ...new Uint8Array(track.info.decoderConfig.description)
+  ]);
+  var vpcC = (track) => {
+    if (!track.info.decoderConfig) {
+      return null;
+    }
+    let decoderConfig = track.info.decoderConfig;
+    if (!decoderConfig.colorSpace) {
+      throw new Error(`'colorSpace' is required in the decoder config for VP9.`);
+    }
+    let parts = decoderConfig.codec.split(".");
+    let profile = Number(parts[1]);
+    let level = Number(parts[2]);
+    let bitDepth = Number(parts[3]);
+    let chromaSubsampling = 0;
+    let thirdByte = (bitDepth << 4) + (chromaSubsampling << 1) + Number(decoderConfig.colorSpace.fullRange);
+    let colourPrimaries = 2;
+    let transferCharacteristics = 2;
+    let matrixCoefficients = 2;
+    return fullBox("vpcC", 1, 0, [
+      u8(profile),
+      // Profile
+      u8(level),
+      // Level
+      u8(thirdByte),
+      // Bit depth, chroma subsampling, full range
+      u8(colourPrimaries),
+      // Colour primaries
+      u8(transferCharacteristics),
+      // Transfer characteristics
+      u8(matrixCoefficients),
+      // Matrix coefficients
+      u16(0)
+      // Codec initialization data size
+    ]);
+  };
+  var av1C = () => {
+    let marker = 1;
+    let version = 1;
+    let firstByte = (marker << 7) + version;
+    return box("av1C", [
+      firstByte,
+      0,
+      0,
+      0
+    ]);
+  };
+  var soundSampleDescription = (compressionType, track) => box(compressionType, [
+    Array(6).fill(0),
+    // Reserved
+    u16(1),
+    // Data reference index
+    u16(0),
+    // Version
+    u16(0),
+    // Revision level
+    u32(0),
+    // Vendor
+    u16(track.info.numberOfChannels),
+    // Number of channels
+    u16(16),
+    // Sample size (bits)
+    u16(0),
+    // Compression ID
+    u16(0),
+    // Packet size
+    fixed_16_16(track.info.sampleRate)
+    // Sample rate
+  ], [
+    AUDIO_CODEC_TO_CONFIGURATION_BOX[track.info.codec](track)
+  ]);
+  var esds = (track) => {
+    let description = new Uint8Array(track.info.decoderConfig.description);
+    return fullBox("esds", 0, 0, [
+      // https://stackoverflow.com/a/54803118
+      u32(58753152),
+      // TAG(3) = Object Descriptor ([2])
+      u8(32 + description.byteLength),
+      // length of this OD (which includes the next 2 tags)
+      u16(1),
+      // ES_ID = 1
+      u8(0),
+      // flags etc = 0
+      u32(75530368),
+      // TAG(4) = ES Descriptor ([2]) embedded in above OD
+      u8(18 + description.byteLength),
+      // length of this ESD
+      u8(64),
+      // MPEG-4 Audio
+      u8(21),
+      // stream type(6bits)=5 audio, flags(2bits)=1
+      u24(0),
+      // 24bit buffer size
+      u32(130071),
+      // max bitrate
+      u32(130071),
+      // avg bitrate
+      u32(92307584),
+      // TAG(5) = ASC ([2],[3]) embedded in above OD
+      u8(description.byteLength),
+      // length
+      ...description,
+      u32(109084800),
+      // TAG(6)
+      u8(1),
+      // length
+      u8(2)
+      // data
+    ]);
+  };
+  var dOps = (track) => {
+    let preskip = 3840;
+    let gain = 0;
+    const description = track.info.decoderConfig?.description;
+    if (description) {
+      if (description.byteLength < 18) {
+        throw new TypeError("Invalid decoder description provided for Opus; must be at least 18 bytes long.");
+      }
+      const view2 = ArrayBuffer.isView(description) ? new DataView(description.buffer, description.byteOffset, description.byteLength) : new DataView(description);
+      preskip = view2.getUint16(10, true);
+      gain = view2.getInt16(14, true);
+    }
+    return box("dOps", [
+      u8(0),
+      // Version
+      u8(track.info.numberOfChannels),
+      // OutputChannelCount
+      u16(preskip),
+      u32(track.info.sampleRate),
+      // InputSampleRate
+      fixed_8_8(gain),
+      // OutputGain
+      u8(0)
+      // ChannelMappingFamily
+    ]);
+  };
+  var stts = (track) => {
+    return fullBox("stts", 0, 0, [
+      u32(track.timeToSampleTable.length),
+      // Number of entries
+      track.timeToSampleTable.map((x) => [
+        // Time-to-sample table
+        u32(x.sampleCount),
+        // Sample count
+        u32(x.sampleDelta)
+        // Sample duration
+      ])
+    ]);
+  };
+  var stss = (track) => {
+    if (track.samples.every((x) => x.type === "key"))
+      return null;
+    let keySamples = [...track.samples.entries()].filter(([, sample]) => sample.type === "key");
+    return fullBox("stss", 0, 0, [
+      u32(keySamples.length),
+      // Number of entries
+      keySamples.map(([index]) => u32(index + 1))
+      // Sync sample table
+    ]);
+  };
+  var stsc = (track) => {
+    return fullBox("stsc", 0, 0, [
+      u32(track.compactlyCodedChunkTable.length),
+      // Number of entries
+      track.compactlyCodedChunkTable.map((x) => [
+        // Sample-to-chunk table
+        u32(x.firstChunk),
+        // First chunk
+        u32(x.samplesPerChunk),
+        // Samples per chunk
+        u32(1)
+        // Sample description index
+      ])
+    ]);
+  };
+  var stsz = (track) => fullBox("stsz", 0, 0, [
+    u32(0),
+    // Sample size (0 means non-constant size)
+    u32(track.samples.length),
+    // Number of entries
+    track.samples.map((x) => u32(x.size))
+    // Sample size table
+  ]);
+  var stco = (track) => {
+    if (track.finalizedChunks.length > 0 && last(track.finalizedChunks).offset >= 2 ** 32) {
+      return fullBox("co64", 0, 0, [
+        u32(track.finalizedChunks.length),
+        // Number of entries
+        track.finalizedChunks.map((x) => u64(x.offset))
+        // Chunk offset table
+      ]);
+    }
+    return fullBox("stco", 0, 0, [
+      u32(track.finalizedChunks.length),
+      // Number of entries
+      track.finalizedChunks.map((x) => u32(x.offset))
+      // Chunk offset table
+    ]);
+  };
+  var ctts = (track) => {
+    return fullBox("ctts", 0, 0, [
+      u32(track.compositionTimeOffsetTable.length),
+      // Number of entries
+      track.compositionTimeOffsetTable.map((x) => [
+        // Time-to-sample table
+        u32(x.sampleCount),
+        // Sample count
+        u32(x.sampleCompositionTimeOffset)
+        // Sample offset
+      ])
+    ]);
+  };
+  var mvex = (tracks) => {
+    return box("mvex", null, tracks.map(trex));
+  };
+  var trex = (track) => {
+    return fullBox("trex", 0, 0, [
+      u32(track.id),
+      // Track ID
+      u32(1),
+      // Default sample description index
+      u32(0),
+      // Default sample duration
+      u32(0),
+      // Default sample size
+      u32(0)
+      // Default sample flags
+    ]);
+  };
+  var moof = (sequenceNumber, tracks) => {
+    return box("moof", null, [
+      mfhd(sequenceNumber),
+      ...tracks.map(traf)
+    ]);
+  };
+  var mfhd = (sequenceNumber) => {
+    return fullBox("mfhd", 0, 0, [
+      u32(sequenceNumber)
+      // Sequence number
+    ]);
+  };
+  var fragmentSampleFlags = (sample) => {
+    let byte1 = 0;
+    let byte2 = 0;
+    let byte3 = 0;
+    let byte4 = 0;
+    let sampleIsDifferenceSample = sample.type === "delta";
+    byte2 |= +sampleIsDifferenceSample;
+    if (sampleIsDifferenceSample) {
+      byte1 |= 1;
+    } else {
+      byte1 |= 2;
+    }
+    return byte1 << 24 | byte2 << 16 | byte3 << 8 | byte4;
+  };
+  var traf = (track) => {
+    return box("traf", null, [
+      tfhd(track),
+      tfdt(track),
+      trun(track)
+    ]);
+  };
+  var tfhd = (track) => {
+    let tfFlags = 0;
+    tfFlags |= 8;
+    tfFlags |= 16;
+    tfFlags |= 32;
+    tfFlags |= 131072;
+    let referenceSample = track.currentChunk.samples[1] ?? track.currentChunk.samples[0];
+    let referenceSampleInfo = {
+      duration: referenceSample.timescaleUnitsToNextSample,
+      size: referenceSample.size,
+      flags: fragmentSampleFlags(referenceSample)
+    };
+    return fullBox("tfhd", 0, tfFlags, [
+      u32(track.id),
+      // Track ID
+      u32(referenceSampleInfo.duration),
+      // Default sample duration
+      u32(referenceSampleInfo.size),
+      // Default sample size
+      u32(referenceSampleInfo.flags)
+      // Default sample flags
+    ]);
+  };
+  var tfdt = (track) => {
+    return fullBox("tfdt", 1, 0, [
+      u64(intoTimescale(track.currentChunk.startTimestamp, track.timescale))
+      // Base Media Decode Time
+    ]);
+  };
+  var trun = (track) => {
+    let allSampleDurations = track.currentChunk.samples.map((x) => x.timescaleUnitsToNextSample);
+    let allSampleSizes = track.currentChunk.samples.map((x) => x.size);
+    let allSampleFlags = track.currentChunk.samples.map(fragmentSampleFlags);
+    let allSampleCompositionTimeOffsets = track.currentChunk.samples.map((x) => intoTimescale(x.presentationTimestamp - x.decodeTimestamp, track.timescale));
+    let uniqueSampleDurations = new Set(allSampleDurations);
+    let uniqueSampleSizes = new Set(allSampleSizes);
+    let uniqueSampleFlags = new Set(allSampleFlags);
+    let uniqueSampleCompositionTimeOffsets = new Set(allSampleCompositionTimeOffsets);
+    let firstSampleFlagsPresent = uniqueSampleFlags.size === 2 && allSampleFlags[0] !== allSampleFlags[1];
+    let sampleDurationPresent = uniqueSampleDurations.size > 1;
+    let sampleSizePresent = uniqueSampleSizes.size > 1;
+    let sampleFlagsPresent = !firstSampleFlagsPresent && uniqueSampleFlags.size > 1;
+    let sampleCompositionTimeOffsetsPresent = uniqueSampleCompositionTimeOffsets.size > 1 || [...uniqueSampleCompositionTimeOffsets].some((x) => x !== 0);
+    let flags = 0;
+    flags |= 1;
+    flags |= 4 * +firstSampleFlagsPresent;
+    flags |= 256 * +sampleDurationPresent;
+    flags |= 512 * +sampleSizePresent;
+    flags |= 1024 * +sampleFlagsPresent;
+    flags |= 2048 * +sampleCompositionTimeOffsetsPresent;
+    return fullBox("trun", 1, flags, [
+      u32(track.currentChunk.samples.length),
+      // Sample count
+      u32(track.currentChunk.offset - track.currentChunk.moofOffset || 0),
+      // Data offset
+      firstSampleFlagsPresent ? u32(allSampleFlags[0]) : [],
+      track.currentChunk.samples.map((_, i) => [
+        sampleDurationPresent ? u32(allSampleDurations[i]) : [],
+        // Sample duration
+        sampleSizePresent ? u32(allSampleSizes[i]) : [],
+        // Sample size
+        sampleFlagsPresent ? u32(allSampleFlags[i]) : [],
+        // Sample flags
+        // Sample composition time offsets
+        sampleCompositionTimeOffsetsPresent ? i32(allSampleCompositionTimeOffsets[i]) : []
+      ])
+    ]);
+  };
+  var mfra = (tracks) => {
+    return box("mfra", null, [
+      ...tracks.map(tfra),
+      mfro()
+    ]);
+  };
+  var tfra = (track, trackIndex) => {
+    let version = 1;
+    return fullBox("tfra", version, 0, [
+      u32(track.id),
+      // Track ID
+      u32(63),
+      // This specifies that traf number, trun number and sample number are 32-bit ints
+      u32(track.finalizedChunks.length),
+      // Number of entries
+      track.finalizedChunks.map((chunk) => [
+        u64(intoTimescale(chunk.startTimestamp, track.timescale)),
+        // Time
+        u64(chunk.moofOffset),
+        // moof offset
+        u32(trackIndex + 1),
+        // traf number
+        u32(1),
+        // trun number
+        u32(1)
+        // Sample number
+      ])
+    ]);
+  };
+  var mfro = () => {
+    return fullBox("mfro", 0, 0, [
+      // This value needs to be overwritten manually from the outside, where the actual size of the enclosing mfra box
+      // is known
+      u32(0)
+      // Size
+    ]);
+  };
+  var VIDEO_CODEC_TO_BOX_NAME = {
+    "avc": "avc1",
+    "hevc": "hvc1",
+    "vp9": "vp09",
+    "av1": "av01"
+  };
+  var VIDEO_CODEC_TO_CONFIGURATION_BOX = {
+    "avc": avcC,
+    "hevc": hvcC,
+    "vp9": vpcC,
+    "av1": av1C
+  };
+  var AUDIO_CODEC_TO_BOX_NAME = {
+    "aac": "mp4a",
+    "opus": "Opus"
+  };
+  var AUDIO_CODEC_TO_CONFIGURATION_BOX = {
+    "aac": esds,
+    "opus": dOps
+  };
+
+  // src/target.ts
+  var isTarget = Symbol("isTarget");
+  var Target = class {
+  };
+  isTarget;
+  var ArrayBufferTarget = class extends Target {
+    constructor() {
+      super(...arguments);
+      this.buffer = null;
+    }
+  };
+  var StreamTarget = class extends Target {
+    constructor(options) {
+      super();
+      this.options = options;
+      if (typeof options !== "object") {
+        throw new TypeError("StreamTarget requires an options object to be passed to its constructor.");
+      }
+      if (options.onData) {
+        if (typeof options.onData !== "function") {
+          throw new TypeError("options.onData, when provided, must be a function.");
+        }
+        if (options.onData.length < 2) {
+          throw new TypeError(
+            "options.onData, when provided, must be a function that takes in at least two arguments (data and position). Ignoring the position argument, which specifies the byte offset at which the data is to be written, can lead to broken outputs."
+          );
+        }
+      }
+      if (options.chunked !== void 0 && typeof options.chunked !== "boolean") {
+        throw new TypeError("options.chunked, when provided, must be a boolean.");
+      }
+      if (options.chunkSize !== void 0 && (!Number.isInteger(options.chunkSize) || options.chunkSize <= 0)) {
+        throw new TypeError("options.chunkSize, when provided, must be a positive integer.");
+      }
+    }
+  };
+  var FileSystemWritableFileStreamTarget = class extends Target {
+    constructor(stream, options) {
+      super();
+      this.stream = stream;
+      this.options = options;
+      if (!(stream instanceof FileSystemWritableFileStream)) {
+        throw new TypeError("FileSystemWritableFileStreamTarget requires a FileSystemWritableFileStream instance.");
+      }
+      if (options !== void 0 && typeof options !== "object") {
+        throw new TypeError("FileSystemWritableFileStreamTarget's options, when provided, must be an object.");
+      }
+      if (options) {
+        if (options.chunkSize !== void 0 && (!Number.isInteger(options.chunkSize) || options.chunkSize <= 0)) {
+          throw new TypeError("options.chunkSize, when provided, must be a positive integer");
+        }
+      }
+    }
+  };
+
+  // src/writer.ts
+  var _helper, _helperView;
+  var Writer = class {
+    constructor() {
+      this.pos = 0;
+      __privateAdd(this, _helper, new Uint8Array(8));
+      __privateAdd(this, _helperView, new DataView(__privateGet(this, _helper).buffer));
+      /**
+       * Stores the position from the start of the file to where boxes elements have been written. This is used to
+       * rewrite/edit elements that were already added before, and to measure sizes of things.
+       */
+      this.offsets = /* @__PURE__ */ new WeakMap();
+    }
+    /** Sets the current position for future writes to a new one. */
+    seek(newPos) {
+      this.pos = newPos;
+    }
+    writeU32(value) {
+      __privateGet(this, _helperView).setUint32(0, value, false);
+      this.write(__privateGet(this, _helper).subarray(0, 4));
+    }
+    writeU64(value) {
+      __privateGet(this, _helperView).setUint32(0, Math.floor(value / 2 ** 32), false);
+      __privateGet(this, _helperView).setUint32(4, value, false);
+      this.write(__privateGet(this, _helper).subarray(0, 8));
+    }
+    writeAscii(text) {
+      for (let i = 0; i < text.length; i++) {
+        __privateGet(this, _helperView).setUint8(i % 8, text.charCodeAt(i));
+        if (i % 8 === 7)
+          this.write(__privateGet(this, _helper));
+      }
+      if (text.length % 8 !== 0) {
+        this.write(__privateGet(this, _helper).subarray(0, text.length % 8));
+      }
+    }
+    writeBox(box2) {
+      this.offsets.set(box2, this.pos);
+      if (box2.contents && !box2.children) {
+        this.writeBoxHeader(box2, box2.size ?? box2.contents.byteLength + 8);
+        this.write(box2.contents);
+      } else {
+        let startPos = this.pos;
+        this.writeBoxHeader(box2, 0);
+        if (box2.contents)
+          this.write(box2.contents);
+        if (box2.children) {
+          for (let child of box2.children)
+            if (child)
+              this.writeBox(child);
+        }
+        let endPos = this.pos;
+        let size = box2.size ?? endPos - startPos;
+        this.seek(startPos);
+        this.writeBoxHeader(box2, size);
+        this.seek(endPos);
+      }
+    }
+    writeBoxHeader(box2, size) {
+      this.writeU32(box2.largeSize ? 1 : size);
+      this.writeAscii(box2.type);
+      if (box2.largeSize)
+        this.writeU64(size);
+    }
+    measureBoxHeader(box2) {
+      return 8 + (box2.largeSize ? 8 : 0);
+    }
+    patchBox(box2) {
+      let endPos = this.pos;
+      this.seek(this.offsets.get(box2));
+      this.writeBox(box2);
+      this.seek(endPos);
+    }
+    measureBox(box2) {
+      if (box2.contents && !box2.children) {
+        let headerSize = this.measureBoxHeader(box2);
+        return headerSize + box2.contents.byteLength;
+      } else {
+        let result = this.measureBoxHeader(box2);
+        if (box2.contents)
+          result += box2.contents.byteLength;
+        if (box2.children) {
+          for (let child of box2.children)
+            if (child)
+              result += this.measureBox(child);
+        }
+        return result;
+      }
+    }
+  };
+  _helper = new WeakMap();
+  _helperView = new WeakMap();
+  var _target, _buffer, _bytes, _maxPos, _ensureSize, ensureSize_fn;
+  var ArrayBufferTargetWriter = class extends Writer {
+    constructor(target) {
+      super();
+      __privateAdd(this, _ensureSize);
+      __privateAdd(this, _target, void 0);
+      __privateAdd(this, _buffer, new ArrayBuffer(2 ** 16));
+      __privateAdd(this, _bytes, new Uint8Array(__privateGet(this, _buffer)));
+      __privateAdd(this, _maxPos, 0);
+      __privateSet(this, _target, target);
+    }
+    write(data) {
+      __privateMethod(this, _ensureSize, ensureSize_fn).call(this, this.pos + data.byteLength);
+      __privateGet(this, _bytes).set(data, this.pos);
+      this.pos += data.byteLength;
+      __privateSet(this, _maxPos, Math.max(__privateGet(this, _maxPos), this.pos));
+    }
+    finalize() {
+      __privateMethod(this, _ensureSize, ensureSize_fn).call(this, this.pos);
+      __privateGet(this, _target).buffer = __privateGet(this, _buffer).slice(0, Math.max(__privateGet(this, _maxPos), this.pos));
+    }
+  };
+  _target = new WeakMap();
+  _buffer = new WeakMap();
+  _bytes = new WeakMap();
+  _maxPos = new WeakMap();
+  _ensureSize = new WeakSet();
+  ensureSize_fn = function(size) {
+    let newLength = __privateGet(this, _buffer).byteLength;
+    while (newLength < size)
+      newLength *= 2;
+    if (newLength === __privateGet(this, _buffer).byteLength)
+      return;
+    let newBuffer = new ArrayBuffer(newLength);
+    let newBytes = new Uint8Array(newBuffer);
+    newBytes.set(__privateGet(this, _bytes), 0);
+    __privateSet(this, _buffer, newBuffer);
+    __privateSet(this, _bytes, newBytes);
+  };
+  var _target2, _sections;
+  var StreamTargetWriter = class extends Writer {
+    constructor(target) {
+      super();
+      __privateAdd(this, _target2, void 0);
+      __privateAdd(this, _sections, []);
+      __privateSet(this, _target2, target);
+    }
+    write(data) {
+      __privateGet(this, _sections).push({
+        data: data.slice(),
+        start: this.pos
+      });
+      this.pos += data.byteLength;
+    }
+    flush() {
+      if (__privateGet(this, _sections).length === 0)
+        return;
+      let chunks = [];
+      let sorted = [...__privateGet(this, _sections)].sort((a, b) => a.start - b.start);
+      chunks.push({
+        start: sorted[0].start,
+        size: sorted[0].data.byteLength
+      });
+      for (let i = 1; i < sorted.length; i++) {
+        let lastChunk = chunks[chunks.length - 1];
+        let section = sorted[i];
+        if (section.start <= lastChunk.start + lastChunk.size) {
+          lastChunk.size = Math.max(lastChunk.size, section.start + section.data.byteLength - lastChunk.start);
+        } else {
+          chunks.push({
+            start: section.start,
+            size: section.data.byteLength
+          });
+        }
+      }
+      for (let chunk of chunks) {
+        chunk.data = new Uint8Array(chunk.size);
+        for (let section of __privateGet(this, _sections)) {
+          if (chunk.start <= section.start && section.start < chunk.start + chunk.size) {
+            chunk.data.set(section.data, section.start - chunk.start);
+          }
+        }
+        __privateGet(this, _target2).options.onData?.(chunk.data, chunk.start);
+      }
+      __privateGet(this, _sections).length = 0;
+    }
+    finalize() {
+    }
+  };
+  _target2 = new WeakMap();
+  _sections = new WeakMap();
+  var DEFAULT_CHUNK_SIZE = 2 ** 24;
+  var MAX_CHUNKS_AT_ONCE = 2;
+  var _target3, _chunkSize, _chunks, _writeDataIntoChunks, writeDataIntoChunks_fn, _insertSectionIntoChunk, insertSectionIntoChunk_fn, _createChunk, createChunk_fn, _flushChunks, flushChunks_fn;
+  var ChunkedStreamTargetWriter = class extends Writer {
+    constructor(target) {
+      super();
+      __privateAdd(this, _writeDataIntoChunks);
+      __privateAdd(this, _insertSectionIntoChunk);
+      __privateAdd(this, _createChunk);
+      __privateAdd(this, _flushChunks);
+      __privateAdd(this, _target3, void 0);
+      __privateAdd(this, _chunkSize, void 0);
+      /**
+       * The data is divided up into fixed-size chunks, whose contents are first filled in RAM and then flushed out.
+       * A chunk is flushed if all of its contents have been written.
+       */
+      __privateAdd(this, _chunks, []);
+      __privateSet(this, _target3, target);
+      __privateSet(this, _chunkSize, target.options?.chunkSize ?? DEFAULT_CHUNK_SIZE);
+      if (!Number.isInteger(__privateGet(this, _chunkSize)) || __privateGet(this, _chunkSize) < 2 ** 10) {
+        throw new Error("Invalid StreamTarget options: chunkSize must be an integer not smaller than 1024.");
+      }
+    }
+    write(data) {
+      __privateMethod(this, _writeDataIntoChunks, writeDataIntoChunks_fn).call(this, data, this.pos);
+      __privateMethod(this, _flushChunks, flushChunks_fn).call(this);
+      this.pos += data.byteLength;
+    }
+    finalize() {
+      __privateMethod(this, _flushChunks, flushChunks_fn).call(this, true);
+    }
+  };
+  _target3 = new WeakMap();
+  _chunkSize = new WeakMap();
+  _chunks = new WeakMap();
+  _writeDataIntoChunks = new WeakSet();
+  writeDataIntoChunks_fn = function(data, position) {
+    let chunkIndex = __privateGet(this, _chunks).findIndex((x) => x.start <= position && position < x.start + __privateGet(this, _chunkSize));
+    if (chunkIndex === -1)
+      chunkIndex = __privateMethod(this, _createChunk, createChunk_fn).call(this, position);
+    let chunk = __privateGet(this, _chunks)[chunkIndex];
+    let relativePosition = position - chunk.start;
+    let toWrite = data.subarray(0, Math.min(__privateGet(this, _chunkSize) - relativePosition, data.byteLength));
+    chunk.data.set(toWrite, relativePosition);
+    let section = {
+      start: relativePosition,
+      end: relativePosition + toWrite.byteLength
+    };
+    __privateMethod(this, _insertSectionIntoChunk, insertSectionIntoChunk_fn).call(this, chunk, section);
+    if (chunk.written[0].start === 0 && chunk.written[0].end === __privateGet(this, _chunkSize)) {
+      chunk.shouldFlush = true;
+    }
+    if (__privateGet(this, _chunks).length > MAX_CHUNKS_AT_ONCE) {
+      for (let i = 0; i < __privateGet(this, _chunks).length - 1; i++) {
+        __privateGet(this, _chunks)[i].shouldFlush = true;
+      }
+      __privateMethod(this, _flushChunks, flushChunks_fn).call(this);
+    }
+    if (toWrite.byteLength < data.byteLength) {
+      __privateMethod(this, _writeDataIntoChunks, writeDataIntoChunks_fn).call(this, data.subarray(toWrite.byteLength), position + toWrite.byteLength);
+    }
+  };
+  _insertSectionIntoChunk = new WeakSet();
+  insertSectionIntoChunk_fn = function(chunk, section) {
+    let low = 0;
+    let high = chunk.written.length - 1;
+    let index = -1;
+    while (low <= high) {
+      let mid = Math.floor(low + (high - low + 1) / 2);
+      if (chunk.written[mid].start <= section.start) {
+        low = mid + 1;
+        index = mid;
+      } else {
+        high = mid - 1;
+      }
+    }
+    chunk.written.splice(index + 1, 0, section);
+    if (index === -1 || chunk.written[index].end < section.start)
+      index++;
+    while (index < chunk.written.length - 1 && chunk.written[index].end >= chunk.written[index + 1].start) {
+      chunk.written[index].end = Math.max(chunk.written[index].end, chunk.written[index + 1].end);
+      chunk.written.splice(index + 1, 1);
+    }
+  };
+  _createChunk = new WeakSet();
+  createChunk_fn = function(includesPosition) {
+    let start = Math.floor(includesPosition / __privateGet(this, _chunkSize)) * __privateGet(this, _chunkSize);
+    let chunk = {
+      start,
+      data: new Uint8Array(__privateGet(this, _chunkSize)),
+      written: [],
+      shouldFlush: false
+    };
+    __privateGet(this, _chunks).push(chunk);
+    __privateGet(this, _chunks).sort((a, b) => a.start - b.start);
+    return __privateGet(this, _chunks).indexOf(chunk);
+  };
+  _flushChunks = new WeakSet();
+  flushChunks_fn = function(force = false) {
+    for (let i = 0; i < __privateGet(this, _chunks).length; i++) {
+      let chunk = __privateGet(this, _chunks)[i];
+      if (!chunk.shouldFlush && !force)
+        continue;
+      for (let section of chunk.written) {
+        __privateGet(this, _target3).options.onData?.(
+          chunk.data.subarray(section.start, section.end),
+          chunk.start + section.start
+        );
+      }
+      __privateGet(this, _chunks).splice(i--, 1);
+    }
+  };
+  var FileSystemWritableFileStreamTargetWriter = class extends ChunkedStreamTargetWriter {
+    constructor(target) {
+      super(new StreamTarget({
+        onData: (data, position) => target.stream.write({
+          type: "write",
+          data,
+          position
+        }),
+        chunkSize: target.options?.chunkSize
+      }));
+    }
+  };
+
+  // src/muxer.ts
+  var GLOBAL_TIMESCALE = 1e3;
+  var SUPPORTED_VIDEO_CODECS = ["avc", "hevc", "vp9", "av1"];
+  var SUPPORTED_AUDIO_CODECS = ["aac", "opus"];
+  var TIMESTAMP_OFFSET = 2082844800;
+  var FIRST_TIMESTAMP_BEHAVIORS = ["strict", "offset", "cross-track-offset"];
+  var _options, _writer, _ftypSize, _mdat, _videoTrack, _audioTrack, _creationTime, _finalizedChunks, _nextFragmentNumber, _videoSampleQueue, _audioSampleQueue, _finalized, _validateOptions, validateOptions_fn, _writeHeader, writeHeader_fn, _computeMoovSizeUpperBound, computeMoovSizeUpperBound_fn, _prepareTracks, prepareTracks_fn, _generateMpeg4AudioSpecificConfig, generateMpeg4AudioSpecificConfig_fn, _createSampleForTrack, createSampleForTrack_fn, _addSampleToTrack, addSampleToTrack_fn, _validateTimestamp, validateTimestamp_fn, _finalizeCurrentChunk, finalizeCurrentChunk_fn, _finalizeFragment, finalizeFragment_fn, _maybeFlushStreamingTargetWriter, maybeFlushStreamingTargetWriter_fn, _ensureNotFinalized, ensureNotFinalized_fn;
+  var Muxer = class {
+    constructor(options) {
+      __privateAdd(this, _validateOptions);
+      __privateAdd(this, _writeHeader);
+      __privateAdd(this, _computeMoovSizeUpperBound);
+      __privateAdd(this, _prepareTracks);
+      // https://wiki.multimedia.cx/index.php/MPEG-4_Audio
+      __privateAdd(this, _generateMpeg4AudioSpecificConfig);
+      __privateAdd(this, _createSampleForTrack);
+      __privateAdd(this, _addSampleToTrack);
+      __privateAdd(this, _validateTimestamp);
+      __privateAdd(this, _finalizeCurrentChunk);
+      __privateAdd(this, _finalizeFragment);
+      __privateAdd(this, _maybeFlushStreamingTargetWriter);
+      __privateAdd(this, _ensureNotFinalized);
+      __privateAdd(this, _options, void 0);
+      __privateAdd(this, _writer, void 0);
+      __privateAdd(this, _ftypSize, void 0);
+      __privateAdd(this, _mdat, void 0);
+      __privateAdd(this, _videoTrack, null);
+      __privateAdd(this, _audioTrack, null);
+      __privateAdd(this, _creationTime, Math.floor(Date.now() / 1e3) + TIMESTAMP_OFFSET);
+      __privateAdd(this, _finalizedChunks, []);
+      // Fields for fragmented MP4:
+      __privateAdd(this, _nextFragmentNumber, 1);
+      __privateAdd(this, _videoSampleQueue, []);
+      __privateAdd(this, _audioSampleQueue, []);
+      __privateAdd(this, _finalized, false);
+      __privateMethod(this, _validateOptions, validateOptions_fn).call(this, options);
+      options.video = deepClone(options.video);
+      options.audio = deepClone(options.audio);
+      options.fastStart = deepClone(options.fastStart);
+      this.target = options.target;
+      __privateSet(this, _options, {
+        firstTimestampBehavior: "strict",
+        ...options
+      });
+      if (options.target instanceof ArrayBufferTarget) {
+        __privateSet(this, _writer, new ArrayBufferTargetWriter(options.target));
+      } else if (options.target instanceof StreamTarget) {
+        __privateSet(this, _writer, options.target.options?.chunked ? new ChunkedStreamTargetWriter(options.target) : new StreamTargetWriter(options.target));
+      } else if (options.target instanceof FileSystemWritableFileStreamTarget) {
+        __privateSet(this, _writer, new FileSystemWritableFileStreamTargetWriter(options.target));
+      } else {
+        throw new Error(`Invalid target: ${options.target}`);
+      }
+      __privateMethod(this, _prepareTracks, prepareTracks_fn).call(this);
+      __privateMethod(this, _writeHeader, writeHeader_fn).call(this);
+    }
+    addVideoChunk(sample, meta, timestamp, compositionTimeOffset) {
+      if (!(sample instanceof EncodedVideoChunk)) {
+        throw new TypeError("addVideoChunk's first argument (sample) must be of type EncodedVideoChunk.");
+      }
+      if (meta && typeof meta !== "object") {
+        throw new TypeError("addVideoChunk's second argument (meta), when provided, must be an object.");
+      }
+      if (timestamp !== void 0 && (!Number.isFinite(timestamp) || timestamp < 0)) {
+        throw new TypeError(
+          "addVideoChunk's third argument (timestamp), when provided, must be a non-negative real number."
+        );
+      }
+      if (compositionTimeOffset !== void 0 && !Number.isFinite(compositionTimeOffset)) {
+        throw new TypeError(
+          "addVideoChunk's fourth argument (compositionTimeOffset), when provided, must be a real number."
+        );
+      }
+      let data = new Uint8Array(sample.byteLength);
+      sample.copyTo(data);
+      this.addVideoChunkRaw(
+        data,
+        sample.type,
+        timestamp ?? sample.timestamp,
+        sample.duration,
+        meta,
+        compositionTimeOffset
+      );
+    }
+    addVideoChunkRaw(data, type, timestamp, duration, meta, compositionTimeOffset) {
+      if (!(data instanceof Uint8Array)) {
+        throw new TypeError("addVideoChunkRaw's first argument (data) must be an instance of Uint8Array.");
+      }
+      if (type !== "key" && type !== "delta") {
+        throw new TypeError("addVideoChunkRaw's second argument (type) must be either 'key' or 'delta'.");
+      }
+      if (!Number.isFinite(timestamp) || timestamp < 0) {
+        throw new TypeError("addVideoChunkRaw's third argument (timestamp) must be a non-negative real number.");
+      }
+      if (!Number.isFinite(duration) || duration < 0) {
+        throw new TypeError("addVideoChunkRaw's fourth argument (duration) must be a non-negative real number.");
+      }
+      if (meta && typeof meta !== "object") {
+        throw new TypeError("addVideoChunkRaw's fifth argument (meta), when provided, must be an object.");
+      }
+      if (compositionTimeOffset !== void 0 && !Number.isFinite(compositionTimeOffset)) {
+        throw new TypeError(
+          "addVideoChunkRaw's sixth argument (compositionTimeOffset), when provided, must be a real number."
+        );
+      }
+      __privateMethod(this, _ensureNotFinalized, ensureNotFinalized_fn).call(this);
+      if (!__privateGet(this, _options).video)
+        throw new Error("No video track declared.");
+      if (typeof __privateGet(this, _options).fastStart === "object" && __privateGet(this, _videoTrack).samples.length === __privateGet(this, _options).fastStart.expectedVideoChunks) {
+        throw new Error(`Cannot add more video chunks than specified in 'fastStart' (${__privateGet(this, _options).fastStart.expectedVideoChunks}).`);
+      }
+      let videoSample = __privateMethod(this, _createSampleForTrack, createSampleForTrack_fn).call(this, __privateGet(this, _videoTrack), data, type, timestamp, duration, meta, compositionTimeOffset);
+      if (__privateGet(this, _options).fastStart === "fragmented" && __privateGet(this, _audioTrack)) {
+        while (__privateGet(this, _audioSampleQueue).length > 0 && __privateGet(this, _audioSampleQueue)[0].decodeTimestamp <= videoSample.decodeTimestamp) {
+          let audioSample = __privateGet(this, _audioSampleQueue).shift();
+          __privateMethod(this, _addSampleToTrack, addSampleToTrack_fn).call(this, __privateGet(this, _audioTrack), audioSample);
+        }
+        if (videoSample.decodeTimestamp <= __privateGet(this, _audioTrack).lastDecodeTimestamp) {
+          __privateMethod(this, _addSampleToTrack, addSampleToTrack_fn).call(this, __privateGet(this, _videoTrack), videoSample);
+        } else {
+          __privateGet(this, _videoSampleQueue).push(videoSample);
+        }
+      } else {
+        __privateMethod(this, _addSampleToTrack, addSampleToTrack_fn).call(this, __privateGet(this, _videoTrack), videoSample);
+      }
+    }
+    addAudioChunk(sample, meta, timestamp) {
+      if (!(sample instanceof EncodedAudioChunk)) {
+        throw new TypeError("addAudioChunk's first argument (sample) must be of type EncodedAudioChunk.");
+      }
+      if (meta && typeof meta !== "object") {
+        throw new TypeError("addAudioChunk's second argument (meta), when provided, must be an object.");
+      }
+      if (timestamp !== void 0 && (!Number.isFinite(timestamp) || timestamp < 0)) {
+        throw new TypeError(
+          "addAudioChunk's third argument (timestamp), when provided, must be a non-negative real number."
+        );
+      }
+      let data = new Uint8Array(sample.byteLength);
+      sample.copyTo(data);
+      this.addAudioChunkRaw(data, sample.type, timestamp ?? sample.timestamp, sample.duration, meta);
+    }
+    addAudioChunkRaw(data, type, timestamp, duration, meta) {
+      if (!(data instanceof Uint8Array)) {
+        throw new TypeError("addAudioChunkRaw's first argument (data) must be an instance of Uint8Array.");
+      }
+      if (type !== "key" && type !== "delta") {
+        throw new TypeError("addAudioChunkRaw's second argument (type) must be either 'key' or 'delta'.");
+      }
+      if (!Number.isFinite(timestamp) || timestamp < 0) {
+        throw new TypeError("addAudioChunkRaw's third argument (timestamp) must be a non-negative real number.");
+      }
+      if (!Number.isFinite(duration) || duration < 0) {
+        throw new TypeError("addAudioChunkRaw's fourth argument (duration) must be a non-negative real number.");
+      }
+      if (meta && typeof meta !== "object") {
+        throw new TypeError("addAudioChunkRaw's fifth argument (meta), when provided, must be an object.");
+      }
+      __privateMethod(this, _ensureNotFinalized, ensureNotFinalized_fn).call(this);
+      if (!__privateGet(this, _options).audio)
+        throw new Error("No audio track declared.");
+      if (typeof __privateGet(this, _options).fastStart === "object" && __privateGet(this, _audioTrack).samples.length === __privateGet(this, _options).fastStart.expectedAudioChunks) {
+        throw new Error(`Cannot add more audio chunks than specified in 'fastStart' (${__privateGet(this, _options).fastStart.expectedAudioChunks}).`);
+      }
+      let audioSample = __privateMethod(this, _createSampleForTrack, createSampleForTrack_fn).call(this, __privateGet(this, _audioTrack), data, type, timestamp, duration, meta);
+      if (__privateGet(this, _options).fastStart === "fragmented" && __privateGet(this, _videoTrack)) {
+        while (__privateGet(this, _videoSampleQueue).length > 0 && __privateGet(this, _videoSampleQueue)[0].decodeTimestamp <= audioSample.decodeTimestamp) {
+          let videoSample = __privateGet(this, _videoSampleQueue).shift();
+          __privateMethod(this, _addSampleToTrack, addSampleToTrack_fn).call(this, __privateGet(this, _videoTrack), videoSample);
+        }
+        if (audioSample.decodeTimestamp <= __privateGet(this, _videoTrack).lastDecodeTimestamp) {
+          __privateMethod(this, _addSampleToTrack, addSampleToTrack_fn).call(this, __privateGet(this, _audioTrack), audioSample);
+        } else {
+          __privateGet(this, _audioSampleQueue).push(audioSample);
+        }
+      } else {
+        __privateMethod(this, _addSampleToTrack, addSampleToTrack_fn).call(this, __privateGet(this, _audioTrack), audioSample);
+      }
+    }
+    /** Finalizes the file, making it ready for use. Must be called after all video and audio chunks have been added. */
+    finalize() {
+      if (__privateGet(this, _finalized)) {
+        throw new Error("Cannot finalize a muxer more than once.");
+      }
+      if (__privateGet(this, _options).fastStart === "fragmented") {
+        for (let videoSample of __privateGet(this, _videoSampleQueue))
+          __privateMethod(this, _addSampleToTrack, addSampleToTrack_fn).call(this, __privateGet(this, _videoTrack), videoSample);
+        for (let audioSample of __privateGet(this, _audioSampleQueue))
+          __privateMethod(this, _addSampleToTrack, addSampleToTrack_fn).call(this, __privateGet(this, _audioTrack), audioSample);
+        __privateMethod(this, _finalizeFragment, finalizeFragment_fn).call(this, false);
+      } else {
+        if (__privateGet(this, _videoTrack))
+          __privateMethod(this, _finalizeCurrentChunk, finalizeCurrentChunk_fn).call(this, __privateGet(this, _videoTrack));
+        if (__privateGet(this, _audioTrack))
+          __privateMethod(this, _finalizeCurrentChunk, finalizeCurrentChunk_fn).call(this, __privateGet(this, _audioTrack));
+      }
+      let tracks = [__privateGet(this, _videoTrack), __privateGet(this, _audioTrack)].filter(Boolean);
+      if (__privateGet(this, _options).fastStart === "in-memory") {
+        let mdatSize;
+        for (let i = 0; i < 2; i++) {
+          let movieBox2 = moov(tracks, __privateGet(this, _creationTime));
+          let movieBoxSize = __privateGet(this, _writer).measureBox(movieBox2);
+          mdatSize = __privateGet(this, _writer).measureBox(__privateGet(this, _mdat));
+          let currentChunkPos = __privateGet(this, _writer).pos + movieBoxSize + mdatSize;
+          for (let chunk of __privateGet(this, _finalizedChunks)) {
+            chunk.offset = currentChunkPos;
+            for (let { data } of chunk.samples) {
+              currentChunkPos += data.byteLength;
+              mdatSize += data.byteLength;
+            }
+          }
+          if (currentChunkPos < 2 ** 32)
+            break;
+          if (mdatSize >= 2 ** 32)
+            __privateGet(this, _mdat).largeSize = true;
+        }
+        let movieBox = moov(tracks, __privateGet(this, _creationTime));
+        __privateGet(this, _writer).writeBox(movieBox);
+        __privateGet(this, _mdat).size = mdatSize;
+        __privateGet(this, _writer).writeBox(__privateGet(this, _mdat));
+        for (let chunk of __privateGet(this, _finalizedChunks)) {
+          for (let sample of chunk.samples) {
+            __privateGet(this, _writer).write(sample.data);
+            sample.data = null;
+          }
+        }
+      } else if (__privateGet(this, _options).fastStart === "fragmented") {
+        let startPos = __privateGet(this, _writer).pos;
+        let mfraBox = mfra(tracks);
+        __privateGet(this, _writer).writeBox(mfraBox);
+        let mfraBoxSize = __privateGet(this, _writer).pos - startPos;
+        __privateGet(this, _writer).seek(__privateGet(this, _writer).pos - 4);
+        __privateGet(this, _writer).writeU32(mfraBoxSize);
+      } else {
+        let mdatPos = __privateGet(this, _writer).offsets.get(__privateGet(this, _mdat));
+        let mdatSize = __privateGet(this, _writer).pos - mdatPos;
+        __privateGet(this, _mdat).size = mdatSize;
+        __privateGet(this, _mdat).largeSize = mdatSize >= 2 ** 32;
+        __privateGet(this, _writer).patchBox(__privateGet(this, _mdat));
+        let movieBox = moov(tracks, __privateGet(this, _creationTime));
+        if (typeof __privateGet(this, _options).fastStart === "object") {
+          __privateGet(this, _writer).seek(__privateGet(this, _ftypSize));
+          __privateGet(this, _writer).writeBox(movieBox);
+          let remainingBytes = mdatPos - __privateGet(this, _writer).pos;
+          __privateGet(this, _writer).writeBox(free(remainingBytes));
+        } else {
+          __privateGet(this, _writer).writeBox(movieBox);
+        }
+      }
+      __privateMethod(this, _maybeFlushStreamingTargetWriter, maybeFlushStreamingTargetWriter_fn).call(this);
+      __privateGet(this, _writer).finalize();
+      __privateSet(this, _finalized, true);
+    }
+  };
+  _options = new WeakMap();
+  _writer = new WeakMap();
+  _ftypSize = new WeakMap();
+  _mdat = new WeakMap();
+  _videoTrack = new WeakMap();
+  _audioTrack = new WeakMap();
+  _creationTime = new WeakMap();
+  _finalizedChunks = new WeakMap();
+  _nextFragmentNumber = new WeakMap();
+  _videoSampleQueue = new WeakMap();
+  _audioSampleQueue = new WeakMap();
+  _finalized = new WeakMap();
+  _validateOptions = new WeakSet();
+  validateOptions_fn = function(options) {
+    if (typeof options !== "object") {
+      throw new TypeError("The muxer requires an options object to be passed to its constructor.");
+    }
+    if (!(options.target instanceof Target)) {
+      throw new TypeError("The target must be provided and an instance of Target.");
+    }
+    if (options.video) {
+      if (!SUPPORTED_VIDEO_CODECS.includes(options.video.codec)) {
+        throw new TypeError(`Unsupported video codec: ${options.video.codec}`);
+      }
+      if (!Number.isInteger(options.video.width) || options.video.width <= 0) {
+        throw new TypeError(`Invalid video width: ${options.video.width}. Must be a positive integer.`);
+      }
+      if (!Number.isInteger(options.video.height) || options.video.height <= 0) {
+        throw new TypeError(`Invalid video height: ${options.video.height}. Must be a positive integer.`);
+      }
+      const videoRotation = options.video.rotation;
+      if (typeof videoRotation === "number" && ![0, 90, 180, 270].includes(videoRotation)) {
+        throw new TypeError(`Invalid video rotation: ${videoRotation}. Has to be 0, 90, 180 or 270.`);
+      } else if (Array.isArray(videoRotation) && (videoRotation.length !== 9 || videoRotation.some((value) => typeof value !== "number"))) {
+        throw new TypeError(`Invalid video transformation matrix: ${videoRotation.join()}`);
+      }
+      if (options.video.frameRate !== void 0 && (!Number.isInteger(options.video.frameRate) || options.video.frameRate <= 0)) {
+        throw new TypeError(
+          `Invalid video frame rate: ${options.video.frameRate}. Must be a positive integer.`
+        );
+      }
+    }
+    if (options.audio) {
+      if (!SUPPORTED_AUDIO_CODECS.includes(options.audio.codec)) {
+        throw new TypeError(`Unsupported audio codec: ${options.audio.codec}`);
+      }
+      if (!Number.isInteger(options.audio.numberOfChannels) || options.audio.numberOfChannels <= 0) {
+        throw new TypeError(
+          `Invalid number of audio channels: ${options.audio.numberOfChannels}. Must be a positive integer.`
+        );
+      }
+      if (!Number.isInteger(options.audio.sampleRate) || options.audio.sampleRate <= 0) {
+        throw new TypeError(
+          `Invalid audio sample rate: ${options.audio.sampleRate}. Must be a positive integer.`
+        );
+      }
+    }
+    if (options.firstTimestampBehavior && !FIRST_TIMESTAMP_BEHAVIORS.includes(options.firstTimestampBehavior)) {
+      throw new TypeError(`Invalid first timestamp behavior: ${options.firstTimestampBehavior}`);
+    }
+    if (typeof options.fastStart === "object") {
+      if (options.video) {
+        if (options.fastStart.expectedVideoChunks === void 0) {
+          throw new TypeError(`'fastStart' is an object but is missing property 'expectedVideoChunks'.`);
+        } else if (!Number.isInteger(options.fastStart.expectedVideoChunks) || options.fastStart.expectedVideoChunks < 0) {
+          throw new TypeError(`'expectedVideoChunks' must be a non-negative integer.`);
+        }
+      }
+      if (options.audio) {
+        if (options.fastStart.expectedAudioChunks === void 0) {
+          throw new TypeError(`'fastStart' is an object but is missing property 'expectedAudioChunks'.`);
+        } else if (!Number.isInteger(options.fastStart.expectedAudioChunks) || options.fastStart.expectedAudioChunks < 0) {
+          throw new TypeError(`'expectedAudioChunks' must be a non-negative integer.`);
+        }
+      }
+    } else if (![false, "in-memory", "fragmented"].includes(options.fastStart)) {
+      throw new TypeError(`'fastStart' option must be false, 'in-memory', 'fragmented' or an object.`);
+    }
+  };
+  _writeHeader = new WeakSet();
+  writeHeader_fn = function() {
+    __privateGet(this, _writer).writeBox(ftyp({
+      holdsAvc: __privateGet(this, _options).video?.codec === "avc",
+      fragmented: __privateGet(this, _options).fastStart === "fragmented"
+    }));
+    __privateSet(this, _ftypSize, __privateGet(this, _writer).pos);
+    if (__privateGet(this, _options).fastStart === "in-memory") {
+      __privateSet(this, _mdat, mdat(false));
+    } else if (__privateGet(this, _options).fastStart === "fragmented") {
+    } else {
+      if (typeof __privateGet(this, _options).fastStart === "object") {
+        let moovSizeUpperBound = __privateMethod(this, _computeMoovSizeUpperBound, computeMoovSizeUpperBound_fn).call(this);
+        __privateGet(this, _writer).seek(__privateGet(this, _writer).pos + moovSizeUpperBound);
+      }
+      __privateSet(this, _mdat, mdat(true));
+      __privateGet(this, _writer).writeBox(__privateGet(this, _mdat));
+    }
+    __privateMethod(this, _maybeFlushStreamingTargetWriter, maybeFlushStreamingTargetWriter_fn).call(this);
+  };
+  _computeMoovSizeUpperBound = new WeakSet();
+  computeMoovSizeUpperBound_fn = function() {
+    if (typeof __privateGet(this, _options).fastStart !== "object")
+      return;
+    let upperBound = 0;
+    let sampleCounts = [
+      __privateGet(this, _options).fastStart.expectedVideoChunks,
+      __privateGet(this, _options).fastStart.expectedAudioChunks
+    ];
+    for (let n of sampleCounts) {
+      if (!n)
+        continue;
+      upperBound += (4 + 4) * Math.ceil(2 / 3 * n);
+      upperBound += 4 * n;
+      upperBound += (4 + 4 + 4) * Math.ceil(2 / 3 * n);
+      upperBound += 4 * n;
+      upperBound += 8 * n;
+    }
+    upperBound += 4096;
+    return upperBound;
+  };
+  _prepareTracks = new WeakSet();
+  prepareTracks_fn = function() {
+    if (__privateGet(this, _options).video) {
+      __privateSet(this, _videoTrack, {
+        id: 1,
+        info: {
+          type: "video",
+          codec: __privateGet(this, _options).video.codec,
+          width: __privateGet(this, _options).video.width,
+          height: __privateGet(this, _options).video.height,
+          rotation: __privateGet(this, _options).video.rotation ?? 0,
+          decoderConfig: null
+        },
+        // The fallback contains many common frame rates as factors
+        timescale: __privateGet(this, _options).video.frameRate ?? 57600,
+        samples: [],
+        finalizedChunks: [],
+        currentChunk: null,
+        firstDecodeTimestamp: void 0,
+        lastDecodeTimestamp: -1,
+        timeToSampleTable: [],
+        compositionTimeOffsetTable: [],
+        lastTimescaleUnits: null,
+        lastSample: null,
+        compactlyCodedChunkTable: []
+      });
+    }
+    if (__privateGet(this, _options).audio) {
+      __privateSet(this, _audioTrack, {
+        id: __privateGet(this, _options).video ? 2 : 1,
+        info: {
+          type: "audio",
+          codec: __privateGet(this, _options).audio.codec,
+          numberOfChannels: __privateGet(this, _options).audio.numberOfChannels,
+          sampleRate: __privateGet(this, _options).audio.sampleRate,
+          decoderConfig: null
+        },
+        timescale: __privateGet(this, _options).audio.sampleRate,
+        samples: [],
+        finalizedChunks: [],
+        currentChunk: null,
+        firstDecodeTimestamp: void 0,
+        lastDecodeTimestamp: -1,
+        timeToSampleTable: [],
+        compositionTimeOffsetTable: [],
+        lastTimescaleUnits: null,
+        lastSample: null,
+        compactlyCodedChunkTable: []
+      });
+      if (__privateGet(this, _options).audio.codec === "aac") {
+        let guessedCodecPrivate = __privateMethod(this, _generateMpeg4AudioSpecificConfig, generateMpeg4AudioSpecificConfig_fn).call(
+          this,
+          2,
+          // Object type for AAC-LC, since it's the most common
+          __privateGet(this, _options).audio.sampleRate,
+          __privateGet(this, _options).audio.numberOfChannels
+        );
+        __privateGet(this, _audioTrack).info.decoderConfig = {
+          codec: __privateGet(this, _options).audio.codec,
+          description: guessedCodecPrivate,
+          numberOfChannels: __privateGet(this, _options).audio.numberOfChannels,
+          sampleRate: __privateGet(this, _options).audio.sampleRate
+        };
+      }
+    }
+  };
+  _generateMpeg4AudioSpecificConfig = new WeakSet();
+  generateMpeg4AudioSpecificConfig_fn = function(objectType, sampleRate, numberOfChannels) {
+    let frequencyIndices = [96e3, 88200, 64e3, 48e3, 44100, 32e3, 24e3, 22050, 16e3, 12e3, 11025, 8e3, 7350];
+    let frequencyIndex = frequencyIndices.indexOf(sampleRate);
+    let channelConfig = numberOfChannels;
+    let configBits = "";
+    configBits += objectType.toString(2).padStart(5, "0");
+    configBits += frequencyIndex.toString(2).padStart(4, "0");
+    if (frequencyIndex === 15)
+      configBits += sampleRate.toString(2).padStart(24, "0");
+    configBits += channelConfig.toString(2).padStart(4, "0");
+    let paddingLength = Math.ceil(configBits.length / 8) * 8;
+    configBits = configBits.padEnd(paddingLength, "0");
+    let configBytes = new Uint8Array(configBits.length / 8);
+    for (let i = 0; i < configBits.length; i += 8) {
+      configBytes[i / 8] = parseInt(configBits.slice(i, i + 8), 2);
+    }
+    return configBytes;
+  };
+  _createSampleForTrack = new WeakSet();
+  createSampleForTrack_fn = function(track, data, type, timestamp, duration, meta, compositionTimeOffset) {
+    let presentationTimestampInSeconds = timestamp / 1e6;
+    let decodeTimestampInSeconds = (timestamp - (compositionTimeOffset ?? 0)) / 1e6;
+    let durationInSeconds = duration / 1e6;
+    let adjusted = __privateMethod(this, _validateTimestamp, validateTimestamp_fn).call(this, presentationTimestampInSeconds, decodeTimestampInSeconds, track);
+    presentationTimestampInSeconds = adjusted.presentationTimestamp;
+    decodeTimestampInSeconds = adjusted.decodeTimestamp;
+    if (meta?.decoderConfig) {
+      if (track.info.decoderConfig === null) {
+        track.info.decoderConfig = meta.decoderConfig;
+      } else {
+        Object.assign(track.info.decoderConfig, meta.decoderConfig);
+      }
+    }
+    let sample = {
+      presentationTimestamp: presentationTimestampInSeconds,
+      decodeTimestamp: decodeTimestampInSeconds,
+      duration: durationInSeconds,
+      data,
+      size: data.byteLength,
+      type,
+      // Will be refined once the next sample comes in
+      timescaleUnitsToNextSample: intoTimescale(durationInSeconds, track.timescale)
+    };
+    return sample;
+  };
+  _addSampleToTrack = new WeakSet();
+  addSampleToTrack_fn = function(track, sample) {
+    if (__privateGet(this, _options).fastStart !== "fragmented") {
+      track.samples.push(sample);
+    }
+    const sampleCompositionTimeOffset = intoTimescale(sample.presentationTimestamp - sample.decodeTimestamp, track.timescale);
+    if (track.lastTimescaleUnits !== null) {
+      let timescaleUnits = intoTimescale(sample.decodeTimestamp, track.timescale, false);
+      let delta = Math.round(timescaleUnits - track.lastTimescaleUnits);
+      track.lastTimescaleUnits += delta;
+      track.lastSample.timescaleUnitsToNextSample = delta;
+      if (__privateGet(this, _options).fastStart !== "fragmented") {
+        let lastTableEntry = last(track.timeToSampleTable);
+        if (lastTableEntry.sampleCount === 1) {
+          lastTableEntry.sampleDelta = delta;
+          lastTableEntry.sampleCount++;
+        } else if (lastTableEntry.sampleDelta === delta) {
+          lastTableEntry.sampleCount++;
+        } else {
+          lastTableEntry.sampleCount--;
+          track.timeToSampleTable.push({
+            sampleCount: 2,
+            sampleDelta: delta
+          });
+        }
+        const lastCompositionTimeOffsetTableEntry = last(track.compositionTimeOffsetTable);
+        if (lastCompositionTimeOffsetTableEntry.sampleCompositionTimeOffset === sampleCompositionTimeOffset) {
+          lastCompositionTimeOffsetTableEntry.sampleCount++;
+        } else {
+          track.compositionTimeOffsetTable.push({
+            sampleCount: 1,
+            sampleCompositionTimeOffset
+          });
+        }
+      }
+    } else {
+      track.lastTimescaleUnits = 0;
+      if (__privateGet(this, _options).fastStart !== "fragmented") {
+        track.timeToSampleTable.push({
+          sampleCount: 1,
+          sampleDelta: intoTimescale(sample.duration, track.timescale)
+        });
+        track.compositionTimeOffsetTable.push({
+          sampleCount: 1,
+          sampleCompositionTimeOffset
+        });
+      }
+    }
+    track.lastSample = sample;
+    let beginNewChunk = false;
+    if (!track.currentChunk) {
+      beginNewChunk = true;
+    } else {
+      let currentChunkDuration = sample.presentationTimestamp - track.currentChunk.startTimestamp;
+      if (__privateGet(this, _options).fastStart === "fragmented") {
+        let mostImportantTrack = __privateGet(this, _videoTrack) ?? __privateGet(this, _audioTrack);
+        if (track === mostImportantTrack && sample.type === "key" && currentChunkDuration >= 1) {
+          beginNewChunk = true;
+          __privateMethod(this, _finalizeFragment, finalizeFragment_fn).call(this);
+        }
+      } else {
+        beginNewChunk = currentChunkDuration >= 0.5;
+      }
+    }
+    if (beginNewChunk) {
+      if (track.currentChunk) {
+        __privateMethod(this, _finalizeCurrentChunk, finalizeCurrentChunk_fn).call(this, track);
+      }
+      track.currentChunk = {
+        startTimestamp: sample.presentationTimestamp,
+        samples: []
+      };
+    }
+    track.currentChunk.samples.push(sample);
+  };
+  _validateTimestamp = new WeakSet();
+  validateTimestamp_fn = function(presentationTimestamp, decodeTimestamp, track) {
+    const strictTimestampBehavior = __privateGet(this, _options).firstTimestampBehavior === "strict";
+    const noLastDecodeTimestamp = track.lastDecodeTimestamp === -1;
+    const timestampNonZero = decodeTimestamp !== 0;
+    if (strictTimestampBehavior && noLastDecodeTimestamp && timestampNonZero) {
+      throw new Error(
+        `The first chunk for your media track must have a timestamp of 0 (received DTS=${decodeTimestamp}).Non-zero first timestamps are often caused by directly piping frames or audio data from a MediaStreamTrack into the encoder. Their timestamps are typically relative to the age of thedocument, which is probably what you want.
+
+If you want to offset all timestamps of a track such that the first one is zero, set firstTimestampBehavior: 'offset' in the options.
+`
+      );
+    } else if (__privateGet(this, _options).firstTimestampBehavior === "offset" || __privateGet(this, _options).firstTimestampBehavior === "cross-track-offset") {
+      if (track.firstDecodeTimestamp === void 0) {
+        track.firstDecodeTimestamp = decodeTimestamp;
+      }
+      let baseDecodeTimestamp;
+      if (__privateGet(this, _options).firstTimestampBehavior === "offset") {
+        baseDecodeTimestamp = track.firstDecodeTimestamp;
+      } else {
+        baseDecodeTimestamp = Math.min(
+          __privateGet(this, _videoTrack)?.firstDecodeTimestamp ?? Infinity,
+          __privateGet(this, _audioTrack)?.firstDecodeTimestamp ?? Infinity
+        );
+      }
+      decodeTimestamp -= baseDecodeTimestamp;
+      presentationTimestamp -= baseDecodeTimestamp;
+    }
+    if (decodeTimestamp < track.lastDecodeTimestamp) {
+      throw new Error(
+        `Timestamps must be monotonically increasing (DTS went from ${track.lastDecodeTimestamp * 1e6} to ${decodeTimestamp * 1e6}).`
+      );
+    }
+    track.lastDecodeTimestamp = decodeTimestamp;
+    return { presentationTimestamp, decodeTimestamp };
+  };
+  _finalizeCurrentChunk = new WeakSet();
+  finalizeCurrentChunk_fn = function(track) {
+    if (__privateGet(this, _options).fastStart === "fragmented") {
+      throw new Error("Can't finalize individual chunks if 'fastStart' is set to 'fragmented'.");
+    }
+    if (!track.currentChunk)
+      return;
+    track.finalizedChunks.push(track.currentChunk);
+    __privateGet(this, _finalizedChunks).push(track.currentChunk);
+    if (track.compactlyCodedChunkTable.length === 0 || last(track.compactlyCodedChunkTable).samplesPerChunk !== track.currentChunk.samples.length) {
+      track.compactlyCodedChunkTable.push({
+        firstChunk: track.finalizedChunks.length,
+        // 1-indexed
+        samplesPerChunk: track.currentChunk.samples.length
+      });
+    }
+    if (__privateGet(this, _options).fastStart === "in-memory") {
+      track.currentChunk.offset = 0;
+      return;
+    }
+    track.currentChunk.offset = __privateGet(this, _writer).pos;
+    for (let sample of track.currentChunk.samples) {
+      __privateGet(this, _writer).write(sample.data);
+      sample.data = null;
+    }
+    __privateMethod(this, _maybeFlushStreamingTargetWriter, maybeFlushStreamingTargetWriter_fn).call(this);
+  };
+  _finalizeFragment = new WeakSet();
+  finalizeFragment_fn = function(flushStreamingWriter = true) {
+    if (__privateGet(this, _options).fastStart !== "fragmented") {
+      throw new Error("Can't finalize a fragment unless 'fastStart' is set to 'fragmented'.");
+    }
+    let tracks = [__privateGet(this, _videoTrack), __privateGet(this, _audioTrack)].filter((track) => track && track.currentChunk);
+    if (tracks.length === 0)
+      return;
+    let fragmentNumber = __privateWrapper(this, _nextFragmentNumber)._++;
+    if (fragmentNumber === 1) {
+      let movieBox = moov(tracks, __privateGet(this, _creationTime), true);
+      __privateGet(this, _writer).writeBox(movieBox);
+    }
+    let moofOffset = __privateGet(this, _writer).pos;
+    let moofBox = moof(fragmentNumber, tracks);
+    __privateGet(this, _writer).writeBox(moofBox);
+    {
+      let mdatBox = mdat(false);
+      let totalTrackSampleSize = 0;
+      for (let track of tracks) {
+        for (let sample of track.currentChunk.samples) {
+          totalTrackSampleSize += sample.size;
+        }
+      }
+      let mdatSize = __privateGet(this, _writer).measureBox(mdatBox) + totalTrackSampleSize;
+      if (mdatSize >= 2 ** 32) {
+        mdatBox.largeSize = true;
+        mdatSize = __privateGet(this, _writer).measureBox(mdatBox) + totalTrackSampleSize;
+      }
+      mdatBox.size = mdatSize;
+      __privateGet(this, _writer).writeBox(mdatBox);
+    }
+    for (let track of tracks) {
+      track.currentChunk.offset = __privateGet(this, _writer).pos;
+      track.currentChunk.moofOffset = moofOffset;
+      for (let sample of track.currentChunk.samples) {
+        __privateGet(this, _writer).write(sample.data);
+        sample.data = null;
+      }
+    }
+    let endPos = __privateGet(this, _writer).pos;
+    __privateGet(this, _writer).seek(__privateGet(this, _writer).offsets.get(moofBox));
+    let newMoofBox = moof(fragmentNumber, tracks);
+    __privateGet(this, _writer).writeBox(newMoofBox);
+    __privateGet(this, _writer).seek(endPos);
+    for (let track of tracks) {
+      track.finalizedChunks.push(track.currentChunk);
+      __privateGet(this, _finalizedChunks).push(track.currentChunk);
+      track.currentChunk = null;
+    }
+    if (flushStreamingWriter) {
+      __privateMethod(this, _maybeFlushStreamingTargetWriter, maybeFlushStreamingTargetWriter_fn).call(this);
+    }
+  };
+  _maybeFlushStreamingTargetWriter = new WeakSet();
+  maybeFlushStreamingTargetWriter_fn = function() {
+    if (__privateGet(this, _writer) instanceof StreamTargetWriter) {
+      __privateGet(this, _writer).flush();
+    }
+  };
+  _ensureNotFinalized = new WeakSet();
+  ensureNotFinalized_fn = function() {
+    if (__privateGet(this, _finalized)) {
+      throw new Error("Cannot add new video or audio chunks after the file has been finalized.");
+    }
+  };
+  return __toCommonJS(src_exports);
+})();
+if (typeof module === "object" && typeof module.exports === "object") Object.assign(module.exports, Mp4Muxer)
+
+</script>
+<script>
+/* Peg & belt generator — the belt maths from belt.py, plus construction families that grow a shape
+   one feature at a time, keeping a feature only if the shape still passes the check.
+   Coordinates are grid units, y up. A peg is {x, y, s} (s = +1 lobe, -1 scoop); every peg has radius R. */
+(function (root) {
+  const TAU = Math.PI * 2, mod = (a, m) => ((a % m) + m) % m;
+
+  function rng32(seed) {
+    let a = seed >>> 0;
+    return () => {
+      a |= 0; a = a + 0x6D2B79F5 | 0;
+      let t = Math.imul(a ^ a >>> 15, 1 | a);
+      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
+
+  // ------------------------------------------------------------------ belt maths
+
+  function tangent(a, b, R) {
+    const dx = b.x - a.x, dy = b.y - a.y, D = Math.hypot(dx, dy), k = (b.s - a.s) * R;
+    if (D < 1e-9 || Math.abs(k) > D + 1e-9) return null;
+    const ux = dx / D, uy = dy / D, c = k / D, s = Math.sqrt(Math.max(0, 1 - c * c));
+    const Lx = c * ux - s * uy, Ly = c * uy + s * ux;
+    return [{ x: a.x - a.s * R * Lx, y: a.y - a.s * R * Ly }, { x: b.x - b.s * R * Lx, y: b.y - b.s * R * Ly }];
+  }
+
+  function outline(loop, R) {
+    const n = loop.length;
+    if (n === 1) return { single: true };
+    const segs = [];
+    for (let i = 0; i < n; i++) {
+      const t = tangent(loop[i], loop[(i + 1) % n], R);
+      if (!t) return null;
+      segs.push(t);
+    }
+    const arcs = loop.map((p, i) => {
+      const a = segs[(i - 1 + n) % n][1], b = segs[i][0];
+      const ta = Math.atan2(a.y - p.y, a.x - p.x), tb = Math.atan2(b.y - p.y, b.x - p.x);
+      return { a, b, ta, span: p.s > 0 ? mod(tb - ta, TAU) : mod(ta - tb, TAU) };
+    });
+    return { segs, arcs };
+  }
+
+  const f5 = v => +v.toFixed(5);
+
+  function loopD(loop, o, R) {
+    if (o.single) {
+      const p = loop[0];
+      return `M${f5(p.x - R)},${f5(p.y)}A${R},${R} 0 1 0 ${f5(p.x + R)},${f5(p.y)}A${R},${R} 0 1 0 ${f5(p.x - R)},${f5(p.y)}Z`;
+    }
+    let d = "";
+    loop.forEach((p, i) => {
+      const { a, b, span } = o.arcs[i];
+      if (i === 0) d += `M${f5(a.x)},${f5(a.y)}`;
+      d += `A${R},${R} 0 ${span > Math.PI ? 1 : 0} ${p.s > 0 ? 1 : 0} ${f5(b.x)},${f5(b.y)}`;
+      const nx = o.segs[i][1];
+      d += `L${f5(nx.x)},${f5(nx.y)}`;
+    });
+    return d + "Z";
+  }
+
+  function pathD(loops, R) {
+    return loops.map(l => loopD(l, outline(l, R), R)).join("");
+  }
+
+  function sample(loop, o, R, step) {
+    const pts = [];
+    if (o.single) {
+      const p = loop[0];
+      for (let j = 0; j < 20; j++) pts.push([p.x + R * Math.cos(j * TAU / 20), p.y + R * Math.sin(j * TAU / 20)]);
+      return pts;
+    }
+    loop.forEach((p, i) => {
+      const { ta, span } = o.arcs[i];
+      const m = Math.max(1, Math.ceil(span * R / step));
+      for (let j = 0; j <= m; j++) {
+        const t = ta + p.s * span * j / m;
+        pts.push([p.x + R * Math.cos(t), p.y + R * Math.sin(t)]);
+      }
+    });
+    return pts;
+  }
+
+  const orient = (a, b, c) => (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
+  const cross = (p, q, r, s) => orient(p, q, r) * orient(p, q, s) < 0 && orient(r, s, p) * orient(r, s, q) < 0;
+
+  // any two belt segments crossing (within a loop or between loops), via a spatial hash
+  function crosses(polys) {
+    const cell = 1.5, map = new Map();
+    for (let li = 0; li < polys.length; li++) {
+      const pts = polys[li], n = pts.length;
+      for (let i = 0; i < n; i++) {
+        const a = pts[i], b = pts[(i + 1) % n], sg = { a, b, li, i, n };
+        const x0 = Math.floor(Math.min(a[0], b[0]) / cell), x1 = Math.floor(Math.max(a[0], b[0]) / cell);
+        const y0 = Math.floor(Math.min(a[1], b[1]) / cell), y1 = Math.floor(Math.max(a[1], b[1]) / cell);
+        for (let gx = x0; gx <= x1; gx++) for (let gy = y0; gy <= y1; gy++) {
+          const key = gx * 100003 + gy, arr = map.get(key);
+          if (!arr) { map.set(key, [sg]); continue; }
+          for (const o of arr) {
+            if (o.li === li) { const d = Math.abs(o.i - i); if (d <= 1 || d === n - 1) continue; }
+            if (cross(o.a, o.b, a, b)) return true;
+          }
+          arr.push(sg);
+        }
+      }
+    }
+    return false;
+  }
+
+  // even-odd fill test, segments bucketed by row
+  function makeInside(polys) {
+    const rows = new Map();
+    for (const pts of polys) {
+      const n = pts.length;
+      for (let i = 0; i < n; i++) {
+        const a = pts[i], b = pts[(i + 1) % n];
+        for (let r = Math.floor(Math.min(a[1], b[1])); r <= Math.floor(Math.max(a[1], b[1])); r++) {
+          if (!rows.has(r)) rows.set(r, []);
+          rows.get(r).push([a[0], a[1], b[0], b[1]]);
+        }
+      }
+    }
+    return (x, y) => {
+      let c = false;
+      for (const [x1, y1, x2, y2] of rows.get(Math.floor(y)) || [])
+        if ((y1 > y) !== (y2 > y) && x < x1 + (y - y1) * (x2 - x1) / (y2 - y1)) c = !c;
+      return c;
+    };
+  }
+
+  // a valid shape: no belt crosses itself or another, + pegs sit in the fill, - pegs outside it
+  function validate(loops, R) {
+    const polys = [];
+    for (const l of loops) {
+      const o = outline(l, R);
+      if (!o) return false;
+      polys.push(sample(l, o, R, 0.14));
+    }
+    if (crosses(polys)) return false;
+    const inside = makeInside(polys);
+    for (const l of loops) for (const p of l) for (let k = 0; k < 6; k++) {
+      const t = (k + 0.25) * TAU / 6;
+      if (inside(p.x + 0.9 * R * Math.cos(t), p.y + 0.9 * R * Math.sin(t)) !== (p.s > 0)) return false;
+    }
+    return true;
+  }
+
+  // ------------------------------------------------------------------ generator
+
+  const FAMILIES = ["slab", "fold", "comb", "totem", "star"];
+
+  function generate(P) {
+    const rng = rng32((P.seed * 2654435761) ^ 0x9e3779b9);
+    const rand = (a, b) => a + (b - a) * rng(), randInt = (a, b) => Math.floor(rand(a, b + 1)), pick = a => a[Math.floor(rng() * a.length)];
+    const { W, H, R } = P, NECK = 2 * R + P.gap, M = 1;
+    const snap = v => Math.round(v / P.snap) * P.snap;
+    const peg = (x, y, s) => ({ x: snap(x), y: snap(y), s });
+    const near = (a, b) => Math.abs(a.x - b.x) < 1e-6 && Math.abs(a.y - b.y) < 1e-6 && a.s === b.s;
+    const family = P.family === "mix" ? pick(["slab", "fold", "comb", "totem", "star", "slab", "fold", "totem"]) : P.family;
+    const sym = P.symmetry;
+
+    // ---------- bases: the starting loop of + (and some -) pegs, counter-clockwise
+    const rect = () => [peg(M, M, 1), peg(W - M, M, 1), peg(W - M, H - M, 1), peg(M, H - M, 1)];
+
+    function slabBase() {
+      if (rng() < 0.5) return rect();
+      const c = snap(rand(1, Math.min(W, H) * 0.18));
+      return [peg(M + c, M, 1), peg(W - M - c, M, 1), peg(W - M, M + c, 1), peg(W - M, H - M - c, 1),
+        peg(W - M - c, H - M, 1), peg(M + c, H - M, 1), peg(M, H - M - c, 1), peg(M, M + c, 1)];
+    }
+
+    function totemBase() {
+      const k = randInt(2, Math.max(2, Math.min(5, Math.floor(H / 7)))), cx = W / 2, half = (W - 2 * M) / 2;
+      let cuts = [];
+      for (let i = 1; i < k; i++) cuts.push(M + (H - 2 * M) * (i + rand(-0.25, 0.25)) / k);
+      const hwR = [], hwL = [];
+      for (let j = 0; j < k; j++) {
+        hwR.push(half * rand(0.45, 1));
+        hwL.push(sym === "mirror" ? hwR[j] : half * rand(0.45, 1));
+      }
+      if (sym === "turn") for (let j = 0; j < k; j++) hwL[j] = hwR[k - 1 - j];
+      const waist = cuts.map(() => {
+        const hair = rng() < Math.max(0.25, P.neck);
+        const g = hair ? R + P.gap / 2 : rand(R + 0.6, half * 0.5);
+        const off = sym === "none" && !hair ? rand(-1, 1) : 0;
+        return { g, off, d: rand(0, 0.35) };
+      });
+      if (sym === "turn") for (let i = 0; i < cuts.length; i++) {
+        const j = cuts.length - 1 - i;
+        if (j > i) { waist[j] = { ...waist[i] }; cuts[j] = H - cuts[i]; }
+        if (j === i) cuts[i] = H / 2;
+      }
+      const right = [peg(cx + hwR[0], M, 1)], left = [peg(cx - hwL[k - 1], H - M, 1)];
+      cuts.forEach((y, i) => {
+        const span = Math.min(y - (i ? cuts[i - 1] : M), (i < cuts.length - 1 ? cuts[i + 1] : H - M) - y);
+        const d = waist[i].d * span;
+        right.push(peg(cx + hwR[i], y - d, 1), peg(cx + waist[i].g + waist[i].off, y, -1), peg(cx + hwR[i + 1], y + d, 1));
+      });
+      right.push(peg(cx + hwR[k - 1], H - M, 1));
+      [...cuts].reverse().forEach((y, ri) => {
+        const i = cuts.length - 1 - ri;
+        const span = Math.min(y - (i ? cuts[i - 1] : M), (i < cuts.length - 1 ? cuts[i + 1] : H - M) - y);
+        const w = sym === "turn" ? waist[cuts.length - 1 - i] : waist[i];
+        const d = w.d * span, off = sym === "turn" ? -w.off : w.off;
+        left.push(peg(cx - hwL[i + 1], y + d, 1), peg(cx - w.g + off, y, -1), peg(cx - hwL[i], y - d, 1));
+      });
+      left.push(peg(cx - hwL[0], M, 1));
+      const loop = [...right, ...left];
+      return loop.filter((p, i) => !near(p, loop[(i + 1) % loop.length]));
+    }
+
+    function starBase() {
+      const n = randInt(3, 9), fi = rand(0.18, 0.55), flat = rng() < 0.4, cx = W / 2, cy = H / 2;
+      const ax = (W - 2 * M) / 2, ay = (H - 2 * M) / 2;
+      let th = sym === "mirror" ? Math.PI / 2 + (rng() < 0.5 ? 0 : Math.PI / n) : rand(0, TAU);
+      const jit = [];
+      for (let j = 0; j < n; j++) jit.push(sym === "none" ? rand(0.7, 1) : 1);
+      const pts = [];
+      for (let j = 0; j < n; j++) {
+        const a = th + j * TAU / n, d = flat ? Math.PI / n * 0.28 : 0;
+        if (flat) {
+          pts.push(peg(cx + ax * jit[j] * Math.cos(a - d), cy + ay * jit[j] * Math.sin(a - d), 1));
+          pts.push(peg(cx + ax * jit[j] * Math.cos(a + d), cy + ay * jit[j] * Math.sin(a + d), 1));
+        } else pts.push(peg(cx + ax * jit[j] * Math.cos(a), cy + ay * jit[j] * Math.sin(a), 1));
+        const b = a + Math.PI / n;
+        pts.push(peg(cx + ax * fi * Math.cos(b), cy + ay * fi * Math.sin(b), -1));
+      }
+      return pts.filter((p, i) => !near(p, pts[(i + 1) % pts.length]));
+    }
+
+    let base, tries = 0;
+    do {
+      base = family === "totem" ? totemBase() : family === "star" ? starBase() : family === "slab" ? slabBase() : rect();
+    } while (!validate([base], R) && ++tries < 40);
+    if (tries >= 40) base = rect();
+
+    // ---------- features: runs of pegs inserted into one base edge
+    const N = base.length;
+    const edge = e => {
+      const A = base[e], B = base[(e + 1) % N], dx = B.x - A.x, dy = B.y - A.y, len = Math.hypot(dx, dy);
+      return { e, A, B, len, ux: dx / len, uy: dy / len, nx: -dy / len, ny: dx / len };
+    };
+    const at = (E, t) => ({ x: E.A.x + E.ux * E.len * t, y: E.A.y + E.uy * E.len * t });
+    const proj = (E, p) => ((p.x - E.A.x) * E.ux + (p.y - E.A.y) * E.uy) / E.len;
+
+    function rayHit(Px, Py, nx, ny, skip) {
+      let best = null;
+      for (let j = 0; j < N; j++) {
+        if (j === skip) continue;
+        const A = base[j], B = base[(j + 1) % N], sx = B.x - A.x, sy = B.y - A.y;
+        const den = nx * sy - ny * sx;
+        if (Math.abs(den) < 1e-9) continue;
+        const qx = A.x - Px, qy = A.y - Py, s = (qx * sy - qy * sx) / den, u = (qx * ny - qy * nx) / den;
+        if (s > 1e-6 && u >= 0 && u <= 1 && (!best || s < best.s)) best = { s, j, u };
+      }
+      return best;
+    }
+
+    function feature(e, pegs) {
+      const E = edge(e), ts = pegs.map(p => proj(E, p));
+      const order = pegs.map((p, i) => [ts[i], p]).sort((a, b) => a[0] - b[0]).map(a => a[1]);
+      // each peg also remembers its foot on the edge, so motion can push it in and out along the cut
+      order.forEach(p => {
+        const t = proj(E, p), fx = E.A.x + E.ux * E.len * t, fy = E.A.y + E.uy * E.len * t;
+        p.fx = fx; p.fy = fy; p.ox = p.x - fx; p.oy = p.y - fy; p.ux = E.ux; p.uy = E.uy;
+      });
+      return { e, pegs: order, t0: Math.min(...ts), t1: Math.max(...ts), m: (2 * R + 0.1) / E.len };
+    }
+
+    const st = { feats: [] };
+    let gid = 0;
+    function outer() {
+      const out = [];
+      for (let e = 0; e < N; e++) {
+        out.push(base[e]);
+        st.feats.filter(f => f.e === e).sort((a, b) => a.t0 - b.t0).forEach(f => out.push(...f.pegs));
+      }
+      return out;
+    }
+    const loops = () => [outer()];
+
+    // symmetry: the image of a peg, an edge, a feature
+    const img = p => sym === "mirror" ? { x: W - p.x, y: p.y, s: p.s } : { x: W - p.x, y: H - p.y, s: p.s };
+    function edgeImg(e) {
+      const a = img(base[e]), b = img(base[(e + 1) % N]);
+      for (let j = 0; j < N; j++) {
+        const A = base[j], B = base[(j + 1) % N];
+        if (sym === "mirror" ? near(a, B) && near(b, A) : near(a, A) && near(b, B)) return j;
+      }
+      return -1;
+    }
+    const samePegs = (a, b) => a.length === b.length && a.every(p => b.some(q => near(p, q)));
+    const overlaps = (f, g) => f.e === g.e && !(f.t1 + f.m < g.t0 || g.t1 + g.m < f.t0);
+    const inField = p => p.x >= 0.5 && p.x <= W - 0.5 && p.y >= 0.5 && p.y <= H - 0.5;
+
+    // a group of features goes in together (a bite and its neck partner, plus their symmetric images).
+    // A group keeps a real wall (WALL) between itself and the rest of the belt: a cut may not end against another
+    // cut or run up to an edge. Only a designed neck, inside one group, comes down to a hairline.
+    const WALL = 0.9;
+    const segDist = (px, py, a, b) => {
+      const dx = b.x - a.x, dy = b.y - a.y, l2 = dx * dx + dy * dy;
+      const t = l2 ? Math.max(0, Math.min(1, ((px - a.x) * dx + (py - a.y) * dy) / l2)) : 0;
+      return Math.hypot(px - a.x - t * dx, py - a.y - t * dy);
+    };
+    function clear(id) {
+      const loop = outer(), n = loop.length, o = outline(loop, R), segs = [];
+      loop.forEach((p, i) => {
+        const { ta, span } = o.arcs[i], m = Math.max(1, Math.ceil(span * R / 0.2));
+        for (let j = 0; j < m; j++) {
+          const t0 = ta + p.s * span * j / m, t1 = ta + p.s * span * (j + 1) / m;
+          segs.push({ a: { x: p.x + R * Math.cos(t0), y: p.y + R * Math.sin(t0) }, b: { x: p.x + R * Math.cos(t1), y: p.y + R * Math.sin(t1) }, g: [p.gid] });
+        }
+        segs.push({ a: o.segs[i][0], b: o.segs[i][1], g: [p.gid, loop[(i + 1) % n].gid] });
+      });
+      for (const p of loop) {
+        if (p.s > 0) continue;
+        const mine = p.gid === id;
+        for (const sg of segs) {
+          if (sg.g.includes(p.gid) && p.gid !== undefined) continue;
+          if (!mine && !sg.g.includes(id)) continue;
+          if (segDist(p.x, p.y, sg.a, sg.b) < R + WALL) return false;
+        }
+      }
+      return true;
+    }
+    function tryGroup(fs) {
+      fs = fs.filter(Boolean);
+      if (sym !== "none") {
+        for (const f of [...fs]) {
+          const j = edgeImg(f.e);
+          if (j < 0) return false;
+          const g = feature(j, f.pegs.map(img));
+          if (fs.some(h => h.e === g.e && samePegs(h.pegs, g.pegs))) continue;
+          fs.push(g);
+        }
+      }
+      for (const f of fs) if (!f.pegs.every(inField)) return false;
+      for (let i = 0; i < fs.length; i++) {
+        if (st.feats.some(g => overlaps(fs[i], g))) return false;
+        for (let j = i + 1; j < fs.length; j++) if (overlaps(fs[i], fs[j])) return false;
+      }
+      const id = gid++;
+      fs.forEach(f => { f.gid = id; f.pegs.forEach(p => p.gid = id); });
+      st.feats.push(...fs);
+      if (validate(loops(), R) && clear(id)) return true;
+      st.feats.length -= fs.length;
+      return false;
+    }
+
+    // ---------- a bite cut into edge e at t: V (apex only), notch (lip, apex, lip), slot (flat bottom)
+    // or channel (a long parallel-sided cut, round-ended)
+    function bite(e, t, w, depth, skew, kind) {
+      const E = edge(e), tw = w / E.len, ts = t + skew / E.len;
+      const c = at(E, ts), ax = c.x + E.nx * depth, ay = c.y + E.ny * depth;
+      if (kind === "v") return { f: feature(e, [peg(ax, ay, -1)]), apex: { x: snap(ax), y: snap(ay) }, E };
+      const l0 = at(E, t - tw), l1 = at(E, t + tw);
+      if (t - tw < 0.02 || t + tw > 0.98) return null;
+      if (kind === "slot" || kind === "channel") {
+        const h = kind === "channel" ? w : w * rand(0.35, 0.6), a0 = at(E, ts - h / E.len), a1 = at(E, ts + h / E.len);
+        return { f: feature(e, [peg(l0.x, l0.y, 1), peg(a0.x + E.nx * depth, a0.y + E.ny * depth, -1),
+          peg(a1.x + E.nx * depth, a1.y + E.ny * depth, -1), peg(l1.x, l1.y, 1)]), apex: { x: snap(ax), y: snap(ay) }, E };
+      }
+      return { f: feature(e, [peg(l0.x, l0.y, 1), peg(ax, ay, -1), peg(l1.x, l1.y, 1)]), apex: { x: snap(ax), y: snap(ay) }, E };
+    }
+
+    const formPick = () => P.form !== "mixed" ? P.form : pick(["v", "v", "notch", "notch", "notch", "slot", "channel", "channel"]);
+
+    // a neck: an opposing bite whose apex sits exactly NECK beyond this bite's apex.
+    // Two - pegs NECK apart leave a hairline of width P.gap.
+    function neckFor(b) {
+      const { apex, E } = b, hit = rayHit(apex.x, apex.y, E.nx, E.ny, -1);
+      if (!hit || hit.s < NECK + 2 * R + 0.4) return null;
+      const zx = apex.x + E.nx * NECK, zy = apex.y + E.ny * NECK;
+      const E2 = edge(hit.j), w2 = rand(0.8, Math.min(4, E2.len * 0.2)) / E2.len;
+      if (hit.u - w2 < 0.02 || hit.u + w2 > 0.98) return null;
+      const l0 = at(E2, hit.u - w2), l1 = at(E2, hit.u + w2);
+      return feature(hit.j, [peg(l0.x, l0.y, 1), { x: zx, y: zy, s: -1 }, peg(l1.x, l1.y, 1)]);
+    }
+
+    function addBite(e, t, w, depth, skew, kind, neckP) {
+      const b = bite(e, t, w, depth, skew, kind);
+      if (!b) return false;
+      const nk = rng() < neckP ? neckFor(b) : null;
+      if (nk && tryGroup([b.f, nk])) return true;
+      return tryGroup([b.f]);
+    }
+
+    // ---------- forced construction per family
+    if (family === "comb") {
+      const m = randInt(3, Math.max(3, Math.floor(W / 3))), E = edge(2), across = H - 2 * M;
+      const dep = across * rand(0.2, 0.55) * (0.5 + P.depth), kind = rng() < 0.5 ? "v" : "notch", wid = rand(0.25, 0.42);
+      const fs = [];
+      for (let i = 0; i < m; i++) {
+        const t = (i + 0.5) / m, b = bite(2, t, kind === "v" ? 0 : wid * E.len / m, dep * rand(0.8, 1.2), 0, kind);
+        if (b) fs.push(b.f);
+      }
+      tryGroup(fs.slice(0, 1)) && fs.slice(1).forEach(f => tryGroup([f]));
+      if (rng() < 0.5) {
+        const mb = m + (rng() < 0.5 ? -1 : 0);
+        for (let i = 0; i < mb; i++) addBite(0, (i + 0.5) / mb + (sym === "none" ? 0.5 / mb : 0) * 0.5, wid * edge(0).len / mb, dep * rand(0.5, 0.9), 0, kind, 0);
+      }
+    }
+    if (family === "fold") {
+      const n = randInt(2, Math.max(2, Math.min(6, Math.floor(H / 6)))), hb = (H - 2 * M) / n;
+      for (let k = 0; k < n; k++) {
+        const yb = M + k * hb, yt = yb + hb, right = k % 2 === 0;
+        const e = right ? 1 : 3, E = edge(e), dep = (W - 2 * M) * rand(0.5, 0.8) * (0.6 + P.depth * 0.5);
+        const ya = right ? yb + hb * rand(0.2, 0.4) : yt - hb * rand(0.2, 0.4);
+        const tl = right ? (yb + 0.4 - M) / E.len : (H - M - yt + 0.4) / E.len, th = right ? (yt - 0.4 - M) / E.len : (H - M - yb - 0.4) / E.len;
+        const t = (tl + th) / 2, w = (th - tl) / 2 * E.len, skew = right ? ya - (yb + yt) / 2 : (yb + yt) / 2 - ya;
+        addBite(e, t, Math.max(0.8, w), dep, skew, "notch", P.neck * 0.5);
+      }
+    }
+
+    // ---------- free bites, weighted by edge length
+    const lens = base.map((_, e) => edge(e).len), total = lens.reduce((a, b) => a + b, 0);
+    let added = 0;
+    for (let a = 0; a < P.bites * 5 && added < P.bites; a++) {
+      let r = rng() * total, e = 0;
+      while (r > lens[e] && e < N - 1) r -= lens[e++];
+      const E = edge(e);
+      if (E.len < 2.5) continue;
+      const t = rand(0.12, 0.88), c = at(E, t), hit = rayHit(c.x, c.y, E.nx, E.ny, e);
+      if (!hit) continue;
+      const depth = Math.min(hit.s - 2 * R - 0.3, hit.s * P.depth * rand(0.55, 1.15));
+      if (depth < 2 * R + 0.1) continue;
+      const kind = formPick(), w = kind === "channel" ? rand(0.5, 1.2) : rand(0.6, Math.max(0.9, Math.min(E.len * 0.22, 5)));
+      if (addBite(e, t, w, depth, rand(-1, 1) * w * P.skew, kind, P.neck)) added++;
+    }
+
+    const L = loops();
+    return { W, H, R, family, seed: P.seed, loops: L, d: pathD(L, R), pegs: L.reduce((a, l) => a + l.length, 0),
+      base, feats: st.feats, groups: gid };
+  }
+
+  // the shape with every cut group scaled by depth(gid): 1 = as generated, 0 = flush with its edge, null = left out,
+  // and slid along its edge by shift(gid) grid units. Motion uses this; the caller keeps the last valid pose when a
+  // frame fails validate().
+  function pose(res, depth, shift = () => 0) {
+    const out = [], N = res.base.length;
+    for (let e = 0; e < N; e++) {
+      out.push(res.base[e]);
+      res.feats.filter(f => f.e === e).sort((a, b) => a.t0 - b.t0).forEach(f => {
+        const k = depth(f.gid), d = shift(f.gid);
+        if (k === null) return;
+        f.pegs.forEach(p => out.push({ x: p.fx + p.ux * d + p.ox * k, y: p.fy + p.uy * d + p.oy * k, s: p.s, gid: f.gid }));
+      });
+    }
+    return [out];
+  }
+
+  const api = { generate, pose, validate, pathD, outline, FAMILIES };
+  if (typeof module !== "undefined") module.exports = api; else root.Belt = api;
+})(this);
+
+</script>
+<script>
+const OPTIONS = {
+  motion: [["still", "Still"], ["build", "Build"], ["stamp", "Stamp"], ["engine", "Engine"], ["ratchet", "Ratchet"], ["shuttle", "Shuttle"]],
+  family: [["mix", "Mix"], ["slab", "Slab"], ["fold", "Fold"], ["comb", "Comb"], ["totem", "Totem"], ["star", "Star"]],
+  symmetry: [["none", "None"], ["mirror", "Mirror"], ["turn", "Turn"]],
+  form: [["mixed", "Mixed"], ["v", "V"], ["notch", "Notch"], ["slot", "Slot"], ["channel", "Channel"]],
+  snap: [[0.25, "¼"], [0.5, "½"], [1, "1"]],
+  beltDir: [["swing", "Out & back"], ["fwd", "One way"], ["rev", "Reverse"]],
+};
+// the field is 400% of a glyph cell (5 x 8)
+const DEFAULTS = { family: "mix", symmetry: "none", bites: 14, depth: 0.55, skew: 0.6, form: "mixed", neck: 0.5,
+  W: 20, H: 32, R: 0.45, gap: 0.1, snap: 0.25, seed: 1, motion: "still", tempo: 1, swing: 0.35, drive: false, beltDir: "swing",
+  grid: true, pegs: false, invert: false, outline: false, tile: false, sound: true };
+const FMT = { depth: v => Math.round(v * 100) + "%", neck: v => Math.round(v * 100) + "%", swing: v => Math.round(v * 100) + "%",
+  skew: v => v.toFixed(2), R: v => v.toFixed(2), gap: v => v.toFixed(2), tempo: v => v.toFixed(2) + "×" };
+const NOTES = {
+  still: "Click a cut to pluck it like a belt.",
+  build: "The cuts arrive in the order they were made, hold, then leave in reverse.",
+  stamp: "A press punches the cuts in, one at a time, then lifts them back out.",
+  engine: "Every cut rides a crank, firing in four phases like a four-cylinder engine.",
+  ratchet: "The cuts are wound out a tooth at a time, then wound back in.",
+  shuttle: "The cuts slide along their edges like carriages on a belt.",
+  drive: "The belt runs round its pegs and back; each peg turns its + or − with it, the two kinds in opposite directions.",
+  oneway: "The belt runs round its pegs one way only; each peg turns its + or − with it, the two kinds in opposite directions.",
+};
+const SHAPE_KEYS = ["family", "symmetry", "bites", "depth", "skew", "form", "neck", "W", "H", "R", "gap", "snap"];
+
+let state = { ...DEFAULTS };
+try { Object.assign(state, JSON.parse(decodeURIComponent(location.hash.slice(1)) || "{}")); } catch (e) {}
+delete state.counters;
+let current = null;
+const $ = s => document.querySelector(s), $$ = s => document.querySelectorAll(s);
+
+// ---------------------------------------------------------------- controls
+$$(".seg").forEach(el => {
+  const key = el.dataset.key;
+  OPTIONS[key].forEach(([v, label]) => {
+    const b = document.createElement("button");
+    b.textContent = label; b.type = "button"; b.dataset.v = v;
+    b.onclick = () => { state[key] = v; sync(); key === "motion" || key === "beltDir" ? restartClock() : run(); };
+    el.appendChild(b);
+  });
+});
+$$("input[type=range]").forEach(el => {
+  el.oninput = () => {
+    state[el.dataset.key] = +el.value; sync();
+    if (SHAPE_KEYS.includes(el.dataset.key)) schedule();
+    if (el.dataset.key === "swing" && current) measureShuttle();
+  };
+});
+$$("[data-view]").forEach(el => el.onclick = () => {
+  state[el.dataset.view] = !state[el.dataset.view]; sync(); frame(true);
+  if (el.dataset.view === "invert" || el.dataset.view === "outline") variations(token);
+  if (el.dataset.view === "drive") restartClock();
+});
+const seedEl = $("#seed");
+seedEl.onchange = () => { state.seed = Math.max(1, Math.floor(+seedEl.value) || 1); sync(); run(); };
+const step = d => { state.seed = Math.max(1, state.seed + d); sync(); run(); };
+$("#prev").onclick = () => step(-1);
+$("#next").onclick = () => step(1);
+const fresh = () => { state.seed = 1 + Math.floor(Math.random() * 99999); sync(); run(); };
+$("#new").onclick = fresh;
+function roll() {
+  const r = a => a[Math.floor(Math.random() * a.length)], u = (a, b, s) => +(Math.round((a + Math.random() * (b - a)) / s) * s).toFixed(2);
+  const [W, H] = r([[20, 32], [20, 32], [32, 32], [32, 20], [24, 40], [40, 24], [16, 40]]);
+  Object.assign(state, { family: r(OPTIONS.family)[0], symmetry: r(OPTIONS.symmetry)[0], form: r(OPTIONS.form)[0],
+    bites: u(6, 32, 1), depth: u(0.3, 0.85, 0.05), skew: u(0, 1.2, 0.05), neck: u(0, 1, 0.05), W, H,
+    seed: 1 + Math.floor(Math.random() * 99999) });
+  sync(); run();
+}
+$("#roll").onclick = roll;
+document.addEventListener("keydown", e => {
+  if (e.target.tagName === "INPUT" && e.target.type !== "range") return;
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  if (e.code === "Space") { e.preventDefault(); fresh(); }
+  if (e.code === "KeyR") roll();
+  if (e.code === "ArrowRight") { e.preventDefault(); step(1); }
+  if (e.code === "ArrowLeft") { e.preventDefault(); step(-1); }
+});
+
+function sync() {
+  $$(".seg").forEach(el => el.querySelectorAll("button").forEach(b =>
+    b.setAttribute("aria-pressed", String(b.dataset.v === String(state[el.dataset.key])))));
+  $$("input[type=range]").forEach(el => {
+    const k = el.dataset.key;
+    el.value = state[k];
+    el.closest(".ctl").querySelector(".ctl__val").textContent = (FMT[k] || String)(state[k]);
+  });
+  $$("[data-view]").forEach(el => el.setAttribute("aria-pressed", String(!!state[el.dataset.view])));
+  seedEl.value = state.seed;
+  $("#motionNote").textContent = NOTES[state.motion] + (state.drive ? " " + NOTES[state.beltDir === "swing" ? "drive" : "oneway"] : "");
+  history.replaceState(null, "", "#" + encodeURIComponent(JSON.stringify(state)));
+}
+
+// the wordmark fills its three columns
+function fitMark() {
+  const m = $("#mark"), w = m.parentElement.clientWidth;
+  m.style.setProperty("--mark", "100px");
+  const widest = Math.max(...[...m.children].map(s => s.getBoundingClientRect().width));
+  m.style.setProperty("--mark", (100 * w / widest).toFixed(2) + "px");
+}
+document.fonts.ready.then(fitMark);
+addEventListener("resize", fitMark);
+
+// ---------------------------------------------------------------- drawing
+const COL = { paper: "#f2f1ee", ink: "#111110", claret: "#7b1838", peg: "#8d8c88" };
+const colours = inv => inv ? { fg: COL.paper, peg: "#5f5e5a" } : { fg: COL.ink, peg: COL.peg };
+
+function gridLines(W, H, sw) {
+  const o = [];
+  for (let x = 0; x <= W; x++) o.push(`<line x1="${x}" y1="0" x2="${x}" y2="${H}" stroke="${COL.claret}" stroke-opacity="${x % 4 ? 0.12 : 0.36}" ${sw(x % 4 === 0)}/>`);
+  for (let y = 0; y <= H; y++) o.push(`<line x1="0" y1="${y}" x2="${W}" y2="${y}" stroke="${COL.claret}" stroke-opacity="${y % 4 ? 0.12 : 0.36}" ${sw(y % 4 === 0)}/>`);
+  return o.join("");
+}
+function pegMarks(loops, R, pc, sw) {
+  const o = [], m = R * 0.45;
+  for (const l of loops) for (const p of l) {
+    o.push(`<circle cx="${p.x}" cy="${p.y}" r="${R}" fill="none" stroke="${pc}" ${sw}/>`);
+    o.push(`<line x1="${p.x - m}" y1="${p.y}" x2="${p.x + m}" y2="${p.y}" stroke="${pc}" ${sw}/>`);
+    if (p.s > 0) o.push(`<line x1="${p.x}" y1="${p.y - m}" x2="${p.x}" y2="${p.y + m}" stroke="${pc}" ${sw}/>`);
+  }
+  return o.join("");
+}
+
+// the shape is filled, or in outline mode drawn as its belt: one line, the width given in screen px or grid units
+const paint = (fg, w) => state.outline
+  ? `fill="none" stroke="${fg}" stroke-linejoin="round" ${w.px ? `stroke-width="${w.px}" vector-effect="non-scaling-stroke"` : `stroke-width="${w.units}"`}`
+  : `fill="${fg}" fill-rule="evenodd"`;
+const LINE = 0.09;   // outline width in grid units, for files and video
+
+// a standalone SVG of the generated shape, for take-aways and neighbours
+function svgFile(res, opt) {
+  const { W, H, R } = res, pad = 1, c = colours(opt.invert), k = opt.px ? opt.px / 24 : 1;
+  const size = opt.px ? `width="${Math.round((W + 2 * pad) * opt.px)}" height="${Math.round((H + 2 * pad) * opt.px)}"` : "";
+  const sw = m => opt.px ? `stroke-width="${(m ? 0.8 : 0.5) * k / opt.px}"` : `stroke-width="${m ? 0.8 : 0.5}" vector-effect="non-scaling-stroke"`;
+  const psw = opt.px ? `stroke-width="${0.9 * k / opt.px}"` : `stroke-width="0.9" vector-effect="non-scaling-stroke"`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${-pad} ${-pad} ${W + 2 * pad} ${H + 2 * pad}" ${size}>` +
+    (opt.bg === false && !opt.invert ? "" : `<rect x="${-pad}" y="${-pad}" width="${W + 2 * pad}" height="${H + 2 * pad}" fill="${opt.invert ? COL.ink : COL.paper}"/>`) +
+    `<g transform="translate(0 ${H}) scale(1 -1)">${opt.grid ? gridLines(W, H, sw) : ""}` +
+    `<path d="${res.d}" ${paint(c.fg, opt.px ? { units: LINE } : { px: 1.5 })}/>${opt.pegs ? pegMarks(res.loops, R, c.peg, psw) : ""}</g></svg>`;
+}
+
+// the live board: built once per shape and view, then only the path (and pegs) change per frame
+const board = $("#board");
+let boardPath = null, boardPegs = null, boardBelt = null, boardPulleys = null;
+function buildBoard() {
+  const { W, H } = current, c = colours(state.invert), pad = 1;
+  const sw = m => `stroke-width="${m ? 0.8 : 0.5}" vector-effect="non-scaling-stroke"`;
+  const ink = (x, y, w, h) => state.invert ? `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${COL.ink}"/>` : "";
+  if (state.tile) {
+    // three across, two down, each cell flipped from its neighbour: a repeat that meets itself at every edge
+    const cw = W, ch = H;
+    board.setAttribute("viewBox", `-1 -1 ${3 * cw + 2} ${2 * ch + 2}`);
+    board.innerHTML = ink(-1, -1, 3 * cw + 2, 2 * ch + 2) + `<defs><path id="shape" ${paint(c.fg, { px: 1.5 })}/></defs>` + [0, 1, 2, 3, 4, 5].map(i => {
+      const col = i % 3, row = Math.floor(i / 3), fx = col % 2 === 1, fy = row === 1;
+      return `<g transform="translate(${col * cw + (fx ? cw : 0)} ${row * ch + (fy ? 0 : ch)}) scale(${fx ? -1 : 1} ${fy ? 1 : -1})"><use href="#shape"/></g>`;
+    }).join("") + `<g id="pegs"></g>`;
+  } else {
+    board.setAttribute("viewBox", `${-pad} ${-pad} ${W + 2 * pad} ${H + 2 * pad}`);
+    board.innerHTML = ink(-pad, -pad, W + 2 * pad, H + 2 * pad) + `<g transform="translate(0 ${H}) scale(1 -1)">${state.grid ? gridLines(W, H, sw) : ""}` +
+      `<path id="shape" ${paint(c.fg, { px: 1.75 })}/><g id="pegs"></g>` +
+      `<path id="belt" fill="none" stroke="${COL.claret}" stroke-width="0.16" stroke-dasharray="0.32 0.28"/><g id="pulleys"></g></g>`;
+  }
+  board.setAttribute("preserveAspectRatio", matchMedia("(max-width: 639px)").matches ? "xMidYMid meet" : "xMinYMin meet");
+  boardPath = board.querySelector("#shape");
+  boardPegs = board.querySelector("#pegs");
+  boardBelt = board.querySelector("#belt");
+  boardPulleys = board.querySelector("#pulleys");
+}
+
+// ---------------------------------------------------------------- motion: the house as a machine
+// Every cut group can be posed: pushed deeper or shallower along its cut, and slid along its edge (Belt.pose).
+// A motion is a pose for each group at time t. A frame that fails the check keeps the last good pose, so the
+// machine never breaks its own rules. Drive runs on top of any of them: the belt travels round its pegs.
+let clock0 = performance.now(), lastGood = null, lastD = "", cutOrder = [], lastU = null, shuttleAmp = new Map();
+const plucks = new Map();      // gid -> start time
+const FIRING = [0, 2, 3, 1];   // four cylinders firing 1-3-4-2, as quarter turns of the crank
+const STEPS = 6;               // ratchet teeth per cycle
+const BELT = 1.6;              // belt speed, grid units a second at speed 1
+
+// Every motion loops without a seam. The sequenced ones (build, stamp, ratchet) run forward, hold, run back, hold;
+// engine and shuttle are periodic; the belt runs out and back. So a loop never cuts back to its first frame.
+function forward(motion) {   // [duration of the forward run, hold at each end], seconds
+  const T = state.tempo, n = Math.max(1, cutOrder.length);
+  if (motion === "build") return [((n - 1) * 0.45 + 0.7) / T, 1.2 / T];
+  if (motion === "stamp") return [((n - 1) * 0.5 + 0.5) / T, 1.2 / T];
+  if (motion === "ratchet") return [STEPS * 0.5 / T, 0.6 / T];
+  return null;
+}
+function cycle(motion = state.motion) {   // one whole loop, seconds
+  const f = forward(motion), T = state.tempo;
+  if (f) return 2 * (f[0] + f[1]);
+  if (motion === "engine") return 2.4 / T;
+  if (motion === "shuttle") return 4 / T;
+  return 6 / T;
+}
+// time along the forward run for loop time u: out, hold, back, hold
+function pingpong(u, F, Hd) {
+  if (u < F) return u;
+  if (u < F + Hd) return F;
+  if (u < 2 * F + Hd) return F - (u - F - Hd);
+  return 0;
+}
+// slider-crank: piston position 0..1 (1 at top dead centre) for crank angle th, connecting rod 3.2 x the crank
+const crank = th => { const l = 3.2; return (Math.cos(th) + Math.sqrt(l * l - Math.sin(th) ** 2) - (l - 1)) / 2; };
+const cube = x => x * x * x, outCube = x => 1 - Math.pow(1 - x, 3);
+
+function motionAt(t, motion) {
+  const sw = state.swing, T = state.tempo, rank = new Map(cutOrder.map((g, i) => [g, i]));
+  const L = cycle(motion), u = ((t % L) + L) % L, now = performance.now(), f = forward(motion);
+  const tau = f ? pingpong((u + f[1] / 2) % L, f[0], f[1]) : u;   // start halfway through the empty hold
+  const depth = g => {
+    let k = 1;
+    if (motion === "build") {
+      // each cut eases in from its edge, overshooting a touch
+      const x = (tau - rank.get(g) * 0.45 / T) / (0.7 / T);
+      if (x <= 0) return null;
+      k = x >= 1 ? 1 : outCube(x) + Math.sin(x * Math.PI) * 0.25 * sw;
+    } else if (motion === "stamp") {
+      // a press: each cut is punched in, hard, with a little rebound
+      const x = (tau - rank.get(g) * 0.5 / T) / (0.16 / T);
+      if (x <= 0) return null;
+      k = x < 1 ? cube(x) * (1 + 0.15 * sw) : 1 + 0.15 * sw * Math.exp(-(x - 1) * 2.5) * Math.cos((x - 1) * 4);
+    } else if (motion === "engine") {
+      const th = 2 * Math.PI * u / L - FIRING[rank.get(g) % 4] * Math.PI / 2;
+      k = 1 - sw * (1 - crank(th));
+    } else if (motion === "ratchet") {
+      // one tooth per tick: a quick click, then still until the next
+      const tick = 0.5 / T, n = Math.floor(tau / tick), x = tau / tick - n;
+      k = 1 - sw * Math.min(1, (n + outCube(Math.min(1, x / 0.16))) / STEPS);
+    }
+    const p = plucks.get(g);
+    if (p !== undefined) { const dt = (now - p) / 1000; k *= 1 - 0.55 * Math.exp(-dt * 2.2) * Math.cos(dt * 17); }
+    return k;
+  };
+  // shuttle: every cut runs back and forth along its edge together, each as far as it can go without jamming
+  const shift = motion === "shuttle" ? g => (shuttleAmp.get(g) || 0) * Math.sin(2 * Math.PI * u / L) : () => 0;
+  return { depth, shift, u, L, tau };
+}
+
+// how far each cut can shuttle on its own before it hits something (worked out once per shape)
+function measureShuttle() {
+  shuttleAmp = new Map();
+  const reach = state.swing * 6;
+  for (const g of cutOrder) for (const a of [reach, reach * 0.66, reach * 0.4, reach * 0.2]) {
+    const ok = [a, -a].every(d => Belt.validate(Belt.pose(current, () => 1, h => h === g ? d : 0), current.R));
+    if (ok) { shuttleAmp.set(g, a); break; }
+  }
+}
+
+function poseAt(t, motion = state.motion) {
+  const now = performance.now();
+  for (const [g, p] of plucks) if (now - p > 2500) plucks.delete(g);
+  if (motion === "still" && plucks.size === 0) return current.loops;
+  const m = motionAt(t, motion), L = Belt.pose(current, m.depth, m.shift);
+  if (Belt.validate(L, current.R)) lastGood = L;
+  return lastGood || current.loops;
+}
+
+// drive: belt teeth travel along the belt; each peg is a pulley turning with it.
+// The belt wraps + pegs anticlockwise and - pegs clockwise, so pulleys and idlers turn opposite ways, at belt speed / R.
+// It runs out and eases back once per loop of the current motion, so it is home again when the loop closes.
+// One way (or reverse) it runs at a steady speed instead. To still loop without a seam, the distance it covers in one
+// loop is a whole number of half turns of a peg (the + and − look the same after half a turn), and the tooth pitch
+// is stretched a hair so that distance is a whole number of teeth too.
+function beltLap() {   // distance per loop and tooth pitch, for one-way running
+  const L = cycle(), R = current.R, half = Math.PI * R;
+  const D = Math.max(1, Math.round(BELT * state.tempo * L / half)) * half;
+  return { L, D, pitch: D / Math.max(1, Math.round(D / 0.6)) };
+}
+const beltTravel = t => {
+  const L = cycle(), u = ((t % L) + L) % L;
+  if (state.beltDir === "swing") return BELT * state.tempo * L / Math.PI * (1 - Math.cos(2 * Math.PI * u / L)) / 2;
+  const { D } = beltLap();
+  return (state.beltDir === "rev" ? -1 : 1) * D * u / L;
+};
+const beltDash = () => { const p = state.beltDir === "swing" ? 0.6 : beltLap().pitch; return [p * 0.533, p * 0.467]; };
+// Each pulley is drawn the way pegs are marked on the construction sheets: a thin ring and its sign, + or −.
+// The sign turns with the belt, which is all the movement it needs to show.
+function pegMark(p, R) {   // ring radius and the sign's strokes, in the peg's own turning frame
+  const r = R * 0.8, m = R * 0.5;
+  return { r, strokes: p.s > 0 ? [[-m, 0, m, 0], [0, -m, 0, m]] : [[-m, 0, m, 0]] };
+}
+function pulleys(loops, R, t, fg, bg) {
+  const o = [], v = beltTravel(t);
+  for (const l of loops) for (const p of l) {
+    const a = (p.s > 0 ? 1 : -1) * v / R * 180 / Math.PI, c = p.s > 0 ? bg : fg, { r, strokes } = pegMark(p, R);
+    o.push(`<g transform="translate(${p.x} ${p.y}) rotate(${a.toFixed(2)})" stroke="${c}" fill="none" stroke-linecap="round">` +
+      `<circle r="${r}" stroke-width="0.04"/>` + strokes.map(([x1, y1, x2, y2]) => `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke-width="0.07"/>`).join("") + `</g>`);
+  }
+  return o.join("");
+}
+
+// sounds of the machine: one struck, filtered click, tuned per motion
+let audio = null;
+const ac = () => (audio = audio || new (window.AudioContext || window.webkitAudioContext)());
+function strike(f, dur, gain, noise = 0.6) {
+  if (!state.sound) return;
+  const A = ac(), t = A.currentTime, out = A.createGain();
+  out.gain.setValueAtTime(gain, t); out.gain.exponentialRampToValueAtTime(0.0001, t + dur); out.connect(A.destination);
+  const o = A.createOscillator(); o.type = "sine"; o.frequency.setValueAtTime(f * 1.6, t); o.frequency.exponentialRampToValueAtTime(f, t + 0.03);
+  o.connect(out); o.start(t); o.stop(t + dur);
+  const buf = A.createBuffer(1, Math.ceil(A.sampleRate * dur), A.sampleRate), ch = buf.getChannelData(0);
+  for (let i = 0; i < ch.length; i++) ch[i] = (Math.random() * 2 - 1) * Math.exp(-i / (A.sampleRate * 0.012));
+  const n = A.createBufferSource(), bp = A.createBiquadFilter(), ng = A.createGain();
+  bp.type = "bandpass"; bp.frequency.value = f * 6; bp.Q.value = 1.4; ng.gain.value = noise;
+  n.buffer = buf; n.connect(bp).connect(ng).connect(out); n.start(t);
+}
+// sound events crossed between the last frame and this one, running either way along the forward run
+function sounds(m, motion) {
+  const prev = lastU; lastU = { u: m.u, tau: m.tau };
+  if (prev === null || !state.sound) return;
+  const T = state.tempo;
+  const passed = at => Math.min(prev.tau, m.tau) < at && at <= Math.max(prev.tau, m.tau);
+  if (motion === "stamp") cutOrder.forEach((g, i) => { if (passed(i * 0.5 / T + 0.16 / T)) strike(70, 0.35, 0.22, 0.9); });
+  if (motion === "build") cutOrder.forEach((g, i) => { if (passed(i * 0.45 / T + 0.05 / T)) strike(320, 0.09, 0.05, 0.6); });
+  if (motion === "ratchet") for (let n = 1; n <= STEPS; n++) if (passed(n * 0.5 / T)) strike(900, 0.06, 0.07, 1);
+  if (motion === "engine") {
+    const crossed = at => prev.u <= m.u ? at > prev.u && at <= m.u : at > prev.u || at <= m.u;
+    for (let q = 0; q < 4; q++) if (crossed(q * m.L / 4)) strike(55, 0.18, 0.12, 0.5);
+  }
+}
+
+function frame(rebuild) {
+  if (!current) return;
+  if (rebuild) { buildBoard(); lastD = ""; }
+  const t = (performance.now() - clock0) / 1000, loops = poseAt(t);
+  if (state.motion !== "still") sounds(motionAt(t, state.motion), state.motion);
+  const d = loops === current.loops ? current.d : Belt.pathD(loops, current.R);
+  if (d !== lastD) {
+    boardPath.setAttribute("d", d); lastD = d;
+    boardPegs.innerHTML = state.pegs && !state.tile ? pegMarks(loops, current.R, colours(state.invert).peg, `stroke-width="0.9" vector-effect="non-scaling-stroke"`) : "";
+  }
+  if (!boardBelt) return;
+  if (state.drive) {
+    boardBelt.setAttribute("d", d); boardBelt.setAttribute("stroke-dashoffset", (-beltTravel(t)).toFixed(4));
+    boardBelt.setAttribute("stroke-dasharray", beltDash().map(x => x.toFixed(4)).join(" "));
+    const fg = colours(state.invert).fg;
+    boardPulleys.innerHTML = pulleys(loops, current.R, t, fg, state.outline ? fg : state.invert ? COL.ink : COL.paper);
+  } else if (boardBelt.hasAttribute("d")) { boardBelt.removeAttribute("d"); boardPulleys.innerHTML = ""; }
+}
+function restartClock() { clock0 = performance.now(); lastGood = null; lastU = null; frame(true); }
+(function tick() { if (current && (state.motion !== "still" || state.drive || plucks.size)) frame(false); requestAnimationFrame(tick); })();
+
+// ---------------------------------------------------------------- pluck: click a cut and it twangs like a belt; longer cuts ring lower
+function pluckSound(len, maxLen) {
+  if (!state.sound) return;
+  ac();
+  const scale = [0, 3, 5, 7, 10], steps = 13, i = Math.round((1 - Math.min(1, len / maxLen)) * (steps - 1));
+  const f = 98 * Math.pow(2, (Math.floor(i / 5) * 12 + scale[i % 5]) / 12), t = audio.currentTime;
+  const out = audio.createGain(); out.gain.value = 0.0001; out.connect(audio.destination);
+  out.gain.exponentialRampToValueAtTime(0.16, t + 0.008); out.gain.exponentialRampToValueAtTime(0.0001, t + 1.6);
+  [[1, "triangle", 1], [2, "sine", 0.35], [3.01, "sine", 0.12]].forEach(([h, type, g]) => {
+    const o = audio.createOscillator(), gn = audio.createGain();
+    o.type = type; o.frequency.setValueAtTime(f * h * 1.012, t); o.frequency.exponentialRampToValueAtTime(f * h, t + 0.08);
+    gn.gain.value = g; o.connect(gn).connect(out); o.start(t); o.stop(t + 1.7);
+  });
+}
+board.addEventListener("pointerdown", e => {
+  if (!current || state.tile) return;
+  const pt = board.createSVGPoint(); pt.x = e.clientX; pt.y = e.clientY;
+  const q = pt.matrixTransform(board.getScreenCTM().inverse()), gx = q.x, gy = current.H - q.y;
+  let best = null;
+  for (const f of current.feats) for (const p of f.pegs) {
+    if (p.s > 0) continue;
+    const d = Math.hypot(p.x - gx, p.y - gy);
+    if (!best || d < best.d) best = { d, f };
+  }
+  if (!best || best.d > Math.max(current.W, current.H) * 0.25) return;
+  const g = best.f.gid, len = Math.max(...current.feats.filter(f => f.gid === g).flatMap(f => f.pegs.map(p => Math.hypot(p.ox, p.oy))));
+  plucks.set(g, performance.now());
+  pluckSound(len, Math.max(current.W, current.H) * 0.7);
+});
+
+// ---------------------------------------------------------------- generate
+const vars = $("#vars"), spec = $("#spec");
+const params = s => ({ ...state, seed: s });
+let token = 0, timer = null;
+function schedule() { clearTimeout(timer); timer = setTimeout(run, 120); }
+function run() {
+  const my = ++token;
+  requestAnimationFrame(() => setTimeout(() => {
+    if (my !== token) return;
+    current = Belt.generate(params(state.seed));
+    cutOrder = [...new Set(current.feats.map(f => f.gid))].sort((a, b) => a - b);
+    plucks.clear();
+    measureShuttle();
+    restartClock();
+    spec.innerHTML = [["Seed", current.seed], ["Build", current.family], ["Cuts", cutOrder.length], ["Pegs", current.pegs],
+      ["Field", `${current.W} × ${current.H}`], ["Peg / hairline", `${current.R} / ${state.gap}`]]
+      .map(([k, v]) => `<div><dt class="label muted">${k}</dt><dd>${v}</dd></div>`).join("");
+    variations(my);
+  }, 0));
+}
+// six neighbouring seeds, built one per tick so the main preview never waits on them
+function variations(my) {
+  vars.innerHTML = "";
+  let i = 1;
+  const next = () => {
+    if (my !== token || i > 6) return;
+    const s = state.seed + i++, res = Belt.generate(params(s));
+    const b = document.createElement("button");
+    b.title = `Seed ${s}`; b.setAttribute("aria-label", `Use seed ${s}`);
+    b.innerHTML = svgFile(res, { grid: false, pegs: false, invert: state.invert, bg: false });
+    b.onclick = () => { state.seed = s; sync(); run(); };
+    vars.appendChild(b);
+    setTimeout(next, 0);
+  };
+  setTimeout(next, 0);
+}
+
+// ---------------------------------------------------------------- take away
+function save(blob, name) {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+const fname = ext => `pegbelt-shape-house-${current.family}-${current.W}x${current.H}-${current.seed}.${ext}`;
+$$("[data-dl]").forEach(b => b.onclick = () => {
+  if (!current) return;
+  const kind = b.dataset.dl, view = { grid: state.grid, pegs: state.pegs, invert: state.invert };
+  if (kind === "svg") save(new Blob([svgFile(current, { ...view, px: 24 })], { type: "image/svg+xml" }), fname("svg"));
+  if (kind === "png") {
+    const px = 4096 / (Math.max(current.W, current.H) + 2);
+    const img = new Image(), url = URL.createObjectURL(new Blob([svgFile(current, { ...view, px })], { type: "image/svg+xml" }));
+    img.onload = () => {
+      const c = document.createElement("canvas");
+      c.width = img.width; c.height = img.height;
+      c.getContext("2d").drawImage(img, 0, 0);
+      URL.revokeObjectURL(url);
+      c.toBlob(bl => save(bl, fname("png")), "image/png");
+    };
+    img.src = url;
+  }
+  if (kind === "json") {
+    const out = { W: current.W, H: current.H, R: current.R, seed: current.seed, family: current.family, params: params(current.seed),
+      loops: current.loops.map(l => l.map(p => [p.x, p.y, p.s])) };
+    save(new Blob([JSON.stringify(out, null, 1)], { type: "application/json" }), fname("json"));
+  }
+});
+
+// video: one exact cycle of the current motion (Still records the belt running). Frames are drawn at exact times
+// and encoded with WebCodecs into an MP4 (mp4-muxer), so the last frame meets the first and the loop has no seam.
+// Browsers without WebCodecs fall back to recording the canvas in real time.
+const recBtn = $("#record"), FPS = 30;
+function videoCanvas() {
+  const { W, H } = current, pad = 1, px = Math.floor(1080 / (Math.max(W, H) + 2 * pad));
+  const cv = document.createElement("canvas");
+  cv.width = (W + 2 * pad) * px & ~1; cv.height = (H + 2 * pad) * px & ~1;
+  return { cv, ctx: cv.getContext("2d"), px, pad };
+}
+function drawVideoFrame({ cv, ctx, px, pad }, t) {
+  const { W, H, R } = current, c = colours(state.invert);
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.fillStyle = state.invert ? COL.ink : COL.paper; ctx.fillRect(0, 0, cv.width, cv.height);
+  ctx.setTransform(px, 0, 0, -px, pad * px, (H + pad) * px);
+  if (state.grid) {
+    ctx.strokeStyle = COL.claret;
+    const line = (x1, y1, x2, y2, major) => { ctx.globalAlpha = major ? 0.36 : 0.12; ctx.lineWidth = (major ? 0.8 : 0.5) * 2 / px;
+      ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); };
+    for (let x = 0; x <= W; x++) line(x, 0, x, H, x % 4 === 0);
+    for (let y = 0; y <= H; y++) line(0, y, W, y, y % 4 === 0);
+    ctx.globalAlpha = 1;
+  }
+  const loops = poseAt(t), path = new Path2D(Belt.pathD(loops, R));
+  if (state.outline) { ctx.strokeStyle = c.fg; ctx.lineWidth = LINE; ctx.lineJoin = "round"; ctx.stroke(path); }
+  else { ctx.fillStyle = c.fg; ctx.fill(path, "evenodd"); }
+  if (!state.drive) return;
+  const v = beltTravel(t);
+  ctx.strokeStyle = COL.claret; ctx.lineWidth = 0.16; ctx.setLineDash(beltDash()); ctx.lineDashOffset = -v; ctx.stroke(path); ctx.setLineDash([]);
+  for (const l of loops) for (const p of l) {
+    const col = p.s > 0 && !state.outline ? (state.invert ? COL.ink : COL.paper) : c.fg, a = (p.s > 0 ? 1 : -1) * v / R, { r, strokes } = pegMark(p, R);
+    ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(a); ctx.strokeStyle = col; ctx.lineCap = "round";
+    ctx.lineWidth = 0.04; ctx.beginPath(); ctx.arc(0, 0, r, 0, 2 * Math.PI); ctx.stroke();
+    ctx.lineWidth = 0.07; for (const [x1, y1, x2, y2] of strokes) { ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); }
+    ctx.restore();
+  }
+}
+const recDone = () => { recBtn.textContent = "Video"; recBtn.classList.remove("rec"); delete recBtn.dataset.busy; };
+
+async function exactVideo(V, L) {
+  const config = { codec: "avc1.640028", width: V.cv.width, height: V.cv.height, bitrate: 8e6, framerate: FPS };
+  if (!window.VideoEncoder || !(await VideoEncoder.isConfigSupported(config)).supported) return false;
+  const muxer = new Mp4Muxer.Muxer({ target: new Mp4Muxer.ArrayBufferTarget(), fastStart: "in-memory",
+    video: { codec: "avc", width: V.cv.width, height: V.cv.height } });
+  let failed = null;
+  const enc = new VideoEncoder({ output: (chunk, meta) => muxer.addVideoChunk(chunk, meta), error: e => failed = e });
+  enc.configure(config);
+  const N = Math.max(1, Math.round(L * FPS)), us = 1e6 / FPS;
+  lastGood = null;
+  for (let i = 0; i < N && !failed; i++) {
+    drawVideoFrame(V, i * L / N);   // frame N would be frame 0 again: stop one short
+    const f = new VideoFrame(V.cv, { timestamp: Math.round(i * us), duration: Math.round(us) });
+    enc.encode(f, { keyFrame: i % 60 === 0 }); f.close();
+    if (i % 8 === 0) { recBtn.textContent = `Rendering ${Math.round(100 * i / N)}%`; await new Promise(r => setTimeout(r, 0)); }
+  }
+  await enc.flush(); enc.close();
+  if (failed) throw failed;
+  muxer.finalize();
+  save(new Blob([muxer.target.buffer], { type: "video/mp4" }), fname("mp4"));
+  return true;
+}
+function realtimeVideo(V, L) {
+  const types = ["video/mp4;codecs=avc1", "video/mp4", "video/webm;codecs=vp9", "video/webm"];
+  const mime = types.find(t => window.MediaRecorder && MediaRecorder.isTypeSupported(t));
+  if (!mime) { recBtn.textContent = "No video here"; setTimeout(recDone, 2000); return; }
+  const rec = new MediaRecorder(V.cv.captureStream(FPS), { mimeType: mime, videoBitsPerSecond: 8e6 }), chunks = [];
+  rec.ondataavailable = e => e.data.size && chunks.push(e.data);
+  rec.onstop = () => { save(new Blob(chunks, { type: mime.split(";")[0] }), fname(mime.startsWith("video/mp4") ? "mp4" : "webm")); recDone(); };
+  let t0 = null;
+  const draw = () => {
+    const t = (performance.now() - t0) / 1000;
+    drawVideoFrame(V, Math.min(t, L - 1e-3));
+    recBtn.textContent = `Recording ${Math.max(0, L - t).toFixed(1)}s`;
+    if (t < L) requestAnimationFrame(draw); else rec.stop();
+  };
+  drawVideoFrame(V, 0);
+  rec.onstart = () => { t0 = performance.now(); requestAnimationFrame(draw); };
+  rec.start();
+}
+recBtn.onclick = async () => {
+  if (!current || recBtn.dataset.busy) return;
+  if (state.motion === "still" && !state.drive) { state.drive = true; sync(); restartClock(); }
+  recBtn.dataset.busy = 1; recBtn.classList.add("rec");
+  plucks.clear();
+  const V = videoCanvas(), L = cycle();
+  try { if (await exactVideo(V, L)) return recDone(); } catch (e) { console.warn("exact video failed, recording live", e); }
+  realtimeVideo(V, L);
+};
+
+// a pasted link takes the house to that shape
+addEventListener("hashchange", () => {
+  try { state = { ...DEFAULTS, ...JSON.parse(decodeURIComponent(location.hash.slice(1)) || "{}") }; } catch (e) { return; }
+  sync(); run();
+});
+
+
+// ---------------------------------------------------------------- phone layout
+// Under 640 px the controls become tabs under the pinned shape; the seed actions move to a thumb bar, the neighbours
+// into the Seed tab and the take-aways into a Save tab. Wider again, everything goes back where it was.
+(() => {
+  const mq = matchMedia("(max-width: 639px)"), rail = $(".rail"), groups = [...rail.querySelectorAll(":scope > .group")];
+  const save = document.createElement("div"); save.className = "group";
+  save.innerHTML = '<span class="tag">Save:</span><p class="note">Take-aways follow the view: grid and pegs come along when shown. Video records one cycle of the motion.</p>';
+  groups.push(save);
+  const names = ["Seed", "Motion", "Shape", "Grid", "View", "Save"];
+  const tabs = document.createElement("nav"); tabs.className = "tabs"; tabs.setAttribute("role", "tablist");
+  const dock = document.createElement("div"); dock.className = "dock";
+  let cur = 0;
+  try { cur = Math.min(5, +localStorage.getItem("shapehouse-tab") || 0); } catch (e) {}
+  const show = i => {
+    cur = i;
+    groups.forEach((g, j) => g.classList.toggle("on", j === i));
+    [...tabs.children].forEach((b, j) => b.setAttribute("aria-selected", String(j === i)));
+    try { localStorage.setItem("shapehouse-tab", i); } catch (e) {}
+  };
+  names.forEach((n, i) => {
+    const b = document.createElement("button"); b.textContent = n; b.setAttribute("role", "tab");
+    b.onclick = () => show(i); tabs.appendChild(b);
+  });
+  // nodes that move, with a marker where each one lives on desktop
+  const moves = [[$(".go"), dock], [$("#vars"), groups[0]], [$(".masthead .meta button")?.parentElement, save]];
+  const marks = moves.map(([n]) => { const c = document.createComment("phone"); n.before(c); return c; });
+  function apply() {
+    if (mq.matches) {
+      rail.prepend(tabs); rail.appendChild(save); document.body.appendChild(dock);
+      moves.forEach(([n, to]) => { to.appendChild(n); });
+      moves[2][0].classList.add("takeaway");
+      show(cur);
+    } else {
+      tabs.remove(); save.remove(); dock.remove();
+      moves.forEach(([n], i) => marks[i].after(n));
+      moves[2][0].classList.remove("takeaway");
+    }
+  }
+  mq.addEventListener("change", apply);
+  apply();
+})();
+
+sync();
+run();
+</script>
+</body>
+</html>
