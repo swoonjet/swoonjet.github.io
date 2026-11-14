@@ -45,6 +45,7 @@ Experiments in emergence: simple rules and small systems that grow into instrume
 - [Cadastre](https://jontoews.com/cadastre/): Generate a whole city from a seed — terrain, streets, parcels, parks, every place named. Pan, zoom, export it poster-size.
 - [Linger](https://jontoews.com/linger/): Short fiction and poetry at the speed of reflection. No scrolling, no skimming — just the prose.
 - [Weather Reports](https://jontoews.com/Weather-Reports-Field-Guide/): Forty-six writers, one premise: an unexplained weather phenomenon over World C6H-ɛ. Read it as anthology, archive, or apply for a researcher post.
+- [Pegbelt Shape House](https://jontoews.com/shape-house/): Shapes made of a belt pulled tight round pegs on a grid: lobes, V-bites and hairline necks. Generate one, set it moving like machinery, pluck its cuts, and take it away as SVG, PNG, pegs or video.
 - [Grainfield](https://jontoews.com/grainfield/): A browser-based granular synthesis explorer. Pull a sound apart on a node canvas and listen to its grains.
 - [Chord Loom](https://jontoews.com/chord-loom/): Build a chord and load it onto one of twelve breathing pads, each with its own envelope, tape-loop memory, and reverb.
 - [Single Cell Battle](https://jontoews.com/single-cell-battle/): A turn-based microorganism battler ported from a Python sim. Roll a roster, fight the computer's, win and evolve — lose three times and die.
