@@ -351,8 +351,9 @@ main { position: relative; display: flex; align-items: center; justify-content: 
   </section>
 
   <section data-only="protozoa">
-    <h2>Slide <a data-reset="pz_count pz_size pz_debris pz_focus pz_dof pz_halo pz_scope pz_dark">reset</a></h2>
+    <h2>Slide <a data-reset="pz_count pz_variety pz_size pz_debris pz_focus pz_dof pz_halo pz_scope pz_dark">reset</a></h2>
     <div class="row"><label for="pz_count">Organisms</label><input type="range" id="pz_count" min="5" max="120" step="1"><output></output></div>
+    <div class="row"><label for="pz_variety" title="0: ciliates, amoebae and diatoms only; up: euglenas, rotifers, volvox, vorticellas, heliozoa and desmids too">Variety</label><input type="range" id="pz_variety" min="0" max="1" step="0.01"><output></output></div>
     <div class="row"><label for="pz_size">Size</label><input type="range" id="pz_size" min="0.4" max="2.5" step="0.05"><output></output></div>
     <div class="row"><label for="pz_debris">Debris</label><input type="range" id="pz_debris" min="0" max="2" step="0.05"><output></output></div>
     <div class="row"><label for="pz_focus">Focus depth</label><input type="range" id="pz_focus" min="-1" max="1" step="0.02"><output></output></div>
@@ -543,7 +544,7 @@ main { position: relative; display: flex; align-items: center; justify-content: 
   </section>
 
   <section data-only="coil fans rings ribbons dabs thatch weave burst crystals pumice leather sludge wood shag elephant crochet knit pine mycelium bones syrup rust delaunay scales amethyst">
-    <h2>Light &amp; depth <a data-reset="light shadow ao depth">reset</a></h2>
+    <h2>Light &amp; depth <a data-reset="light outline shadow ao depth">reset</a></h2>
     <div class="lightrow">
       <svg id="dial" viewBox="-30 -30 60 60" aria-label="Light direction">
         <circle r="26" fill="none" stroke="currentColor" stroke-opacity="0.25"/>
@@ -553,9 +554,18 @@ main { position: relative; display: flex; align-items: center; justify-content: 
       </svg>
       <div class="row" style="grid-template-columns: 1fr 44px; margin:0"><input type="range" id="light" min="0" max="359" step="1"><output></output></div>
     </div>
+    <div class="row"><label for="outline">Outlines</label><input type="range" id="outline" min="0" max="1.5" step="0.05"><output></output></div>
     <div class="row"><label for="shadow">Cast shadow</label><input type="range" id="shadow" min="0" max="0.9" step="0.01"><output></output></div>
     <div class="row"><label for="ao">Occlusion</label><input type="range" id="ao" min="0" max="0.9" step="0.01"><output></output></div>
     <div class="row"><label for="depth">Layer lift</label><input type="range" id="depth" min="0" max="0.45" step="0.01"><output></output></div>
+  </section>
+
+  <section>
+    <h2>Combine <a data-reset="layer layer_blend layer_mix">reset</a></h2>
+    <p class="sub">Lay a second texture over this one, on the same strokes</p>
+    <div class="row"><label for="layer">With</label><select id="layer" style="grid-column: 2 / 4"></select></div>
+    <div class="row"><label for="layer_blend">Blend</label><select id="layer_blend" style="grid-column: 2 / 4"></select></div>
+    <div class="row"><label for="layer_mix">Amount</label><input type="range" id="layer_mix" min="0" max="1" step="0.01"><output></output></div>
   </section>
 
   <section>
@@ -587,9 +597,9 @@ const SLIDERS = ["width", "fill", "swirl", "strokes", "eyes", "fat", "rough", "d
                  "rg_centres", "rg_width", "rg_wobble", "rg_breaks", "rb_count", "rb_wave", "rb_angle", "rb_breaks",
                  "db_count", "db_size", "db_order", "db_curve",
                  "th_angle", "th_length", "th_width", "th_overlap", "th_jitter", "wv_count", "wv_angle", "wv_width", "wv_span", "bu_centres", "bu_length", "bu_width", "bu_curl", "kn_stitch", "kn_loose", "kn_uneven", "kn_twist", "kn_fuzz", "kn_rib", "kn_stripes", "pn_density", "pn_length", "pn_width", "pn_align", "pn_depth", "pn_decay", "pn_fresh", "my_seeds", "my_time", "my_branch", "my_wander", "my_density", "my_cords", "my_glow", "bb_density", "bb_size", "bb_hollow", "bb_curve", "bb_align", "bb_pores", "bb_stain", "sy_sheet", "sy_pour", "sy_coil", "sy_level", "sy_bubbles", "sy_depth", "sy_gloss", "ru_amount", "ru_bloom", "ru_flakes", "ru_flake_size", "ru_pits", "ru_scale", "ru_streaks", "dl_points", "dl_adapt", "dl_regular", "dl_relief", "dl_edges", "dl_tones", "sc_size", "sc_rows", "sc_lift", "sc_dome", "sc_growth", "sc_uneven", "sc_tones", "sc_mix", "am_size", "am_density", "am_lean", "am_sharp", "am_align", "am_zone", "am_clarity",
-                 "pz_count", "pz_size", "pz_debris", "pz_focus", "pz_dof", "pz_halo", "pz_scope", "pz_dark", "pitch", "wander", "fibre", "clump", "round", "sheen", "light", "shadow", "ao", "depth", "specks", "grain"];
+                 "pz_count", "pz_variety", "pz_size", "pz_debris", "pz_focus", "pz_dof", "pz_halo", "pz_scope", "pz_dark", "pitch", "wander", "fibre", "clump", "round", "sheen", "light", "outline", "shadow", "ao", "depth", "layer_mix", "specks", "grain"];
 const COLORS = ["color", "dark", "light_color"];
-const FMT = { pitch: (v) => v.toFixed(1) + "px", light: (v) => Math.round(v) + "°", specks: (v) => String(Math.round(v)),
+const FMT = { pz_variety: (v) => Math.round(v * 100) + "%", layer_mix: (v) => Math.round(v * 100) + "%", outline: (v) => Math.round(v * 100) + "%", pitch: (v) => v.toFixed(1) + "px", light: (v) => Math.round(v) + "°", specks: (v) => String(Math.round(v)),
               width: (v) => Math.round(v * 100) + "%", fill: (v) => v.toFixed(1) + "×",
               strokes: (v) => String(Math.round(v)), eyes: (v) => String(Math.round(v)),
               shard: (v) => v.toFixed(1) + "px", opacity: (v) => Math.round(v * 100) + "%", underlay: (v) => Math.round(v * 100) + "%",
@@ -620,6 +630,8 @@ const SUGGEST = { leather: "Saddle", sludge: "Bog", candy: "Candy", ink: "Sumi",
 // the second colour each material starts from (yarn, fresh needles, the mold, the syrup)
 const ACCENT = { shag: "#3f7f8c", crochet: "#3f7f8c", knit: "#8a4a3a", pine: "#4f6b2a", scales: "#c9a24a" };
 const SELECTS = ["blend", "sparkle_blend"];
+// Combine: Imprint presses the second texture's relief into the first; Underneath shows it in the first one's shadows
+const LAYER_BLENDS = ["Imprint", "Underneath", "Patches", "Multiply", "Screen", "Overlay"];
 const BLENDS = ["Normal", "Multiply", "Screen", "Overlay", "Soft light", "Hard light", "Darken", "Lighten",
                 "Color dodge", "Color burn", "Add", "Difference", "Luminosity"];
 const TAGLINE = { coil: "one stroke, the whole screen", fans: "strokes swept round hidden vortices",
@@ -635,7 +647,7 @@ const TAGLINE = { coil: "one stroke, the whole screen", fans: "strokes swept rou
 let DEF = {}, PRESETS = {}, state = {}, size = { w: 2560, h: 1440 }, ready = false;
 
 // the renderer: silk's Python, running in a worker (Pyodide)
-const worker = new Worker("worker.js?v=207b2208");
+const worker = new Worker("worker.js?v=b34021d8");
 let seq = 0;
 const waiting = new Map();
 worker.onmessage = ({ data }) => {
@@ -671,6 +683,7 @@ function paint() {  // state -> controls
   if (HOSTTXT[state.mode]) { $("hostLabel").textContent = HOSTTXT[state.mode][0]; $("hostSlab").textContent = HOSTTXT[state.mode][1]; }
   $("tint").value = state.tint;
   for (const k of SELECTS) $(k).value = state[k];
+  $("layer").value = state.layer; $("layer_blend").value = state.layer_blend;
   $("tagline").textContent = TAGLINE[state.mode];
   $("seed").value = state.seed;
   for (const k of SLIDERS) {
@@ -781,7 +794,7 @@ function surprise() {
     ink_diffuse: +rnd(0.2, 1).toFixed(2), ink_fall: pick([90, 90, 270, Math.round(rnd(0, 359))]),
   });
   if (state.mode === "protozoa") Object.assign(state, {
-    pz_count: Math.round(rnd(15, 60)), pz_size: +rnd(0.7, 1.5).toFixed(2), pz_focus: +rnd(-0.6, 0.6).toFixed(2),
+    pz_count: Math.round(rnd(15, 60)), pz_variety: +rnd(0.2, 1).toFixed(2), pz_size: +rnd(0.7, 1.5).toFixed(2), pz_focus: +rnd(-0.6, 0.6).toFixed(2),
     pz_scope: pick([0, 0, 0.6, 0.9]), pz_dark: pick([0, 0, 0, 1]),
   });
   if (state.mode === "wood") Object.assign(state, {
@@ -867,7 +880,7 @@ function surprise() {
 
 async function init() {
   setStatus("loading Python (about 25 MB, the first time)…", true);
-  const cfg = await call("boot", { zip: "tex-py.zip?v=207b2208" });
+  const cfg = await call("boot", { zip: "tex-py.zip?v=b34021d8" });
   DEF = cfg.defaults; PRESETS = cfg.presets;
   const saved = load();
   state = { ...DEF, ...(saved?.state || {}) };
@@ -922,6 +935,10 @@ async function init() {
     set("host", h, 0);
   });
   for (const k of SELECTS) { $(k).innerHTML = BLENDS.map((n) => `<option>${n}</option>`).join(""); $(k).onchange = (e) => set(k, e.target.value, 0); }
+  $("layer").innerHTML = '<option value="none">None</option>' + [...document.querySelectorAll("[data-mode]")]
+    .map((b) => `<option value="${b.dataset.mode}">${b.textContent.trim()}</option>`).join("");
+  $("layer_blend").innerHTML = LAYER_BLENDS.map((n) => `<option>${n}</option>`).join("");
+  for (const k of ["layer", "layer_blend"]) $(k).onchange = (e) => set(k, e.target.value, 0);
   $("surprise").onclick = surprise;
   $("render").onclick = renderFull;
 
