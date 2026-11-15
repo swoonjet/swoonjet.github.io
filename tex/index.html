@@ -1,0 +1,944 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tex</title>
+<meta name="description" content="Tex: generative textures in the browser. Silk strokes and twenty materials, downloadable as PNG.">
+<meta name="theme-color" content="#f2f1ee">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Host+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --paper: #f2f1ee; --panel: #ebe9e4; --ink: #111110; --muted: #6b6964; --line: rgba(17,17,16,0.12);
+  --accent: #7b1838; --stage: #d9d6cf;
+  --sans: "Host Grotesk", -apple-system, system-ui, sans-serif; --mono: "JetBrains Mono", ui-monospace, monospace;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--paper); color: var(--ink); font: 13px/1.4 var(--sans); }
+body { display: grid; grid-template-columns: 340px 1fr; grid-template-rows: 56px 1fr; height: 100vh; height: 100dvh; overflow: hidden; }
+
+header { grid-column: 1 / -1; display: flex; align-items: center; gap: 12px; padding: 0 20px; border-bottom: 1px solid var(--line); }
+header h1 { font-size: 15px; font-weight: 700; letter-spacing: -0.01em; margin: 0; }
+header h1 span { color: var(--muted); font-weight: 400; margin-left: 8px; }
+header .spacer { flex: 1; }
+#status { font: 11px var(--mono); color: var(--muted); min-width: 220px; text-align: right; }
+header h1 a { color: var(--muted); font-weight: 400; font-size: 12px; margin-left: 14px; text-decoration: none; }
+header h1 a:hover { color: var(--ink); }
+#actions { display: flex; gap: 12px; }
+#status.busy::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); margin-right: 8px; animation: pulse 0.9s infinite alternate; }
+@keyframes pulse { from { opacity: 0.25 } to { opacity: 1 } }
+
+button { font: 500 12px var(--sans); color: var(--ink); background: transparent; border: 1px solid var(--ink); border-radius: 0; height: 32px; padding: 0 14px; cursor: pointer; white-space: nowrap; }
+button:hover { background: var(--ink); color: var(--paper); }
+button.primary { background: var(--ink); color: var(--paper); }
+button.primary:hover { background: var(--accent); border-color: var(--accent); }
+button:disabled { opacity: 0.35; pointer-events: none; }
+button.icon { width: 32px; padding: 0; font-size: 15px; }
+
+aside { grid-row: 2 / 3; overflow-y: auto; border-right: 1px solid var(--line); background: var(--panel); }
+section { padding: 16px 20px 18px; border-bottom: 1px solid var(--line); }
+section h2 { font: 600 10px var(--sans); text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); margin: 0 0 12px; display: flex; justify-content: space-between; }
+section h2 a { color: var(--muted); text-decoration: none; text-transform: none; letter-spacing: 0; font-weight: 500; cursor: pointer; }
+section h2 a:hover { color: var(--ink); }
+
+.row { display: grid; grid-template-columns: 96px 1fr 44px; align-items: center; gap: 10px; margin: 7px 0; }
+.row label { color: var(--ink); }
+.row output { font: 11px var(--mono); color: var(--muted); text-align: right; }
+input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; height: 18px; background: transparent; margin: 0; }
+input[type=range]::-webkit-slider-runnable-track { height: 1px; background: var(--ink); }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 11px; height: 11px; border-radius: 50%; background: var(--ink); margin-top: -5px; border: 0; }
+input[type=range]:hover::-webkit-slider-thumb { background: var(--accent); }
+
+select, input[type=number] { font: 12px var(--sans); color: var(--ink); background: var(--paper); border: 1px solid var(--line); height: 30px; padding: 0 8px; border-radius: 0; width: 100%; }
+input[type=number] { font-family: var(--mono); }
+.pair { display: grid; grid-template-columns: 1fr auto 1fr; gap: 6px; align-items: center; margin-top: 8px; }
+.pair span { color: var(--muted); }
+
+.swatches { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 14px; }
+.swatch { height: 38px; border: 1px solid var(--line); cursor: pointer; display: flex; flex-direction: column; justify-content: flex-end; padding: 0; position: relative; background: none; }
+.swatch .bar { flex: 1; display: flex; }
+.swatch .bar i { flex: 1; }
+.swatch em { font: 500 9px var(--sans); font-style: normal; text-align: left; padding: 2px 4px; background: var(--paper); color: var(--ink); border-top: 1px solid var(--line); }
+.swatch.on { outline: 2px solid var(--ink); outline-offset: 1px; }
+.swatch:hover { background: none; color: inherit; }
+
+.colors { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.colors label { display: flex; flex-direction: column; gap: 5px; font-size: 11px; color: var(--muted); }
+input[type=color] { -webkit-appearance: none; appearance: none; width: 100%; height: 34px; border: 1px solid var(--line); padding: 0; background: none; cursor: pointer; }
+input[type=color]::-webkit-color-swatch-wrapper { padding: 0; }
+input[type=color]::-webkit-color-swatch { border: 0; }
+.colors code { font: 10px var(--mono); color: var(--muted); }
+.check { display: flex; align-items: center; gap: 8px; margin-top: 10px; color: var(--muted); font-size: 12px; cursor: pointer; }
+.check input { accent-color: var(--ink); }
+
+.form { display: grid; grid-template-columns: repeat(4, 1fr); margin-bottom: 12px; }
+.tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin-bottom: 12px; }
+.tabs button { height: 30px; padding: 0 6px; }
+.tabs button.on { background: var(--ink); color: var(--paper); }
+[hidden] { display: none !important; }
+.form.two { grid-template-columns: 1fr 1fr; }
+.form.three { grid-template-columns: 1fr 1fr 1fr; }
+.sub { font-size: 11px; color: var(--muted); margin: 0 0 6px; }
+.form button { height: 30px; }
+.form button + button { border-left: 0; }
+.form button.on { background: var(--ink); color: var(--paper); }
+body:not(.mode-crystals) .crystalsOnly { display: none; }
+.tabs.five { grid-template-columns: repeat(5, 1fr); }
+.tabs.four { grid-template-columns: repeat(4, 1fr); }
+.form.three button:nth-child(n+4) { border-top: 0; }
+.form.three button:nth-child(3n+1) { border-left: 1px solid var(--ink); }
+.seed { display: grid; grid-template-columns: 1fr 32px 32px 32px; gap: 6px; margin-bottom: 8px; }
+
+.lightrow { display: grid; grid-template-columns: 56px 1fr; gap: 14px; align-items: center; margin-bottom: 4px; }
+#dial { width: 56px; height: 56px; cursor: crosshair; }
+
+main { position: relative; display: flex; align-items: center; justify-content: center; padding: 28px; background: var(--stage); overflow: hidden; }
+#frame { position: relative; box-shadow: 0 1px 0 rgba(0,0,0,0.04), 0 18px 50px rgba(0,0,0,0.18); background: #8a857d; }
+#frame img { display: block; width: 100%; height: 100%; transition: opacity 0.2s; }
+#frame.stale img { opacity: 0.7; }
+#dims { position: absolute; left: 0; top: 100%; margin-top: 8px; font: 11px var(--mono); color: var(--muted); }
+#err { position: absolute; left: 20px; bottom: 16px; font: 12px var(--sans); color: var(--accent); }
+
+
+@media (max-width: 760px) {
+  html, body { height: auto; overflow: visible; }
+  body { display: flex; flex-direction: column; height: auto; min-height: 100dvh; }
+  header { height: 48px; padding: 0 16px; flex: none; gap: 8px; order: -2; }
+  header h1 span { display: none; }
+  #status { min-width: 0; font-size: 10px; }
+  #actions { position: fixed; left: 0; right: 0; bottom: 0; z-index: 3; padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+             background: var(--paper); border-top: 1px solid var(--line); gap: 8px; }
+  #actions button { flex: 1; height: 44px; }
+  main { order: -1; position: sticky; top: 0; z-index: 2; height: 46dvh; padding: 12px 16px 24px; flex: none; border-bottom: 1px solid var(--line); }
+  #dims { margin-top: 4px; font-size: 10px; }
+  #err { left: 16px; bottom: 4px; font-size: 11px; }
+  aside { border-right: 0; overflow: visible; padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
+  section { padding: 16px; }
+  .row { grid-template-columns: 92px 1fr 48px; margin: 6px 0; }
+  input[type=range] { height: 36px; touch-action: pan-y; }
+  input[type=range]::-webkit-slider-thumb { width: 22px; height: 22px; margin-top: -11px; }
+  .tabs button, .form button { height: 40px; }
+  select, input[type=number] { height: 40px; font-size: 16px; }
+  input[type=color] { height: 40px; }
+}
+@media (hover: none) {  /* a tap leaves :hover on; only the chosen button stays dark */
+  button:hover { background: transparent; color: var(--ink); }
+  button.primary:hover { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+  .tabs button.on, .form button.on { background: var(--ink); color: var(--paper); }
+}
+</style>
+</head>
+<body class="form-coil">
+<header>
+  <h1>Tex<span id="tagline">one stroke, the whole screen</span><a href="/">jontoews.com</a></h1>
+  <div class="spacer"></div>
+  <div id="status">starting…</div>
+  <div id="actions">
+    <button id="surprise" title="New seed and a random brush (S)" disabled>Surprise me</button>
+    <button id="render" class="primary" title="Render at full size and download it as a PNG (⌘S)" disabled>Download PNG</button>
+  </div>
+</header>
+
+<aside>
+  <section>
+    <h2>Canvas</h2>
+    <select id="sizePreset"></select>
+    <div class="pair"><input id="W" type="number" min="256" max="5120"><span>×</span><input id="H" type="number" min="256" max="5120"></div>
+  </section>
+
+  <section>
+    <h2>Colour <a id="matchBtn" title="Shadow and highlight from the colour, same hue">match tones</a></h2>
+    <div class="swatches" id="swatches"></div>
+    <div class="colors">
+      <label>Shadow<input type="color" id="dark"><code id="darkHex"></code></label>
+      <label>Colour<input type="color" id="color"><code id="colorHex"></code></label>
+      <label>Highlight<input type="color" id="light_color"><code id="lightHex"></code></label>
+    </div>
+    <label class="check"><input type="checkbox" id="autoMatch"> Shadow and highlight follow the colour</label>
+  </section>
+
+  <section>
+    <h2>Composition <a data-reset="seed width fill swirl strokes eyes fat rough th_angle th_length th_width th_overlap th_jitter wv_count wv_angle wv_width wv_span bu_centres bu_length bu_width bu_curl rg_centres rg_width rg_wobble rg_breaks rb_count rb_wave rb_angle rb_breaks db_count db_size db_order db_curve">reset</a></h2>
+    <p class="sub">Silk</p>
+    <div class="tabs four">
+      <button data-mode="coil" title="One long stroke winding over itself">Coil</button>
+      <button data-mode="fans" title="Many strokes swept round vortices, after gart's Cincinnus">Fans</button>
+      <button data-mode="rings" title="Strokes raked round a few centres, like a stone garden">Rings</button>
+      <button data-mode="ribbons" title="Long bands side by side, bending with one slow wave">Ribbons</button>
+      <button data-mode="dabs" title="Short loaded dabs of the brush">Dabs</button>
+      <button data-mode="thatch" title="One direction, in layers: each row over the roots of the last">Thatch</button>
+      <button data-mode="weave" title="Two sets of bands, over and under">Weave</button>
+      <button data-mode="burst" title="Strokes thrown out from a few centres in tiers, like petals">Burst</button>
+    </div>
+    <p class="sub">Materials</p>
+    <div class="tabs four">
+      <button data-mode="crystals" title="The strokes painted with small triangular crystals">Crystals</button>
+      <button data-mode="pumice" title="The strokes, or a slab, turned to porous stone">Pumice</button>
+      <button data-mode="leather" title="A hide folded, dried and polished for decades">Leather</button>
+      <button data-mode="sludge" title="What is left when the tank drains">Sludge</button>
+      <button data-mode="candy" title="Sugar spun into glass thread">Candy</button>
+      <button data-mode="ink" title="Drops rolling into vortex rings in still water">Ink</button>
+      <button data-mode="protozoa" title="A drop of pond water under the microscope">Protozoa</button>
+      <button data-mode="wood" title="A log through the chipper, thrown into a pile">Wood chips</button>
+      <button data-mode="shag" title="Yarn tufted through a backing, cut, and left to fall over">Shag</button>
+      <button data-mode="elephant" title="Thick wrinkled hide, cracked into a net that holds mud">Elephant</button>
+      <button data-mode="crochet" title="Yarn worked stitch by stitch into rows or rounds">Crochet</button>
+      <button data-mode="knit" title="Loose knit in bulky wool">Knit</button>
+      <button data-mode="pine" title="A forest floor of fallen pine needles">Pine</button>
+      <button data-mode="mycelium" title="A fungus spreading as a net of white threads">Mycelium</button>
+      <button data-mode="bones" title="Packed shards that guess at a bird's skeleton">Bird bones</button>
+      <button data-mode="syrup" title="The page under thick, poured syrup">Syrup</button>
+      <button data-mode="rust" title="Painted steel, rusting and flaking">Rust</button>
+      <button data-mode="delaunay" title="The form rebuilt in Delaunay triangles">Delaunay</button>
+      <button data-mode="scales" title="Half-circle plates laid in overlapping rows">Scales</button>
+      <button data-mode="amethyst" title="The inside of a geode, packed with purple quartz points">Amethyst</button>
+    </div>
+    <div data-only="pumice leather sludge candy ink protozoa wood shag elephant crochet knit pine mycelium bones syrup rust delaunay scales amethyst">
+      <p class="sub" id="hostLabel">Carve the bubbles into</p>
+      <div class="form three">
+        <button data-host="coil">Coil</button>
+        <button data-host="fans">Fans</button>
+        <button data-host="rings">Rings</button>
+        <button data-host="ribbons">Ribbons</button>
+        <button data-host="dabs">Dabs</button>
+        <button data-host="thatch">Thatch</button>
+        <button data-host="weave">Weave</button>
+        <button data-host="burst">Burst</button>
+        <button data-host="slab" id="hostSlab">Slab</button>
+      </div>
+    </div>
+    <div class="crystalsOnly">
+      <p class="sub">Crystals paint the strokes of</p>
+      <div class="form three">
+        <button data-path="coil">Coil</button>
+        <button data-path="fans">Fans</button>
+        <button data-path="rings">Rings</button>
+        <button data-path="ribbons">Ribbons</button>
+        <button data-path="dabs">Dabs</button>
+        <button data-path="thatch">Thatch</button>
+        <button data-path="weave">Weave</button>
+        <button data-path="burst">Burst</button>
+      </div>
+    </div>
+    <div class="seed">
+      <input id="seed" type="number" min="0" max="99999">
+      <button class="icon" id="seedPrev" title="Previous seed">‹</button>
+      <button class="icon" id="seedNext" title="Next seed">›</button>
+      <button class="icon" id="seedDice" title="Random seed (R)">⚄</button>
+    </div>
+    <div data-form="coil">
+    <div class="row"><label for="width">Stroke width</label><input type="range" id="width" min="0.12" max="0.55" step="0.01"><output></output></div>
+    <div class="row"><label for="fill">Layers</label><input type="range" id="fill" min="1.5" max="6" step="0.1"><output></output></div>
+    <div class="row"><label for="swirl">Swirl</label><input type="range" id="swirl" min="0" max="1.3" step="0.05"><output></output></div>
+    </div>
+    <div data-form="fans">
+    <div class="row"><label for="strokes">Strokes</label><input type="range" id="strokes" min="10" max="200" step="5"><output></output></div>
+    </div>
+    <div data-form="rings">
+    <div class="row"><label for="rg_centres">Centres</label><input type="range" id="rg_centres" min="1" max="9" step="1"><output></output></div>
+    <div class="row"><label for="rg_width">Stroke width</label><input type="range" id="rg_width" min="20" max="140" step="1"><output></output></div>
+    <div class="row"><label for="rg_wobble">Wobble</label><input type="range" id="rg_wobble" min="0" max="1.5" step="0.05"><output></output></div>
+    <div class="row"><label for="rg_breaks">Breaks</label><input type="range" id="rg_breaks" min="0" max="1.5" step="0.02"><output></output></div>
+    </div>
+    <div data-form="ribbons">
+    <div class="row"><label for="rb_count">Bands</label><input type="range" id="rb_count" min="3" max="48" step="1"><output></output></div>
+    <div class="row"><label for="rb_wave">Wave</label><input type="range" id="rb_wave" min="0" max="2" step="0.05"><output></output></div>
+    <div class="row"><label for="rb_angle">Direction</label><input type="range" id="rb_angle" min="0" max="179" step="1"><output></output></div>
+    <div class="row"><label for="rb_breaks">Breaks</label><input type="range" id="rb_breaks" min="0" max="1.5" step="0.02"><output></output></div>
+    </div>
+    <div data-form="dabs">
+    <div class="row"><label for="db_count">Dabs</label><input type="range" id="db_count" min="60" max="1500" step="10"><output></output></div>
+    <div class="row"><label for="db_size">Dab size</label><input type="range" id="db_size" min="50" max="450" step="5"><output></output></div>
+    <div class="row"><label for="db_order">Follow flow</label><input type="range" id="db_order" min="0" max="1" step="0.01"><output></output></div>
+    <div class="row"><label for="db_curve">Curve</label><input type="range" id="db_curve" min="0" max="1.5" step="0.05"><output></output></div>
+    </div>
+    <div data-form="thatch">
+    <div class="row"><label for="th_angle">Direction</label><input type="range" id="th_angle" min="0" max="359" step="1"><output></output></div>
+    <div class="row"><label for="th_length">Stroke length</label><input type="range" id="th_length" min="80" max="700" step="5"><output></output></div>
+    <div class="row"><label for="th_width">Stroke width</label><input type="range" id="th_width" min="20" max="160" step="1"><output></output></div>
+    <div class="row"><label for="th_overlap">Overlap</label><input type="range" id="th_overlap" min="0" max="0.9" step="0.01"><output></output></div>
+    <div class="row"><label for="th_jitter">Jitter</label><input type="range" id="th_jitter" min="0" max="1.5" step="0.05"><output></output></div>
+    </div>
+    <div data-form="weave">
+    <div class="row"><label for="wv_count">Bands</label><input type="range" id="wv_count" min="3" max="40" step="1"><output></output></div>
+    <div class="row"><label for="wv_angle">Angle</label><input type="range" id="wv_angle" min="0" max="89" step="1"><output></output></div>
+    <div class="row"><label for="wv_width">Band fill</label><input type="range" id="wv_width" min="0.5" max="1" step="0.01"><output></output></div>
+    <div class="row"><label for="wv_span">Float</label><input type="range" id="wv_span" min="1" max="4" step="1"><output></output></div>
+    </div>
+    <div data-form="burst">
+    <div class="row"><label for="bu_centres">Centres</label><input type="range" id="bu_centres" min="1" max="8" step="1"><output></output></div>
+    <div class="row"><label for="bu_length">Stroke length</label><input type="range" id="bu_length" min="80" max="600" step="5"><output></output></div>
+    <div class="row"><label for="bu_width">Stroke width</label><input type="range" id="bu_width" min="20" max="140" step="1"><output></output></div>
+    <div class="row"><label for="bu_curl">Curl</label><input type="range" id="bu_curl" min="0" max="2" step="0.05"><output></output></div>
+    </div>
+    <div data-form="fans dabs slab">
+    <div class="row"><label for="eyes">Vortices</label><input type="range" id="eyes" min="1" max="10" step="1"><output></output></div>
+    </div>
+    <div data-form="fans">
+    <div class="row"><label for="fat">Stroke width</label><input type="range" id="fat" min="0.15" max="0.7" step="0.01"><output></output></div>
+    <div class="row"><label for="rough">Head shape</label><input type="range" id="rough" min="0" max="2" step="0.05"><output></output></div>
+    </div>
+  </section>
+
+  <section data-only="coil fans rings ribbons dabs thatch weave burst crystals">
+    <h2>Brush <a data-reset="pitch wander fibre clump round sheen dry vary">reset</a></h2>
+    <div class="row"><label for="pitch">Fibre spacing</label><input type="range" id="pitch" min="0.7" max="4" step="0.1"><output></output></div>
+    <div class="row"><label for="wander">Wander</label><input type="range" id="wander" min="0" max="5" step="0.1"><output></output></div>
+    <div class="row"><label for="fibre">Fibre tone</label><input type="range" id="fibre" min="0" max="0.25" step="0.01"><output></output></div>
+    <div class="row"><label for="clump">Clumps</label><input type="range" id="clump" min="0" max="0.4" step="0.01"><output></output></div>
+    <div class="row"><label for="round">Roundness</label><input type="range" id="round" min="0" max="0.45" step="0.01"><output></output></div>
+    <div class="row"><label for="sheen">Sheen</label><input type="range" id="sheen" min="0" max="0.7" step="0.01"><output></output></div>
+    <div data-form="fans rings ribbons dabs thatch weave burst">
+    <div class="row"><label for="dry">Dry tails</label><input type="range" id="dry" min="0" max="1" step="0.01"><output></output></div>
+    <div class="row"><label for="vary">Stroke tones</label><input type="range" id="vary" min="0" max="0.3" step="0.01"><output></output></div>
+    </div>
+  </section>
+
+  <section data-only="pumice">
+    <h2>Bubbles <a data-reset="porosity bubble_max bubble_min mix stretch pdepth">reset</a></h2>
+    <div class="row"><label for="porosity">Porosity</label><input type="range" id="porosity" min="0.1" max="3.5" step="0.05"><output></output></div>
+    <div class="row"><label for="bubble_max">Largest</label><input type="range" id="bubble_max" min="6" max="90" step="1"><output></output></div>
+    <div class="row"><label for="bubble_min">Smallest</label><input type="range" id="bubble_min" min="1" max="10" step="0.5"><output></output></div>
+    <div class="row"><label for="mix">Small vs big</label><input type="range" id="mix" min="1.05" max="2.6" step="0.05"><output></output></div>
+    <div class="row"><label for="stretch">Stretch</label><input type="range" id="stretch" min="1" max="6" step="0.1"><output></output></div>
+    <div class="row"><label for="pdepth">Depth</label><input type="range" id="pdepth" min="8" max="120" step="1"><output></output></div>
+  </section>
+
+  <section data-only="leather">
+    <h2>Hide <a data-reset="lea_grain lea_grain_h lea_creases lea_crease_depth lea_cracks lea_crack_size lea_wear lea_stain">reset</a></h2>
+    <div class="row"><label for="lea_grain">Grain size</label><input type="range" id="lea_grain" min="4" max="22" step="0.5"><output></output></div>
+    <div class="row"><label for="lea_grain_h">Grain depth</label><input type="range" id="lea_grain_h" min="0" max="2.5" step="0.05"><output></output></div>
+    <div class="row"><label for="lea_creases">Creases</label><input type="range" id="lea_creases" min="0" max="2" step="0.05"><output></output></div>
+    <div class="row"><label for="lea_crease_depth">Crease depth</label><input type="range" id="lea_crease_depth" min="0" max="2.5" step="0.05"><output></output></div>
+    <div class="row"><label for="lea_cracks">Dried cracks</label><input type="range" id="lea_cracks" min="0" max="1" step="0.01"><output></output></div>
+    <div class="row"><label for="lea_crack_size">Crack plates</label><input type="range" id="lea_crack_size" min="25" max="160" step="1"><output></output></div>
+    <div class="row"><label for="lea_wear">Wear &amp; patina</label><input type="range" id="lea_wear" min="0" max="1.5" step="0.05"><output></output></div>
+    <div class="row"><label for="lea_stain">Stains</label><input type="range" id="lea_stain" min="0" max="1.5" step="0.05"><output></output></div>
+  </section>
+
+  <section data-only="sludge">
+    <h2>Sludge <a data-reset="sl_fill sl_visc sl_skin sl_wrinkle sl_bubbles sl_drips sl_oil">reset</a></h2>
+    <div class="row"><label for="sl_fill">Fill level</label><input type="range" id="sl_fill" min="0.05" max="0.95" step="0.01"><output></output></div>
+    <div class="row"><label for="sl_visc">Viscosity</label><input type="range" id="sl_visc" min="0" max="1.5" step="0.05"><output></output></div>
+    <div class="row"><label for="sl_skin">Skin wrinkles</label><input type="range" id="sl_skin" min="0" max="2" step="0.05"><output></output></div>
+    <div class="row"><label for="sl_wrinkle">Wrinkle size</label><input type="range" id="sl_wrinkle" min="5" max="40" step="0.5"><output></output></div>
+    <div class="row"><label for="sl_bubbles">Gas bubbles</label><input type="range" id="sl_bubbles" min="0" max="2" step="0.05"><output></output></div>
+    <div class="row"><label for="sl_drips">Drips</label><input type="range" id="sl_drips" min="0" max="2" step="0.05"><output></output></div>
+    <div class="row"><label for="sl_oil">Oil film</label><input type="range" id="sl_oil" min="0" max="1" step="0.01"><output></output></div>
+  </section>
+
+  <section data-only="candy">
+    <h2>Sugar <a data-reset="cc_fibres cc_length cc_fluff cc_loop cc_mix tint cc_bright cc_glow">reset</a></h2>
+    <div class="row"><label for="cc_fibres">Threads</label><input type="range" id="cc_fibres" min="500" max="12000" step="250"><output></output></div>
+    <div class="row"><label for="cc_length">Thread length</label><input type="range" id="cc_length" min="100" max="1500" step="10"><output></output></div>
+    <div class="row"><label for="cc_fluff">Fluff</label><input type="range" id="cc_fluff" min="0" max="2" step="0.05"><output></output></div>
+    <div class="row"><label for="cc_loop">Curl</label><input type="range" id="cc_loop" min="0" max="2" step="0.05"><output></output></div>
+    <div class="row"><label for="cc_mix">Second sugar</label><input type="range" id="cc_mix" min="0" max="1" step="0.01"><output></output></div>
+    <div class="row"><label for="tint">Its colour</label><input type="color" id="tint" style="height: 26px; grid-column: 2 / 4"></div>
+    <div class="row"><label for="cc_bright">Density</label><input type="range" id="cc_bright" min="0.2" max="4" step="0.05"><output></output></div>
+    <div class="row"><label for="cc_glow">Glow</label><input type="range" id="cc_glow" min="0" max="1.5" step="0.05"><output></output></div>
+  </section>
+
+  <section data-only="ink">
+    <h2>Ink <a data-reset="ink_drops ink_time ink_turb ink_diffuse ink_fall ink_density">reset</a></h2>
+    <div class="row"><label for="ink_drops">Drops</label><input type="range" id="ink_drops" min="1" max="24" step="1"><output></output></div>
+    <div class="row"><label for="ink_time">Time</label><input type="range" id="ink_time" min="0" max="2" step="0.05"><output></output></div>
+    <div class="row"><label for="ink_turb">Turbulence</label><input type="range" id="ink_turb" min="0" max="2" step="0.05"><output></output></div>
+    <div class="row"><label for="ink_diffuse">Diffusion</label><input type="range" id="ink_diffuse" min="0" max="1.5" step="0.05"><output></output></div>
+    <div class="row"><label for="ink_fall">Falls toward</label><input type="range" id="ink_fall" min="0" max="359" step="1"><output></output></div>
+    <div class="row"><label for="ink_density">Ink density</label><input type="range" id="ink_density" min="0.2" max="4" step="0.05"><output></output></div>
+  </section>
+
+  <section data-only="protozoa">
+    <h2>Slide <a data-reset="pz_count pz_size pz_debris pz_focus pz_dof pz_halo pz_scope pz_dark">reset</a></h2>
+    <div class="row"><label for="pz_count">Organisms</label><input type="range" id="pz_count" min="5" max="120" step="1"><output></output></div>
+    <div class="row"><label for="pz_size">Size</label><input type="range" id="pz_size" min="0.4" max="2.5" step="0.05"><output></output></div>
+    <div class="row"><label for="pz_debris">Debris</label><input type="range" id="pz_debris" min="0" max="2" step="0.05"><output></output></div>
+    <div class="row"><label for="pz_focus">Focus depth</label><input type="range" id="pz_focus" min="-1" max="1" step="0.02"><output></output></div>
+    <div class="row"><label for="pz_dof">Out of focus</label><input type="range" id="pz_dof" min="0" max="2.5" step="0.05"><output></output></div>
+    <div class="row"><label for="pz_halo">Phase halo</label><input type="range" id="pz_halo" min="0" max="1.5" step="0.05"><output></output></div>
+    <div class="row"><label for="pz_scope">Field stop</label><input type="range" id="pz_scope" min="0" max="1" step="0.01"><output></output></div>
+    <div class="row"><label for="pz_dark">Dark field</label><input type="range" id="pz_dark" min="0" max="1" step="0.01"><output></output></div>
+  </section>
+
+  <section data-only="wood">
+    <h2>Chips <a data-reset="wc_size wc_layers wc_align wc_splinter wc_grain wc_bark wc_tones wc_weather">reset</a></h2>
+    <div class="row"><label for="wc_size">Chip size</label><input type="range" id="wc_size" min="25" max="200" step="1"><output></output></div>
+    <div class="row"><label for="wc_layers">Pile depth</label><input type="range" id="wc_layers" min="0.5" max="6" step="0.1"><output></output></div>
+    <div class="row"><label for="wc_align">Alignment</label><input type="range" id="wc_align" min="0" max="1" step="0.01"><output></output></div>
+    <div class="row"><label for="wc_splinter">Splintered ends</label><input type="range" id="wc_splinter" min="0" max="1.5" step="0.05"><output></output></div>
+    <div class="row"><label for="wc_grain">Grain</label><input type="range" id="wc_grain" min="0" max="2" step="0.05"><output></output></div>
+    <div class="row"><label for="wc_bark">Bark</label><input type="range" id="wc_bark" min="0" max="1" step="0.01"><output></output></div>
+    <div class="row"><label for="wc_tones">Tones</label><input type="range" id="wc_tones" min="0" max="1.5" step="0.05"><output></output></div>
+    <div class="row"><label for="wc_weather">Weathering</label><input type="range" id="wc_weather" min="0" max="1" step="0.01"><output></output></div>
+  </section>
+
+  <section data-only="shag">
+    <h2>Pile <a data-reset="sh_pile sh_spacing sh_fall sh_comb sh_curl sh_plies sh_heather sh_sheen yarn">reset</a></h2>
+    <div class="row"><label for="sh_pile">Pile length</label><input type="range" id="sh_pile" min="15" max="160" step="1"><output></output></div>
+    <div class="row"><label for="sh_spacing">Tuft spacing</label><input type="range" id="sh_spacing" min="7" max="30" step="0.5"><output></output></div>
+    <div class="row"><label for="sh_fall">Fall</label><input type="range" id="sh_fall" min="0" max="1" step="0.01"><output></output></div>
+    <div class="row"><label for="sh_comb">Combed</label><input type="range" id="sh_comb" min="0" max="1" step="0.01"><output></output></div>
+    <div class="row"><label for="sh_curl">Curl</label><input type="range" id="sh_curl" min="0" max="1.5" step="0.05"><output></output></div>
+    <div class="row"><label for="sh_plies">Plies</label><input type="range" id="sh_plies" min="1" max="6" step="1"><output></output></div>
+    <div class="row"><label for="sh_sheen">Sheen</label><input type="range" id="sh_sheen" min="0" max="1.5" step="0.05"><output></output></div>
+    <div class="row"><label for="sh_heather">Heather</label><input type="range" id="sh_heather" min="0" max="1" step="0.01"><output></output></div>
+    <div class="row"><label for="yarnA">Second yarn</label><input type="color" id="yarnA" data-yarn style="height: 26px; grid-column: 2 / 4"></div>
+  </section>
+
+  <section data-only="elephant">
+    <h2>Skin <a data-reset="el_plate el_fine el_depth el_folds el_fold_depth el_bulge el_dust el_hairs">reset</a></h2>
+    <div class="row"><label for="el_plate">Plate size</label><input type="range" id="el_plate" min="12" max="90" step="1"><output></output></div>
+    <div class="row"><label for="el_fine">Fine net</label><input type="range" id="el_fine" min="4" max="24" step="0.5"><output></output></div>
+    <div class="row"><label for="el_depth">Channel depth</label><input type="range" id="el_depth" min="0" max="2.5" step="0.05"><output></output></div>
+    <div class="row"><label for="el_bulge">Cushions</label><input type="range" id="el_bulge" min="0" max="2.5" step="0.05"><output></output></div>
+    <div class="row"><label for="el_folds">Folds</label><input type="range" id="el_folds" min="0" max="2" step="0.05"><output></output></div>
+    <div class="row"><label for="el_fold_depth">Fold depth</label><input type="range" id="el_fold_depth" min="0" max="2.5" step="0.05"><output></output></div>
+    <div class="row"><label for="el_dust">Dried mud</label><input type="range" id="el_dust" min="0" max="1.5" step="0.05"><output></output></div>
+    <div class="row"><label for="el_hairs">Bristles</label><input type="range" id="el_hairs" min="0" max="2" step="0.05"><output></output></div>
+  </section>
+
+  <section data-only="crochet">
+    <h2>Stitches <a data-reset="cr_stitch cr_tall cr_lace cr_stripes cr_plump cr_twist cr_fuzz cr_motifs yarn">reset</a></h2>
+    <div class="row"><label for="cr_stitch">Stitch size</label><input type="range" id="cr_stitch" min="8" max="60" step="0.5"><output></output></div>
+    <div class="row"><label for="cr_tall">Tall stitches</label><input type="range" id="cr_tall" min="0" max="1" step="0.01"><output></output></div>
+    <div class="row"><label for="cr_lace">Lace</label><input type="range" id="cr_lace" min="0" max="1" step="0.01"><output></output></div>
+    <div class="row"><label for="cr_plump">Plumpness</label><input type="range" id="cr_plump" min="0.5" max="1.8" step="0.05"><output></output></div>
+    <div class="row"><label for="cr_twist">Twist</label><input type="range" id="cr_twist" min="0" max="2" step="0.05"><output></output></div>
+    <div class="row"><label for="cr_fuzz">Fuzz</label><input type="range" id="cr_fuzz" min="0" max="2" step="0.05"><output></output></div>
+    <div class="row" data-form="slab"><label for="cr_motifs">Motifs</label><input type="range" id="cr_motifs" min="1" max="40" step="1"><output></output></div>
+    <div class="row"><label for="cr_stripes">Stripes every</label><input type="range" id="cr_stripes" min="0" max="10" step="1"><output></output></div>
+    <div class="row"><label for="yarnB">Second yarn</label><input type="color" id="yarnB" data-yarn style="height: 26px; grid-column: 2 / 4"></div>
+  </section>
+
+  <section data-only="knit">
+    <h2>Knit <a data-reset="kn_stitch kn_loose kn_uneven kn_twist kn_fuzz kn_rib kn_stripes yarn">reset</a></h2>
+    <div class="row"><label for="kn_stitch">Stitch size</label><input type="range" id="kn_stitch" min="30" max="220" step="1"><output></output></div>
+    <div class="row"><label for="kn_loose">Loose</label><input type="range" id="kn_loose" min="0" max="1" step="0.01"><output></output></div>
+    <div class="row"><label for="kn_uneven">Uneven</label><input type="range" id="kn_uneven" min="0" max="1.5" step="0.05"><output></output></div>
+    <div class="row"><label for="kn_twist">Twist</label><input type="range" id="kn_twist" min="0" max="2" step="0.05"><output></output></div>
+    <div class="row"><label for="kn_fuzz">Fuzz</label><input type="range" id="kn_fuzz" min="0" max="2" step="0.05"><output></output></div>
+    <div class="row"><label for="kn_rib">Rib every</label><input type="range" id="kn_rib" min="0" max="6" step="1"><output></output></div>
+    <div class="row"><label for="kn_stripes">Stripes every</label><input type="range" id="kn_stripes" min="0" max="12" step="1"><output></output></div>
+    <div class="row"><label for="yarnC">Second yarn</label><input type="color" id="yarnC" data-yarn style="height: 26px; grid-column: 2 / 4"></div>
+  </section>
+
+  <section data-only="pine">
+    <h2>Needles <a data-reset="pn_density pn_length pn_width pn_align pn_depth pn_decay pn_fresh yarn">reset</a></h2>
+    <div class="row"><label for="pn_density">Density</label><input type="range" id="pn_density" min="0.2" max="3" step="0.05"><output></output></div>
+    <div class="row"><label for="pn_length">Needle length</label><input type="range" id="pn_length" min="40" max="400" step="5"><output></output></div>
+    <div class="row"><label for="pn_width">Needle width</label><input type="range" id="pn_width" min="1" max="8" step="0.1"><output></output></div>
+    <div class="row"><label for="pn_align">Alignment</label><input type="range" id="pn_align" min="0" max="1" step="0.01"><output></output></div>
+    <div class="row"><label for="pn_depth">Pile depth</label><input type="range" id="pn_depth" min="0" max="3" step="0.05"><output></output></div>
+    <div class="row"><label for="pn_decay">Decay</label><input type="range" id="pn_decay" min="0" max="1" step="0.01"><output></output></div>
+    <div class="row"><label for="pn_fresh">Fresh</label><input type="range" id="pn_fresh" min="0" max="1" step="0.01"><output></output></div>
+    <div class="row"><label for="yarnD">Fresh colour</label><input type="color" id="yarnD" data-yarn style="height: 26px; grid-column: 2 / 4"></div>
+  </section>
+
+  <section data-only="mycelium">
+    <h2>Mycelium <a data-reset="my_seeds my_time my_branch my_wander my_density my_cords my_glow">reset</a></h2>
+    <div class="row"><label for="my_seeds">Starts</label><input type="range" id="my_seeds" min="1" max="16" step="1"><output></output></div>
+    <div class="row"><label for="my_time">Growth time</label><input type="range" id="my_time" min="60" max="900" step="10"><output></output></div>
+    <div class="row"><label for="my_branch">Branching</label><input type="range" id="my_branch" min="0" max="3" step="0.05"><output></output></div>
+    <div class="row"><label for="my_wander">Wander</label><input type="range" id="my_wander" min="0" max="3" step="0.05"><output></output></div>
+    <div class="row"><label for="my_density">Density</label><input type="range" id="my_density" min="1" max="6" step="1"><output></output></div>
+    <div class="row"><label for="my_cords">Cords</label><input type="range" id="my_cords" min="0" max="2" step="0.05"><output></output></div>
+    <div class="row"><label for="my_glow">Glow</label><input type="range" id="my_glow" min="0" max="1.5" step="0.05"><output></output></div>
+  </section>
+
+  <section data-only="scales">
+    <h2>Scales <a data-reset="sc_size sc_rows sc_lift sc_dome sc_growth sc_uneven sc_tones sc_mix yarn">reset</a></h2>
+    <div class="row"><label for="sc_size">Size</label><input type="range" id="sc_size" min="30" max="400" step="5"><output></output></div>
+    <div class="row"><label for="sc_rows">Rows</label><input type="range" id="sc_rows" min="0.4" max="1.6" step="0.02"><output></output></div>
+    <div class="row"><label for="sc_lift">Lift</label><input type="range" id="sc_lift" min="0" max="2" step="0.05"><output></output></div>
+    <div class="row"><label for="sc_dome">Dome</label><input type="range" id="sc_dome" min="0" max="2" step="0.05"><output></output></div>
+    <div class="row"><label for="sc_growth">Growth lines</label><input type="range" id="sc_growth" min="0" max="2" step="0.05"><output></output></div>
+    <div class="row"><label for="sc_uneven">Uneven</label><input type="range" id="sc_uneven" min="0" max="1" step="0.01"><output></output></div>
+    <div class="row"><label for="sc_tones">Tones</label><input type="range" id="sc_tones" min="0" max="1.5" step="0.05"><output></output></div>
+    <div class="row"><label for="sc_mix">Mix</label><input type="range" id="sc_mix" min="0" max="1" step="0.01"><output></output></div>
+    <div class="row"><label for="yarnE">Second colour</label><input type="color" id="yarnE" data-yarn style="height: 26px; grid-column: 2 / 4"></div>
+  </section>
+
+  <section data-only="amethyst">
+    <h2>Crystals <a data-reset="am_size am_density am_lean am_sharp am_align am_zone am_clarity">reset</a></h2>
+    <div class="row"><label for="am_size">Size</label><input type="range" id="am_size" min="30" max="400" step="5"><output></output></div>
+    <div class="row"><label for="am_density">Density</label><input type="range" id="am_density" min="0.5" max="6" step="0.05"><output></output></div>
+    <div class="row"><label for="am_lean">Lean</label><input type="range" id="am_lean" min="0" max="1" step="0.01"><output></output></div>
+    <div class="row"><label for="am_sharp">Sharpness</label><input type="range" id="am_sharp" min="0.3" max="3" step="0.05"><output></output></div>
+    <div class="row"><label for="am_align">Alignment</label><input type="range" id="am_align" min="0" max="1" step="0.01"><output></output></div>
+    <div class="row"><label for="am_zone">Zoning</label><input type="range" id="am_zone" min="0" max="1" step="0.01"><output></output></div>
+    <div class="row"><label for="am_clarity">Clarity</label><input type="range" id="am_clarity" min="0" max="1.5" step="0.05"><output></output></div>
+  </section>
+
+  <section data-only="bones">
+    <h2>Shards <a data-reset="bb_density bb_size bb_hollow bb_curve bb_align bb_pores bb_stain">reset</a></h2>
+    <div class="row"><label for="bb_density">Density</label><input type="range" id="bb_density" min="0.5" max="5" step="0.05"><output></output></div>
+    <div class="row"><label for="bb_size">Shard size</label><input type="range" id="bb_size" min="50" max="400" step="5"><output></output></div>
+    <div class="row"><label for="bb_hollow">Hollow</label><input type="range" id="bb_hollow" min="0" max="1" step="0.01"><output></output></div>
+    <div class="row"><label for="bb_curve">Curve</label><input type="range" id="bb_curve" min="0" max="1.5" step="0.05"><output></output></div>
+    <div class="row"><label for="bb_align">Alignment</label><input type="range" id="bb_align" min="0" max="1" step="0.01"><output></output></div>
+    <div class="row"><label for="bb_pores">Pores</label><input type="range" id="bb_pores" min="0" max="2" step="0.05"><output></output></div>
+    <div class="row"><label for="bb_stain">Stain</label><input type="range" id="bb_stain" min="0" max="1.5" step="0.05"><output></output></div>
+  </section>
+
+  <section data-only="syrup">
+    <h2>Syrup <a data-reset="sy_sheet sy_pour sy_coil sy_level sy_bubbles sy_depth sy_gloss">reset</a></h2>
+    <div class="row"><label for="sy_sheet">Sheet</label><input type="range" id="sy_sheet" min="0.2" max="3" step="0.05"><output></output></div>
+    <div class="row"><label for="sy_pour">Pour</label><input type="range" id="sy_pour" min="0" max="3" step="0.05"><output></output></div>
+    <div class="row"><label for="sy_coil">Coil size</label><input type="range" id="sy_coil" min="20" max="220" step="1"><output></output></div>
+    <div class="row"><label for="sy_level">Levelling</label><input type="range" id="sy_level" min="0" max="1" step="0.01"><output></output></div>
+    <div class="row"><label for="sy_bubbles">Bubbles</label><input type="range" id="sy_bubbles" min="0" max="3" step="0.05"><output></output></div>
+    <div class="row"><label for="sy_depth">Depth</label><input type="range" id="sy_depth" min="0.2" max="3" step="0.05"><output></output></div>
+    <div class="row"><label for="sy_gloss">Gloss</label><input type="range" id="sy_gloss" min="0" max="2" step="0.05"><output></output></div>
+  </section>
+
+  <section data-only="rust">
+    <h2>Rust <a data-reset="ru_amount ru_bloom ru_flakes ru_flake_size ru_pits ru_scale ru_streaks">reset</a></h2>
+    <div class="row"><label for="ru_amount">Corrosion</label><input type="range" id="ru_amount" min="0" max="1" step="0.01"><output></output></div>
+    <div class="row"><label for="ru_bloom">Bloom size</label><input type="range" id="ru_bloom" min="60" max="700" step="5"><output></output></div>
+    <div class="row"><label for="ru_flakes">Flakes</label><input type="range" id="ru_flakes" min="0" max="2.5" step="0.05"><output></output></div>
+    <div class="row"><label for="ru_flake_size">Flake size</label><input type="range" id="ru_flake_size" min="8" max="80" step="1"><output></output></div>
+    <div class="row"><label for="ru_pits">Pits</label><input type="range" id="ru_pits" min="0" max="2" step="0.05"><output></output></div>
+    <div class="row"><label for="ru_scale">Scale</label><input type="range" id="ru_scale" min="0.3" max="3" step="0.05"><output></output></div>
+    <div class="row"><label for="ru_streaks">Streaks</label><input type="range" id="ru_streaks" min="0" max="1.5" step="0.05"><output></output></div>
+  </section>
+
+  <section data-only="delaunay">
+    <h2>Facets <a data-reset="dl_points dl_adapt dl_regular dl_relief dl_edges dl_tones">reset</a></h2>
+    <div class="row"><label for="dl_points">Points</label><input type="range" id="dl_points" min="100" max="8000" step="50"><output></output></div>
+    <div class="row"><label for="dl_adapt">Adapt</label><input type="range" id="dl_adapt" min="0" max="1" step="0.01"><output></output></div>
+    <div class="row"><label for="dl_regular">Regular</label><input type="range" id="dl_regular" min="0" max="1.2" step="0.05"><output></output></div>
+    <div class="row"><label for="dl_relief">Relief</label><input type="range" id="dl_relief" min="0" max="4" step="0.05"><output></output></div>
+    <div class="row"><label for="dl_edges">Edges</label><input type="range" id="dl_edges" min="0" max="3" step="0.05"><output></output></div>
+    <div class="row"><label for="dl_tones">Tones</label><input type="range" id="dl_tones" min="0" max="1.5" step="0.05"><output></output></div>
+  </section>
+
+  <section data-only="pumice leather sludge wood shag elephant crochet knit pine mycelium bones syrup rust delaunay scales amethyst">
+    <h2>Surface <a data-reset="relief cavity rim glint">reset</a></h2>
+    <div class="row"><label for="relief">Relief</label><input type="range" id="relief" min="0.2" max="3" step="0.05"><output></output></div>
+    <div class="row"><label for="cavity">Pit darkness</label><input type="range" id="cavity" min="0" max="2.5" step="0.05"><output></output></div>
+    <div class="row"><label for="rim">Rim light</label><input type="range" id="rim" min="0" max="2" step="0.05"><output></output></div>
+    <div class="row"><label for="glint">Glint</label><input type="range" id="glint" min="0" max="1" step="0.01"><output></output></div>
+  </section>
+
+  <section class="crystalsOnly">
+    <h2>Crystals <a data-reset="shard size_var elong density align">reset</a></h2>
+    <div class="row"><label for="shard">Size</label><input type="range" id="shard" min="4" max="48" step="0.5"><output></output></div>
+    <div class="row"><label for="size_var">Size variety</label><input type="range" id="size_var" min="0" max="1.5" step="0.05"><output></output></div>
+    <div class="row"><label for="elong">Elongation</label><input type="range" id="elong" min="1" max="6" step="0.1"><output></output></div>
+    <div class="row"><label for="density">Density</label><input type="range" id="density" min="0.3" max="6" step="0.1"><output></output></div>
+    <div class="row"><label for="align">Alignment</label><input type="range" id="align" min="0" max="1" step="0.01"><output></output></div>
+  </section>
+
+  <section class="crystalsOnly">
+    <h2>Shade &amp; blend <a data-reset="facet grad opacity blend sparkle sparkle_blend underlay">reset</a></h2>
+    <div class="row"><label for="blend">Blend</label><select id="blend" style="grid-column: 2 / 4"></select></div>
+    <div class="row"><label for="opacity">Opacity</label><input type="range" id="opacity" min="0.05" max="1" step="0.01"><output></output></div>
+    <div class="row"><label for="facet">Facets</label><input type="range" id="facet" min="0" max="0.8" step="0.01"><output></output></div>
+    <div class="row"><label for="grad">Face gradient</label><input type="range" id="grad" min="0" max="0.4" step="0.01"><output></output></div>
+    <div class="row"><label for="underlay">Underlay</label><input type="range" id="underlay" min="0" max="1" step="0.01"><output></output></div>
+    <div class="row"><label for="sparkle_blend">Sparkle blend</label><select id="sparkle_blend" style="grid-column: 2 / 4"></select></div>
+    <div class="row"><label for="sparkle">Sparkle</label><input type="range" id="sparkle" min="0" max="2" step="0.05"><output></output></div>
+  </section>
+
+  <section data-only="coil fans rings ribbons dabs thatch weave burst crystals pumice leather sludge wood shag elephant crochet knit pine mycelium bones syrup rust delaunay scales amethyst">
+    <h2>Light &amp; depth <a data-reset="light shadow ao depth">reset</a></h2>
+    <div class="lightrow">
+      <svg id="dial" viewBox="-30 -30 60 60" aria-label="Light direction">
+        <circle r="26" fill="none" stroke="currentColor" stroke-opacity="0.25"/>
+        <line id="dialLine" x1="0" y1="0" x2="0" y2="0" stroke="currentColor" stroke-width="1"/>
+        <circle id="dialSun" r="4.5" fill="#111110"/>
+        <circle r="1.5" fill="currentColor" fill-opacity="0.5"/>
+      </svg>
+      <div class="row" style="grid-template-columns: 1fr 44px; margin:0"><input type="range" id="light" min="0" max="359" step="1"><output></output></div>
+    </div>
+    <div class="row"><label for="shadow">Cast shadow</label><input type="range" id="shadow" min="0" max="0.9" step="0.01"><output></output></div>
+    <div class="row"><label for="ao">Occlusion</label><input type="range" id="ao" min="0" max="0.9" step="0.01"><output></output></div>
+    <div class="row"><label for="depth">Layer lift</label><input type="range" id="depth" min="0" max="0.45" step="0.01"><output></output></div>
+  </section>
+
+  <section>
+    <h2>Finish <a data-reset="specks grain">reset</a></h2>
+    <div class="row"><label for="specks">Specks</label><input type="range" id="specks" min="0" max="1500" step="10"><output></output></div>
+    <div class="row"><label for="grain">Grain</label><input type="range" id="grain" min="0" max="0.25" step="0.01"><output></output></div>
+  </section>
+</aside>
+
+<main>
+  <div id="frame"><img id="preview" alt="Preview"><div id="dims"></div></div>
+  <div id="err"></div>
+</main>
+
+
+<script>
+const $ = (id) => document.getElementById(id);
+const SLIDERS = ["width", "fill", "swirl", "strokes", "eyes", "fat", "rough", "dry", "vary",
+                 "shard", "size_var", "elong", "density", "align", "facet", "grad", "opacity", "underlay", "sparkle",
+                 "porosity", "bubble_max", "bubble_min", "mix", "stretch", "pdepth", "relief", "cavity", "rim", "glint",
+                 "lea_grain", "lea_grain_h", "lea_creases", "lea_crease_depth", "lea_cracks", "lea_crack_size", "lea_wear", "lea_stain",
+                 "sl_fill", "sl_visc", "sl_skin", "sl_wrinkle", "sl_bubbles", "sl_drips", "sl_oil",
+                 "cc_fibres", "cc_length", "cc_fluff", "cc_loop", "cc_mix", "cc_bright", "cc_glow",
+                 "ink_drops", "ink_time", "ink_turb", "ink_diffuse", "ink_fall", "ink_density",
+                 "wc_size", "wc_layers", "wc_align", "wc_splinter", "wc_grain", "wc_bark", "wc_tones", "wc_weather",
+                 "sh_pile", "sh_spacing", "sh_fall", "sh_comb", "sh_curl", "sh_plies", "sh_sheen", "sh_heather",
+                 "el_plate", "el_fine", "el_depth", "el_folds", "el_fold_depth", "el_bulge", "el_dust", "el_hairs",
+                 "cr_stitch", "cr_tall", "cr_lace", "cr_plump", "cr_twist", "cr_fuzz", "cr_motifs", "cr_stripes",
+                 "rg_centres", "rg_width", "rg_wobble", "rg_breaks", "rb_count", "rb_wave", "rb_angle", "rb_breaks",
+                 "db_count", "db_size", "db_order", "db_curve",
+                 "th_angle", "th_length", "th_width", "th_overlap", "th_jitter", "wv_count", "wv_angle", "wv_width", "wv_span", "bu_centres", "bu_length", "bu_width", "bu_curl", "kn_stitch", "kn_loose", "kn_uneven", "kn_twist", "kn_fuzz", "kn_rib", "kn_stripes", "pn_density", "pn_length", "pn_width", "pn_align", "pn_depth", "pn_decay", "pn_fresh", "my_seeds", "my_time", "my_branch", "my_wander", "my_density", "my_cords", "my_glow", "bb_density", "bb_size", "bb_hollow", "bb_curve", "bb_align", "bb_pores", "bb_stain", "sy_sheet", "sy_pour", "sy_coil", "sy_level", "sy_bubbles", "sy_depth", "sy_gloss", "ru_amount", "ru_bloom", "ru_flakes", "ru_flake_size", "ru_pits", "ru_scale", "ru_streaks", "dl_points", "dl_adapt", "dl_regular", "dl_relief", "dl_edges", "dl_tones", "sc_size", "sc_rows", "sc_lift", "sc_dome", "sc_growth", "sc_uneven", "sc_tones", "sc_mix", "am_size", "am_density", "am_lean", "am_sharp", "am_align", "am_zone", "am_clarity",
+                 "pz_count", "pz_size", "pz_debris", "pz_focus", "pz_dof", "pz_halo", "pz_scope", "pz_dark", "pitch", "wander", "fibre", "clump", "round", "sheen", "light", "shadow", "ao", "depth", "specks", "grain"];
+const COLORS = ["color", "dark", "light_color"];
+const FMT = { pitch: (v) => v.toFixed(1) + "px", light: (v) => Math.round(v) + "°", specks: (v) => String(Math.round(v)),
+              width: (v) => Math.round(v * 100) + "%", fill: (v) => v.toFixed(1) + "×",
+              strokes: (v) => String(Math.round(v)), eyes: (v) => String(Math.round(v)),
+              shard: (v) => v.toFixed(1) + "px", opacity: (v) => Math.round(v * 100) + "%", underlay: (v) => Math.round(v * 100) + "%",
+              density: (v) => v.toFixed(1) + "×", elong: (v) => v.toFixed(1) + ":1",
+              bubble_max: (v) => Math.round(v) + "px", bubble_min: (v) => v.toFixed(1) + "px", pdepth: (v) => Math.round(v) + "px",
+              stretch: (v) => v.toFixed(1) + "×",
+              lea_grain: (v) => v.toFixed(1) + "px", lea_crack_size: (v) => Math.round(v) + "px", sl_wrinkle: (v) => v.toFixed(1) + "px",
+              cc_fibres: (v) => String(Math.round(v)), cc_length: (v) => Math.round(v) + "px", ink_drops: (v) => String(Math.round(v)),
+              ink_fall: (v) => Math.round(v) + "°", pz_count: (v) => String(Math.round(v)), pz_size: (v) => v.toFixed(2) + "×",
+              wc_size: (v) => Math.round(v) + "px", sh_pile: (v) => Math.round(v) + "px", sh_spacing: (v) => v.toFixed(1) + "px",
+              sh_plies: (v) => String(Math.round(v)), el_plate: (v) => Math.round(v) + "px", el_fine: (v) => v.toFixed(1) + "px",
+              cr_stitch: (v) => v.toFixed(1) + "px", cr_motifs: (v) => String(Math.round(v)),
+              cr_stripes: (v) => (v < 1 ? "off" : Math.round(v) + (v < 2 ? " row" : " rows")),
+              rg_centres: (v) => String(Math.round(v)), rg_width: (v) => Math.round(v) + "px", rb_count: (v) => String(Math.round(v)),
+              rb_angle: (v) => Math.round(v) + "°", db_count: (v) => String(Math.round(v)), db_size: (v) => Math.round(v) + "px",
+              th_angle: (v) => Math.round(v) + "°", th_length: (v) => Math.round(v) + "px", th_width: (v) => Math.round(v) + "px", wv_count: (v) => String(Math.round(v)), wv_angle: (v) => Math.round(v) + "°", wv_span: (v) => String(Math.round(v)), bu_centres: (v) => String(Math.round(v)), bu_length: (v) => Math.round(v) + "px", bu_width: (v) => Math.round(v) + "px", kn_stitch: (v) => Math.round(v) + "px", kn_rib: (v) => (v < 1 ? "off" : Math.round(v) + " st"), kn_stripes: (v) => (v < 1 ? "off" : Math.round(v) + (v < 2 ? " row" : " rows")), pn_length: (v) => Math.round(v) + "px", pn_width: (v) => v.toFixed(1) + "px", my_seeds: (v) => String(Math.round(v)), my_time: (v) => String(Math.round(v)), my_density: (v) => String(Math.round(v)), bb_size: (v) => Math.round(v) + "px", sy_coil: (v) => Math.round(v) + "px", ru_bloom: (v) => Math.round(v) + "px", ru_flake_size: (v) => Math.round(v) + "px", dl_points: (v) => String(Math.round(v)), sc_size: (v) => Math.round(v) + "px", am_size: (v) => Math.round(v) + "px" };
+const HOSTED = ["pumice", "leather", "sludge", "candy", "ink", "protozoa", "wood", "shag", "elephant", "crochet",
+                "knit", "pine", "mycelium", "bones", "syrup", "rust", "delaunay", "scales", "amethyst"];
+const HOSTTXT = { pumice: ["Carve the bubbles into", "Slab"], leather: ["Leather over", "Hide"], sludge: ["Sludge over", "Basin"],
+                  candy: ["Spin the sugar along", "Cone"], ink: ["Ink laid along", "Drops"], protozoa: ["Swimming along", "Free"],
+                  wood: ["Chips thrown over", "Pile"], shag: ["Tufted along", "Rug"], elephant: ["Skin over", "Flank"],
+                  crochet: ["Worked in rows along", "Rounds"], knit: ["Knitted in strips along", "Swatch"],
+                  pine: ["Needles fallen along", "Floor"], mycelium: ["Spreading along", "Ground"], bones: ["Shards along", "Heap"],
+                  syrup: ["Syrup over", "Pool"], rust: ["Rusting over", "Plate"], delaunay: ["Faceting", "Terrain"], scales: ["Scaled along", "Shingles"], amethyst: ["Crystals along", "Geode"] };
+const SUGGEST = { leather: "Saddle", sludge: "Bog", candy: "Candy", ink: "Sumi", protozoa: "Pond", pumice: "Bone",
+                  wood: "Cedar", shag: "Wool", elephant: "Elephant", crochet: "Marigold", knit: "Oatmeal", pine: "Needles",
+                  mycelium: "Loam", bones: "Bone", syrup: "Maple", rust: "Teal paint", delaunay: "Slate", scales: "Jade", amethyst: "Amethyst" };
+// the second colour each material starts from (yarn, fresh needles, the mold, the syrup)
+const ACCENT = { shag: "#3f7f8c", crochet: "#3f7f8c", knit: "#8a4a3a", pine: "#4f6b2a", scales: "#c9a24a" };
+const SELECTS = ["blend", "sparkle_blend"];
+const BLENDS = ["Normal", "Multiply", "Screen", "Overlay", "Soft light", "Hard light", "Darken", "Lighten",
+                "Color dodge", "Color burn", "Add", "Difference", "Luminosity"];
+const TAGLINE = { coil: "one stroke, the whole screen", fans: "strokes swept round hidden vortices",
+                  crystals: "strokes painted in triangular crystals", pumice: "the stroke turned to stone",
+                  leather: "folded, dried and polished for decades", sludge: "what is left when the tank drains",
+                  candy: "sugar spun into glass thread", ink: "drops rolling through still water", protozoa: "a drop of pond water, magnified",
+                  rings: "strokes raked round hidden centres", ribbons: "bands laid side by side", dabs: "short loaded dabs of the brush",
+                  wood: "a log through the chipper", shag: "yarn tufted, cut and fallen over", elephant: "thick hide, cracked and caked in mud",
+                  crochet: "worked stitch by stitch, in rows or rounds", thatch: "one way, in layers", weave: "over and under",
+                  burst: "thrown out from hidden centres", knit: "loose knit in bulky wool", pine: "years of fallen needles",
+                  mycelium: "a net of white threads", bones: "shards that guess at a bird", syrup: "the page under poured syrup",
+                  rust: "painted steel, rusting and flaking", delaunay: "the form rebuilt in triangles", scales: "half circles, row over row", amethyst: "the inside of a geode" };
+let DEF = {}, PRESETS = {}, state = {}, size = { w: 2560, h: 1440 }, ready = false;
+
+// the renderer: silk's Python, running in a worker (Pyodide)
+const worker = new Worker("worker.js?v=207b2208");
+let seq = 0;
+const waiting = new Map();
+worker.onmessage = ({ data }) => {
+  if (data.type === "status") return setStatus(data.text, true);
+  const w = waiting.get(data.id); waiting.delete(data.id);
+  data.ok ? w.res(data.out) : w.rej(new Error(data.error));
+};
+const call = (op, args = {}) => new Promise((res, rej) => { const id = ++seq; waiting.set(id, { res, rej }); worker.postMessage({ id, op, ...args }); });
+const phone = () => matchMedia("(max-width: 760px)").matches;
+const MAXPX = () => (phone() ? 3.7e6 : 14.8e6);  // what a phone's memory, or a desktop's, can render at once
+
+const dpr = window.devicePixelRatio || 1;
+const SIZES = [
+  ["This display", Math.round(screen.width * dpr), Math.round(screen.height * dpr)],
+  ["QHD 2560 × 1440", 2560, 1440], ["4K 3840 × 2160", 3840, 2160],
+  ["Ultrawide 3440 × 1440", 3440, 1440], ["Full HD 1920 × 1080", 1920, 1080],
+  ["MacBook 3024 × 1964", 3024, 1964], ["iPhone 1290 × 2796", 1290, 2796], ["Square 2400 × 2400", 2400, 2400],
+];
+
+function save() { try { localStorage.setItem("tex", JSON.stringify({ state, size })); } catch (e) {} }
+function load() { try { return JSON.parse(localStorage.getItem("tex") || "null"); } catch (e) { return null; } }
+
+function paint() {  // state -> controls
+  if (!TAGLINE[state.mode]) state.mode = "coil";
+  const form = state.mode === "crystals" ? state.path : HOSTED.includes(state.mode) ? state.host : state.mode;
+  document.body.className = `form-${form} mode-${state.mode}`;
+  document.querySelectorAll("[data-mode]").forEach((b) => b.classList.toggle("on", b.dataset.mode === state.mode));
+  document.querySelectorAll("[data-path]").forEach((b) => b.classList.toggle("on", b.dataset.path === state.path));
+  document.querySelectorAll("[data-host]").forEach((b) => b.classList.toggle("on", b.dataset.host === state.host));
+  document.querySelectorAll("[data-only]").forEach((el) => { el.hidden = !el.dataset.only.split(" ").includes(state.mode); });
+  document.querySelectorAll("[data-form]").forEach((el) => { el.hidden = !el.dataset.form.split(" ").includes(form); });
+  document.querySelectorAll("[data-yarn]").forEach((el) => { el.value = state.yarn; });
+  if (HOSTTXT[state.mode]) { $("hostLabel").textContent = HOSTTXT[state.mode][0]; $("hostSlab").textContent = HOSTTXT[state.mode][1]; }
+  $("tint").value = state.tint;
+  for (const k of SELECTS) $(k).value = state[k];
+  $("tagline").textContent = TAGLINE[state.mode];
+  $("seed").value = state.seed;
+  for (const k of SLIDERS) {
+    const el = $(k); el.value = state[k];
+    el.parentElement.querySelector("output").textContent = (FMT[k] || ((v) => v.toFixed(2)))(+state[k]);
+  }
+  for (const k of COLORS) $(k).value = state[k];
+  $("colorHex").textContent = state.color; $("darkHex").textContent = state.dark; $("lightHex").textContent = state.light_color;
+  document.querySelectorAll(".swatch").forEach((s) => {
+    const [c, d, l] = PRESETS[s.dataset.name];
+    s.classList.toggle("on", c === state.color && d === state.dark && l === state.light_color);
+  });
+  $("W").value = size.w; $("H").value = size.h;
+  const i = SIZES.findIndex(([, w, h]) => w === size.w && h === size.h);
+  $("sizePreset").value = i >= 0 ? String(i) : "custom";
+  const a = (state.light * Math.PI) / 180;
+  $("dialSun").setAttribute("cx", 22 * Math.cos(a)); $("dialSun").setAttribute("cy", 22 * Math.sin(a));
+  $("dialLine").setAttribute("x2", 22 * Math.cos(a)); $("dialLine").setAttribute("y2", 22 * Math.sin(a));
+  fitFrame();
+  save();
+}
+
+function fitFrame() {
+  const m = document.querySelector("main"), pad = phone() ? 32 : 56;
+  const aw = m.clientWidth - pad, ah = m.clientHeight - pad - (phone() ? 12 : 20), r = size.w / size.h;
+  let w = aw, h = aw / r;
+  if (h > ah) { h = ah; w = ah * r; }
+  $("frame").style.width = Math.round(w) + "px"; $("frame").style.height = Math.round(h) + "px";
+  $("dims").textContent = `${size.w} × ${size.h}  ·  seed ${state.seed}`;
+}
+
+// previews: one in flight, the newest settings win
+let inflight = false, dirty = false, timer = null;
+function schedule(delay = 180) { $("frame").classList.add("stale"); clearTimeout(timer); timer = setTimeout(preview, delay); }
+async function preview() {
+  if (!ready) return;
+  if (inflight) { dirty = true; return; }
+  inflight = true; dirty = false;
+  const r = size.w / size.h, long = Math.min(phone() ? 640 : 1000, Math.round(Math.max($("frame").clientWidth, $("frame").clientHeight) * Math.min(dpr, phone() ? 2.5 : 1.5)));
+  const w = r >= 1 ? long : Math.round(long * r), h = r >= 1 ? Math.round(long / r) : long;
+  setStatus("rendering preview…", true);
+  const t0 = performance.now();
+  try {
+    const { bytes } = await call("render", { params: state, w, h, ss: 2, fmt: "jpeg" });
+    const blob = new Blob([bytes], { type: "image/jpeg" });
+    const old = $("preview").src; $("preview").src = URL.createObjectURL(blob); if (old) URL.revokeObjectURL(old);
+    $("frame").classList.remove("stale"); $("err").textContent = "";
+    setStatus(`preview ${w}×${h} · ${((performance.now() - t0) / 1000).toFixed(1)}s`);
+  } catch (e) { $("err").textContent = "Preview failed: " + e.message; setStatus("error"); }
+  inflight = false;
+  if (dirty) preview();
+}
+function setStatus(t, busy = false) { $("status").textContent = t; $("status").classList.toggle("busy", busy); }
+
+function set(k, v, delay) { state[k] = v; paint(); schedule(delay); }
+
+async function match() {
+  const d = await call("derive", { color: state.color }); state.dark = d.dark; state.light_color = d.light_color; paint(); schedule(60);
+}
+
+async function renderFull() {
+  const big = size.w * size.h > MAXPX();
+  if (big) { const k = Math.sqrt(MAXPX() / (size.w * size.h)); size = { w: Math.round(size.w * k), h: Math.round(size.h * k) }; paint(); }
+  $("render").disabled = true;
+  const t0 = performance.now(), { w, h } = size;
+  const tick = setInterval(() => setStatus(`full size ${w}×${h} · ${((performance.now() - t0) / 1000).toFixed(0)}s`, true), 500);
+  try {
+    // a desktop renders supersampled, like the studio; a phone renders at size, to stay inside its memory
+    const ss = !phone() && w * h * 4 <= MAXPX() ? 2 : 1;
+    const { bytes } = await call("render", { params: state, w, h, ss, fmt: "png" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([bytes], { type: "image/png" }));
+    a.download = `tex-${state.mode}-s${state.seed}-${w}x${h}.png`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 60000);
+    setStatus(`downloaded ${w}×${h} · ${((performance.now() - t0) / 1000).toFixed(0)}s` + (big ? " (scaled to fit this device)" : ""));
+  } catch (e) { $("err").textContent = "Render failed: " + e.message; setStatus("error"); }
+  clearInterval(tick); $("render").disabled = false;
+}
+
+function surprise() {
+  const rnd = (a, b) => a + Math.random() * (b - a);
+  if (state.mode === "crystals") Object.assign(state, {
+    shard: +rnd(8, 30).toFixed(1), elong: +rnd(1.4, 3.5).toFixed(1), align: +rnd(0.55, 1).toFixed(2),
+    facet: +rnd(0.1, 0.4).toFixed(2), underlay: +rnd(0.2, 0.9).toFixed(2),
+    blend: Math.random() < 0.6 ? "Normal" : ["Screen", "Overlay", "Soft light", "Multiply"][Math.floor(Math.random() * 4)],
+  });
+  if (state.mode === "pumice") Object.assign(state, {
+    porosity: +(state.host === "slab" ? rnd(1.6, 3.2) : rnd(0.3, 1.0)).toFixed(2), bubble_max: Math.round(rnd(15, 60)),
+    mix: +rnd(1.3, 2.1).toFixed(2), stretch: +rnd(1.2, 4).toFixed(1), pdepth: Math.round(rnd(25, 70)),
+    relief: +rnd(0.7, 1.6).toFixed(2), cavity: +rnd(0.5, 1.4).toFixed(2),
+  });
+  const pick = (a) => a[Math.floor(Math.random() * a.length)];
+  if (state.mode === "leather") Object.assign(state, {
+    lea_grain: +rnd(6, 14).toFixed(1), lea_creases: +rnd(0.3, 1.4).toFixed(2), lea_cracks: +rnd(0, 0.8).toFixed(2),
+    lea_crack_size: Math.round(rnd(40, 120)), lea_wear: +rnd(0.3, 1.1).toFixed(2), lea_stain: +rnd(0.2, 1).toFixed(2),
+  });
+  if (state.mode === "sludge") Object.assign(state, {
+    sl_fill: +rnd(0.25, 0.75).toFixed(2), sl_visc: +rnd(0.2, 1.1).toFixed(2), sl_skin: +rnd(0.3, 1.4).toFixed(2),
+    sl_wrinkle: +rnd(8, 24).toFixed(1), sl_bubbles: +rnd(0.2, 1.2).toFixed(2), sl_drips: +rnd(0, 1.2).toFixed(2), sl_oil: +rnd(0.1, 0.7).toFixed(2),
+  });
+  if (state.mode === "candy") Object.assign(state, {
+    cc_length: Math.round(rnd(250, 900)), cc_fluff: +rnd(0.3, 1.4).toFixed(2), cc_loop: +rnd(0.2, 1.2).toFixed(2),
+    cc_mix: +rnd(0.1, 0.6).toFixed(2), cc_glow: +rnd(0.2, 0.9).toFixed(2),
+  });
+  if (state.mode === "ink") Object.assign(state, {
+    ink_drops: Math.round(rnd(3, 14)), ink_time: +rnd(0.5, 1.6).toFixed(2), ink_turb: +rnd(0.3, 1.2).toFixed(2),
+    ink_diffuse: +rnd(0.2, 1).toFixed(2), ink_fall: pick([90, 90, 270, Math.round(rnd(0, 359))]),
+  });
+  if (state.mode === "protozoa") Object.assign(state, {
+    pz_count: Math.round(rnd(15, 60)), pz_size: +rnd(0.7, 1.5).toFixed(2), pz_focus: +rnd(-0.6, 0.6).toFixed(2),
+    pz_scope: pick([0, 0, 0.6, 0.9]), pz_dark: pick([0, 0, 0, 1]),
+  });
+  if (state.mode === "wood") Object.assign(state, {
+    wc_size: Math.round(rnd(45, 140)), wc_layers: +rnd(1.5, 4).toFixed(1), wc_align: +rnd(0.1, 0.9).toFixed(2),
+    wc_splinter: +rnd(0.3, 1.1).toFixed(2), wc_bark: +rnd(0, 0.4).toFixed(2), wc_weather: +rnd(0, 0.8).toFixed(2),
+  });
+  if (state.mode === "shag") Object.assign(state, {
+    sh_pile: Math.round(rnd(35, 120)), sh_spacing: +rnd(10, 20).toFixed(1), sh_fall: +rnd(0.3, 0.95).toFixed(2),
+    sh_comb: +rnd(0.1, 0.9).toFixed(2), sh_curl: +rnd(0.1, 0.9).toFixed(2), sh_heather: pick([0, 0, 0.1, 0.3, 0.5]),
+  });
+  if (state.mode === "elephant") Object.assign(state, {
+    el_plate: Math.round(rnd(20, 60)), el_fine: +rnd(6, 14).toFixed(1), el_depth: +rnd(0.6, 1.6).toFixed(2),
+    el_folds: +rnd(0.3, 1.4).toFixed(2), el_dust: +rnd(0, 1).toFixed(2),
+  });
+  if (state.mode === "crochet") Object.assign(state, {
+    cr_stitch: +rnd(14, 34).toFixed(1), cr_tall: +rnd(0, 1).toFixed(2), cr_lace: pick([0, 0.2, 0.5, 0.9]),
+    cr_stripes: pick([0, 1, 2, 3, 5]), cr_motifs: Math.round(rnd(3, 16)),
+  });
+  const form = state.mode === "crystals" ? state.path : HOSTED.includes(state.mode) ? state.host : state.mode;
+  if (state.mode === "knit") Object.assign(state, {
+    kn_stitch: Math.round(rnd(60, 170)), kn_loose: +rnd(0.2, 0.9).toFixed(2), kn_uneven: +rnd(0.1, 0.9).toFixed(2),
+    kn_rib: pick([0, 0, 1, 2, 3]), kn_stripes: pick([0, 0, 2, 4, 6]),
+  });
+  if (state.mode === "pine") Object.assign(state, {
+    pn_density: +rnd(0.6, 1.8).toFixed(2), pn_length: 5 * Math.round(rnd(80, 260) / 5), pn_align: +rnd(0, 0.9).toFixed(2),
+    pn_decay: +rnd(0.1, 0.9).toFixed(2), pn_fresh: +rnd(0, 0.5).toFixed(2),
+  });
+  if (state.mode === "mycelium") Object.assign(state, {
+    my_seeds: Math.round(rnd(2, 10)), my_time: 10 * Math.round(rnd(30, 80)), my_branch: +rnd(0.5, 2).toFixed(2),
+    my_wander: +rnd(0.4, 2).toFixed(2), my_cords: +rnd(0.3, 1.6).toFixed(2),
+  });
+  if (state.mode === "bones") Object.assign(state, {
+    bb_size: 5 * Math.round(rnd(90, 260) / 5), bb_hollow: +rnd(0.1, 0.8).toFixed(2),
+    bb_curve: +rnd(0, 1).toFixed(2), bb_align: +rnd(0, 0.9).toFixed(2),
+  });
+  if (state.mode === "syrup") Object.assign(state, {
+    sy_pour: +rnd(0.4, 2).toFixed(2), sy_coil: Math.round(rnd(40, 150)), sy_level: +rnd(0.1, 0.8).toFixed(2), sy_depth: +rnd(0.5, 1.8).toFixed(2),
+  });
+  if (state.mode === "rust") Object.assign(state, {
+    ru_amount: +rnd(0.2, 0.8).toFixed(2), ru_bloom: 5 * Math.round(rnd(120, 500) / 5), ru_flakes: +rnd(0.4, 1.8).toFixed(2),
+    ru_flake_size: Math.round(rnd(14, 50)), ru_streaks: +rnd(0, 1.2).toFixed(2),
+  });
+  if (state.mode === "delaunay") Object.assign(state, {
+    dl_points: 50 * Math.round(rnd(600, 5000) / 50), dl_adapt: +rnd(0, 1).toFixed(2), dl_relief: +rnd(0.3, 2.5).toFixed(2), dl_edges: pick([0, 0.4, 0.8, 1.5]),
+  });
+  if (state.mode === "scales") Object.assign(state, {
+    sc_size: 5 * Math.round(rnd(60, 220) / 5), sc_rows: +rnd(0.6, 1.1).toFixed(2), sc_lift: +rnd(0.3, 1.4).toFixed(2),
+    sc_growth: pick([0, 0.4, 0.8]), sc_mix: pick([0, 0, 0.15, 0.4]),
+  });
+  if (state.mode === "amethyst") Object.assign(state, {
+    am_size: 5 * Math.round(rnd(60, 220) / 5), am_lean: +rnd(0, 0.9).toFixed(2), am_sharp: +rnd(0.6, 1.8).toFixed(2),
+  });
+  if (form === "thatch") Object.assign(state, {
+    th_angle: Math.round(rnd(0, 359)), th_length: 5 * Math.round(rnd(160, 520) / 5), th_width: Math.round(rnd(40, 110)),
+    th_overlap: +rnd(0.35, 0.8).toFixed(2), th_jitter: +rnd(0.1, 0.8).toFixed(2),
+  });
+  if (form === "weave") Object.assign(state, {
+    wv_count: Math.round(rnd(5, 22)), wv_angle: pick([0, 0, 45, Math.round(rnd(0, 89))]), wv_width: +rnd(0.7, 0.98).toFixed(2), wv_span: pick([1, 1, 2, 3]),
+  });
+  if (form === "burst") Object.assign(state, {
+    bu_centres: Math.round(rnd(1, 5)), bu_length: 5 * Math.round(rnd(150, 420) / 5), bu_width: Math.round(rnd(35, 95)), bu_curl: +rnd(0, 1.2).toFixed(2),
+  });
+  if (form === "rings") Object.assign(state, {
+    rg_centres: Math.round(rnd(1, 6)), rg_width: Math.round(rnd(35, 100)), rg_wobble: +rnd(0.1, 1.1).toFixed(2), rg_breaks: +rnd(0, 0.5).toFixed(2),
+  });
+  if (form === "ribbons") Object.assign(state, {
+    rb_count: Math.round(rnd(6, 28)), rb_wave: +rnd(0.2, 1.4).toFixed(2), rb_angle: Math.round(rnd(0, 179)), rb_breaks: +rnd(0, 0.4).toFixed(2),
+  });
+  if (form === "dabs") Object.assign(state, {
+    db_count: 10 * Math.round(rnd(25, 90)), db_size: 5 * Math.round(rnd(20, 50)), db_order: +rnd(0, 1).toFixed(2), db_curve: +rnd(0.1, 1).toFixed(2),
+  });
+  if (state.mode === "fans" || (state.mode === "crystals" && state.path === "fans")) Object.assign(state, {
+    strokes: 5 * Math.round(rnd(30, 110) / 5), eyes: Math.floor(rnd(2, 8)), fat: +rnd(0.28, 0.5).toFixed(2),
+    rough: +rnd(0.5, 1.5).toFixed(2), dry: +rnd(0, 0.6).toFixed(2), vary: +rnd(0.04, 0.16).toFixed(2),
+  });
+  Object.assign(state, {
+    seed: Math.floor(Math.random() * 100000), width: +rnd(0.2, 0.42).toFixed(2), fill: +rnd(2.2, 4.2).toFixed(1),
+    swirl: +rnd(0.3, 1.1).toFixed(2), wander: +rnd(0.5, 3).toFixed(1), clump: +rnd(0.06, 0.24).toFixed(2),
+    sheen: +rnd(0.1, 0.4).toFixed(2), light: Math.floor(rnd(190, 300)),
+  });
+  paint(); schedule(0);
+}
+
+async function init() {
+  setStatus("loading Python (about 25 MB, the first time)…", true);
+  const cfg = await call("boot", { zip: "tex-py.zip?v=207b2208" });
+  DEF = cfg.defaults; PRESETS = cfg.presets;
+  const saved = load();
+  state = { ...DEF, ...(saved?.state || {}) };
+  size = saved?.size || { w: SIZES[0][1], h: SIZES[0][2] };
+
+  $("sizePreset").innerHTML = SIZES.map(([n], i) => `<option value="${i}">${n}</option>`).join("") + '<option value="custom">Custom</option>';
+  $("sizePreset").onchange = (e) => { if (e.target.value === "custom") return; const [, w, h] = SIZES[+e.target.value]; size = { w, h }; paint(); schedule(0); };
+  for (const k of ["W", "H"]) $(k).onchange = () => {
+    size = { w: Math.max(256, Math.min(5120, +$("W").value || 2560)), h: Math.max(256, Math.min(5120, +$("H").value || 1440)) }; paint(); schedule(0);
+  };
+
+  $("swatches").innerHTML = Object.entries(PRESETS).map(([n, [c, d, l]]) =>
+    `<button class="swatch" data-name="${n}" title="${n}"><span class="bar"><i style="background:${d}"></i><i style="background:${c}"></i><i style="background:${l}"></i></span><em>${n}</em></button>`).join("");
+  document.querySelectorAll(".swatch").forEach((s) => s.onclick = () => {
+    [state.color, state.dark, state.light_color] = PRESETS[s.dataset.name]; paint(); schedule(0);
+  });
+  $("color").oninput = (e) => { state.color = e.target.value; paint(); if ($("autoMatch").checked) match(); else schedule(60); };
+  $("dark").oninput = (e) => set("dark", e.target.value, 60);
+  $("light_color").oninput = (e) => set("light_color", e.target.value, 60);
+  $("matchBtn").onclick = match;
+
+  for (const k of SLIDERS) $(k).oninput = (e) => set(k, +e.target.value);
+  $("seed").onchange = (e) => set("seed", Math.max(0, +e.target.value | 0), 0);
+  $("seedPrev").onclick = () => set("seed", Math.max(0, state.seed - 1), 0);
+  $("seedNext").onclick = () => set("seed", state.seed + 1, 0);
+  $("seedDice").onclick = () => set("seed", Math.floor(Math.random() * 100000), 0);
+  document.querySelectorAll("[data-reset]").forEach((a) => a.onclick = () => {
+    for (const k of a.dataset.reset.split(" ")) state[k] = DEF[k]; paint(); schedule(0);
+  });
+
+  const dial = $("dial");
+  const aim = (e) => { const r = dial.getBoundingClientRect(); const a = Math.atan2(e.clientY - r.top - r.height / 2, e.clientX - r.left - r.width / 2);
+    set("light", (Math.round((a * 180) / Math.PI) + 360) % 360); };
+  dial.onpointerdown = (e) => { aim(e); dial.setPointerCapture(e.pointerId); dial.onpointermove = aim; };
+  dial.onpointerup = () => { dial.onpointermove = null; };
+
+  // a material tab brings its own colours, unless the colours have been made by hand
+  document.querySelectorAll("[data-mode]").forEach((b) => b.onclick = () => {
+    const m = b.dataset.mode, fromPreset = Object.values(PRESETS).some(([c, d, l]) => c === state.color && d === state.dark && l === state.light_color);
+    if (SUGGEST[m] && fromPreset && m !== state.mode) [state.color, state.dark, state.light_color] = PRESETS[SUGGEST[m]];
+    if (ACCENT[m] && m !== state.mode && (state.yarn === DEF.yarn || Object.values(ACCENT).includes(state.yarn))) state.yarn = ACCENT[m];
+    set("mode", m, 0);
+  });
+  $("tint").oninput = (e) => set("tint", e.target.value, 60);
+  document.querySelectorAll("[data-yarn]").forEach((el) => el.oninput = (e) => set("yarn", e.target.value, 60));
+  document.querySelectorAll("[data-path]").forEach((b) => b.onclick = () => set("path", b.dataset.path, 0));
+  // a slab needs far more bubbles than a stroke to read as foam, so switching in or out of it resets porosity
+  document.querySelectorAll("[data-host]").forEach((b) => b.onclick = () => {
+    const h = b.dataset.host;
+    if (state.mode === "pumice" && (h === "slab") !== (state.host === "slab")) Object.assign(state, h === "slab" ? { porosity: 2.4, bubble_max: 45, stretch: 2.2 }
+                                                                       : { porosity: DEF.porosity, bubble_max: DEF.bubble_max, stretch: DEF.stretch });
+    set("host", h, 0);
+  });
+  for (const k of SELECTS) { $(k).innerHTML = BLENDS.map((n) => `<option>${n}</option>`).join(""); $(k).onchange = (e) => set(k, e.target.value, 0); }
+  $("surprise").onclick = surprise;
+  $("render").onclick = renderFull;
+
+  addEventListener("keydown", (e) => {
+    if (e.target.tagName === "INPUT" && e.target.type !== "range") return;
+    if ((e.metaKey || e.ctrlKey) && e.key === "s") { e.preventDefault(); renderFull(); }
+    else if (e.key === "r" && !e.metaKey) $("seedDice").click();
+    else if (e.key === "s" && !e.metaKey) surprise();
+    else if (e.key === "ArrowRight" && e.target.type !== "range") $("seedNext").click();
+    else if (e.key === "ArrowLeft" && e.target.type !== "range") $("seedPrev").click();
+  });
+  addEventListener("resize", () => { fitFrame(); });
+
+  ready = true; $("surprise").disabled = false; $("render").disabled = false;
+  paint(); preview();
+}
+init().catch((e) => { $("err").textContent = "Couldn't start the renderer: " + e.message; setStatus("error"); });
+</script>
+</body>
+</html>
