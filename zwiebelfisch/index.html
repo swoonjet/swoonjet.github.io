@@ -1,0 +1,788 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="A printed sheet of invented letters, hatching, bands, halftone, contours, sheet music or road paint, cut into tiles you can turn, flip and swap.">
+<meta name="theme-color" content="#e6e3dc">
+<meta property="og:title" content="Zwiebelfisch">
+<meta property="og:description" content="A printed sheet of invented letters, hatching, bands, halftone, contours, sheet music or road paint, cut into tiles you can turn, flip and swap.">
+<meta property="og:image" content="https://jontoews.com/assets/thumbs/zwiebelfisch.jpg">
+<meta property="og:url" content="https://jontoews.com/zwiebelfisch/">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<style>html{color-scheme:light}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+<title>Zwiebelfisch</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo+Narrow:wght@500;700&family=Archivo:wght@400;600&display=swap">
+<style>
+  /* Layout: the board is the page. Canvas first, a narrow control rail beside it; on phones the rail stacks under the board. */
+  :root {
+    --bg: #e6e3dc; --panel: #f4f2ee; --fg: #1a191c; --muted: #67635c; --line: #d0cbc1; --accent: #c3401e; --on-accent: #fff8f2;
+    --display: "Archivo Black", "Arial Black", Impact, sans-serif;
+    --body: "Archivo", "Helvetica Neue", Arial, sans-serif;
+    --narrow: "Archivo Narrow", "Arial Narrow", "Helvetica Neue", sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --bg: #141416; --panel: #1e1e21; --fg: #ebe7df; --muted: #a29d94; --line: #35343a; --accent: #ff7a52; --on-accent: #1a0d07; color-scheme: dark; }
+  }
+  :root[data-theme="dark"] { --bg: #141416; --panel: #1e1e21; --fg: #ebe7df; --muted: #a29d94; --line: #35343a; --accent: #ff7a52; --on-accent: #1a0d07; color-scheme: dark; }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body { background: var(--bg); color: var(--fg); font: 400 15px/1.45 var(--body); }
+  .app { max-width: 1280px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 18px 40px; display: grid; gap: 14px; }
+  header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; }
+  h1 { font: 400 clamp(26px, 6vw, 38px)/1 var(--display); letter-spacing: -0.01em; margin: 0; }
+  .home { font: 500 13px/1 var(--narrow); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); text-decoration: none; }
+  .home:hover { color: var(--fg); }
+  header p { margin: 0; color: var(--muted); font-size: 14px; max-width: 60ch; }
+  .layout { display: grid; gap: 18px; grid-template-columns: minmax(0, 1fr); align-items: start; }
+  @media (min-width: 860px) { .layout { grid-template-columns: minmax(0, 1fr) 300px; } .rail { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 12px); } }
+  .stage { display: grid; gap: 8px; justify-items: center; min-width: 0; }
+  canvas { display: block; max-width: 100%; max-height: 78vh; width: auto; height: auto; touch-action: none; cursor: grab; border-radius: 2px; box-shadow: 0 1px 2px rgba(0,0,0,.12), 0 10px 30px rgba(0,0,0,.10); }
+  canvas.dragging { cursor: grabbing; }
+  .meta { display: flex; gap: 14px; font: 500 12px/1 var(--narrow); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .rail { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px; display: grid; gap: 14px; min-width: 0; }
+  .group { display: grid; gap: 8px; }
+  .label { font: 700 11px/1 var(--narrow); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+  .seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+  .seg button { font: 600 13px/1 var(--body); padding: 10px 6px; border: 0; background: transparent; color: var(--fg); cursor: pointer; min-height: 40px; }
+  .seg button + button { border-left: 1px solid var(--line); }
+  .seg button[aria-pressed="true"] { background: var(--fg); color: var(--bg); }
+  .chips { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+  .chips button { font: 600 13px/1.1 var(--body); padding: 9px 4px; min-height: 40px; border: 1px solid var(--line); border-radius: 6px; background: transparent; color: var(--fg); cursor: pointer; }
+  .chips button:hover { border-color: var(--fg); }
+  .chips button[aria-pressed="true"] { background: var(--fg); border-color: var(--fg); color: var(--bg); }
+  .ways { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+  .ways button { display: flex; align-items: center; gap: 8px; font: 600 13px/1.1 var(--body); padding: 8px; min-height: 40px; border: 1px solid var(--line); border-radius: 6px; background: transparent; color: var(--fg); cursor: pointer; text-align: left; min-width: 0; }
+  .ways button:hover { border-color: var(--fg); }
+  .ways button[aria-pressed="true"] { border-color: var(--fg); box-shadow: inset 0 0 0 1px var(--fg); }
+  .ways .chip { display: grid; grid-template-columns: 1fr 1fr; width: 26px; height: 26px; flex: none; border-radius: 4px; overflow: hidden; border: 1px solid var(--line); }
+  .ways .chip i { display: block; }
+  .ways .chip i:first-child { grid-row: span 2; }
+  .ways .nm { min-width: 0; overflow-wrap: anywhere; }
+  .custom { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; }
+  .custom label { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; cursor: pointer; }
+  .custom input { width: 34px; height: 30px; padding: 0; border: 1px solid var(--line); border-radius: 5px; background: transparent; cursor: pointer; }
+  .custom.on span { color: var(--accent); }
+  .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .btn { font: 600 14px/1 var(--body); padding: 12px 10px; min-height: 44px; border-radius: 6px; border: 1px solid var(--line); background: transparent; color: var(--fg); cursor: pointer; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+  .btn:hover { border-color: var(--fg); }
+  .btn.primary:hover { filter: brightness(1.06); border-color: var(--accent); }
+  button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .sliders { display: grid; gap: 12px; }
+  .row { display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; align-items: center; }
+  .row label { font-size: 13px; font-weight: 600; }
+  .row output { font: 500 13px/1 var(--narrow); color: var(--muted); font-variant-numeric: tabular-nums; }
+  .row input { grid-column: 1 / -1; width: 100%; accent-color: var(--accent); height: 26px; }
+  .hint { margin: 0; font-size: 13px; color: var(--muted); }
+  .toast { position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 18px); transform: translateX(-50%); background: var(--fg); color: var(--bg); font: 600 13px/1 var(--body); padding: 10px 14px; border-radius: 99px; pointer-events: none; }
+  .sheet { position: fixed; inset: 0; background: rgba(10,10,12,.82); display: grid; place-items: center; padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); z-index: 20; }
+  .sheet-inner { display: grid; gap: 12px; justify-items: center; max-width: 100%; }
+  .sheet img { max-width: 100%; max-height: 72vh; display: block; }
+  .sheet p { margin: 0; color: #eee; font-size: 14px; text-align: center; }
+  @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+</style>
+
+<div class="app">
+  <header>
+    <h1>Zwiebelfisch</h1><a class="home" href="/">jontoews.com</a>
+    <p>Printer’s slang for a letter set back in the wrong place. A printed sheet, cut into tiles and put back wrong. Tap a tile to turn it. Drag a tile onto another to swap them.</p>
+  </header>
+  <main class="layout">
+    <div class="stage">
+      <canvas id="cv" role="img" aria-label="A grid of tiles cut from a sheet of invented letterforms"></canvas>
+      <div class="meta"><span id="no">Sheet 2203</span><span id="dims">6 × 8 tiles</span></div>
+    </div>
+    <aside class="rail" aria-label="Controls">
+      <div class="group">
+        <span class="label" id="lab-style">Stock</span>
+        <div class="chips" role="group" aria-labelledby="lab-style" id="styles"></div>
+      </div>
+      <div class="actions">
+        <button class="btn primary" id="b-new" type="button">New forms</button>
+        <button class="btn" id="b-mix" type="button">Scramble</button>
+        <button class="btn" id="b-solve" type="button">Solve</button>
+        <button class="btn" id="b-save" type="button">Save PNG</button>
+      </div>
+      <div class="group">
+        <span class="label" id="lab-way">Colour</span>
+        <div class="ways" role="group" aria-labelledby="lab-way" id="ways"></div>
+        <div class="custom" id="custom">
+          <label for="c-paper"><input type="color" id="c-paper"><span>Paper</span></label>
+          <label for="c-ink"><input type="color" id="c-ink"><span>Ink</span></label>
+          <label for="c-accent" id="lab-accent"><input type="color" id="c-accent"><span>Accent</span></label>
+        </div>
+      </div>
+      <div class="group">
+        <span class="label" id="lab-tap">Tap a tile to</span>
+        <div class="seg" role="group" aria-labelledby="lab-tap" id="taps">
+          <button type="button" data-tap="turn" aria-pressed="true">Turn 90°</button>
+          <button type="button" data-tap="flip" aria-pressed="false">Flip</button>
+        </div>
+      </div>
+      <div class="sliders">
+        <div class="row"><label for="s-cols">Columns</label><output id="o-cols" for="s-cols"></output><input id="s-cols" type="range" min="2" max="14" step="1"></div>
+        <div class="row"><label for="s-rows">Rows</label><output id="o-rows" for="s-rows"></output><input id="s-rows" type="range" min="2" max="18" step="1"></div>
+        <div class="row"><label for="s-turn">Turned tiles</label><output id="o-turn" for="s-turn"></output><input id="s-turn" type="range" min="0" max="100" step="1"></div>
+        <div class="row"><label for="s-swap">Swapped tiles</label><output id="o-swap" for="s-swap"></output><input id="s-swap" type="range" min="0" max="100" step="1"></div>
+        <div class="row"><label for="s-size">Form size</label><output id="o-size" for="s-size"></output><input id="s-size" type="range" min="0.5" max="3" step="0.05"></div>
+        <div class="row"><label for="s-count">Forms per sheet</label><output id="o-count" for="s-count"></output><input id="s-count" type="range" min="1" max="14" step="1"></div>
+        <div class="row"><label for="s-gap">Gap</label><output id="o-gap" for="s-gap"></output><input id="s-gap" type="range" min="0" max="12" step="1"></div>
+        <div class="row"><label for="s-grain">Wear</label><output id="o-grain" for="s-grain"></output><input id="s-grain" type="range" min="0" max="100" step="1"></div>
+      </div>
+      <p class="hint">Sliders and colours keep the same sheet. New forms draws a fresh sheet; Scramble deals a new arrangement. Pick Paper, Ink or Accent to set your own colours.</p>
+    </aside>
+  </main>
+</div>
+<div class="sheet" id="sheet" hidden>
+  <div class="sheet-inner">
+    <img id="sheet-img" alt="The current grid as a PNG">
+    <p>Press and hold the image (or right-click it) to save it.</p>
+    <button class="btn primary" id="sheet-close" type="button">Close</button>
+  </div>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+const C = 240;                                   // one tile, in canvas pixels
+const $ = (id) => document.getElementById(id);
+const cv = $('cv'), ctx = cv.getContext('2d');
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+function rng(seed) {
+  let a = seed >>> 0;
+  return () => { a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+}
+const pick = (r, a) => a[Math.floor(r() * a.length)];
+
+// Each stock: tile papers, the ink printed over them, the board the tiles sit on, and slider defaults.
+const STOCKS = {
+  press:   { name: 'Letterpress', paint: letters, uses: ['size', 'count'], papers: ['#efe8d7', '#f4f0e6', '#e3d7bd', '#d5bf99', '#e9e6dc', '#ddd2bd'], ink: '#16130e', board: '#e9e1cd', seam: 'rgba(40,30,15,.22)',
+             d: { cols: 6, rows: 8, turn: 55, swap: 30, size: 1.0, count: 5, gap: 5, grain: 40 } },
+  stencil: { name: 'Stencil', paint: letters, uses: ['size', 'count'], dark: true, streaks: true, papers: ['#b2461f', '#a53e1a', '#bc5127', '#9b3918', '#b84b22'], ink: '#efe3cc', board: '#3a190e', seam: 'rgba(20,6,0,.45)',
+             d: { cols: 7, rows: 10, turn: 20, swap: 15, size: 1.0, count: 9, gap: 2, grain: 65 } },
+  wedge:   { name: 'Wedge', paint: wedges, uses: [], dark: true, papers: ['#252a3a'], ink: '#e9dec4', accent: '#d9462a', board: '#e9dec4', seam: 'rgba(15,18,30,.35)',
+             d: { cols: 6, rows: 8, turn: 100, swap: 0, size: 1, count: 2, gap: 0, grain: 30 } },
+  hatch:   { name: 'Hatch', paint: hatch, uses: ['size', 'count'], papers: ['#efe9dc', '#ebe3d0', '#f3efe6'], ink: '#19191c', board: '#e4dccb', seam: 'rgba(30,30,30,.2)',
+             d: { cols: 6, rows: 8, turn: 60, swap: 25, size: 1.0, count: 6, gap: 4, grain: 25 } },
+  bands:   { name: 'Bands', paint: bands, uses: ['size', 'count'], papers: ['#efe6d2'], ink: '#1f5d85', accent: '#c9452c', board: '#efe6d2', seam: 'rgba(20,50,80,.22)',
+             d: { cols: 6, rows: 8, turn: 50, swap: 20, size: 1.0, count: 8, gap: 0, grain: 20 } },
+  halftone:{ name: 'Halftone', paint: halftone, uses: ['size', 'count'], papers: ['#ebe6d8', '#e6e0cf', '#efeadf'], ink: '#151515', accent: '#d63b27', board: '#d9d2c0', seam: 'rgba(0,0,0,.2)',
+             d: { cols: 7, rows: 9, turn: 45, swap: 30, size: 1.2, count: 3, gap: 3, grain: 12 } },
+  contour: { name: 'Contour', paint: contour, uses: ['size'], papers: ['#e8dcbf', '#e3d5b4', '#ece2c9'], ink: '#3e2c1c', accent: '#86aabd', board: '#c9bb9a', seam: 'rgba(60,40,20,.25)',
+             d: { cols: 6, rows: 8, turn: 40, swap: 35, size: 1.0, count: 4, gap: 5, grain: 10 } },
+  score:   { name: 'Score', paint: score, uses: ['size', 'count'], papers: ['#f1ebdc', '#ebe2cc', '#f4f0e6', '#e3d6b8'], ink: '#17140f', board: '#e8e0cc', seam: 'rgba(40,30,15,.22)',
+             d: { cols: 6, rows: 8, turn: 50, swap: 30, size: 1.0, count: 4, gap: 4, grain: 30 } },
+  road:    { name: 'Road', paint: road, uses: ['size', 'count'], dark: true, speckle: true, papers: ['#3a3a3c', '#343436', '#3f3f41', '#2f3031'], ink: '#eeeae0', accent: '#f0bd2c', board: '#1c1c1e', seam: 'rgba(0,0,0,.5)',
+             d: { cols: 6, rows: 8, turn: 50, swap: 20, size: 1.0, count: 5, gap: 3, grain: 45 } },
+};
+// Colourways per stock. The first takes the stock's own colours; the rest override papers, ink and accent.
+const WAYS = {
+  press: [{ name: 'Kraft' },
+    { name: 'Red on bone', papers: ['#efe6d3', '#f3ede0', '#e6dbc4', '#ebe1cd'], ink: '#b3261e' },
+    { name: 'Indigo', papers: ['#dfe0dc', '#d6d8d4', '#e8e8e3', '#cfd2cd'], ink: '#1f2c5c' },
+    { name: 'Reverse', papers: ['#1b1a18', '#24221f', '#2b2824', '#201e1b'], ink: '#efe8d7', dark: true }],
+  stencil: [{ name: 'Rust' },
+    { name: 'Army', papers: ['#5b5f3a', '#545836', '#62663f', '#4f5332'], ink: '#e9e2c8', streaks: false },
+    { name: 'Crate', papers: ['#22324a', '#1e2c42', '#283a54'], ink: '#f1e6cf', streaks: false },
+    { name: 'Safety', papers: ['#e6b422', '#dcaa1c', '#efbd2d', '#d9a51a'], ink: '#1b1a17', dark: false, streaks: false }],
+  wedge: [{ name: 'Navy' },
+    { name: 'Forest', papers: ['#1f4a3a'], ink: '#efe3c6', accent: '#e0a32b' },
+    { name: 'Plum', papers: ['#3a2340'], ink: '#f0d9c8', accent: '#2f9c95' },
+    { name: 'Cream', papers: ['#e9dec4'], ink: '#252a3a', accent: '#d9462a', dark: false }],
+  hatch: [{ name: 'Black' },
+    { name: 'Blue', papers: ['#f3f1ea', '#eceae2', '#f6f5f0'], ink: '#1f4fa0' },
+    { name: 'Red on pink', papers: ['#f3e3dc', '#efdad1', '#f6e9e3'], ink: '#cf3528' },
+    { name: 'Reverse', papers: ['#18181b', '#1f1f23', '#141416'], ink: '#ece6da', dark: true }],
+  bands: [{ name: 'Blue' },
+    { name: 'Orange', papers: ['#efe6d2'], ink: '#d9562b', accent: '#1f5d85' },
+    { name: 'Green', papers: ['#ece7d6'], ink: '#1f6b4f', accent: '#e2a22b' },
+    { name: 'Night', papers: ['#1c2433'], ink: '#efe6d2', accent: '#e0703a', dark: true }],
+  halftone: [{ name: 'Red + black' },
+    { name: 'Cyan + magenta', papers: ['#f4f2ee', '#efede8', '#f7f6f2'], ink: '#1b8cc4', accent: '#e0368a' },
+    { name: 'Blue + orange', papers: ['#ece6d8', '#e7e0cf'], ink: '#1f3d8a', accent: '#ef7d2a' },
+    { name: 'Riso', papers: ['#f2ede2', '#ede7da'], ink: '#127a7a', accent: '#ff5c8a' }],
+  contour: [{ name: 'Survey' },
+    { name: 'Night', papers: ['#1b2433', '#1f2939', '#18202e'], ink: '#cfe0e8', accent: '#2d5470', dark: true },
+    { name: 'Fern', papers: ['#dfe6cf', '#d8e0c6', '#e6ecd8'], ink: '#3c5a2c', accent: '#9cc3c9' },
+    { name: 'Red line', papers: ['#f4f1ea', '#efebe2', '#f7f5f0'], ink: '#b8322a', accent: '#a9c7d6' }],
+  score: [{ name: 'Cream' },
+    { name: 'Blue ink', papers: ['#f1ede4', '#ebe6da', '#f5f2eb'], ink: '#203a7a' },
+    { name: 'Red ink', papers: ['#f1ebdc', '#ebe2cc', '#f4f0e6'], ink: '#a8231c' },
+    { name: 'Reverse', papers: ['#1a1917', '#22201d', '#151412'], ink: '#efe8d7', dark: true }],
+  road: [{ name: 'Asphalt' },
+    { name: 'Concrete', papers: ['#b9b6ae', '#b1aea6', '#c1beb6', '#aaa79f'], ink: '#1d1d1d', accent: '#e1452c', dark: false },
+    { name: 'Track', papers: ['#b24a35', '#a94431', '#ba5139'], ink: '#f6f1e6', accent: '#f6f1e6' },
+    { name: 'Court', papers: ['#2f6b5a', '#2b6453', '#357260'], ink: '#f3efe4', accent: '#f0bd2c' }],
+};
+const toHex = (c) => '#' + c.map((v) => Math.round(Math.max(0, Math.min(255, v))).toString(16).padStart(2, '0')).join('');
+const shade = (hx, t) => toHex(hexRgb(hx).map((v) => t < 0 ? v * (1 + t) : v + (255 - v) * t));
+const lum = (hx) => { const [r, g, b] = hexRgb(hx); return (0.299 * r + 0.587 * g + 0.114 * b) / 255; };
+
+// The stock as currently coloured: its preset colourway, or the custom paper / ink / accent.
+function stock() {
+  const base = STOCKS[S.style], ways = WAYS[S.style], way = ways[Math.min(S.way, ways.length - 1)];
+  const st = { ...base, ...way };
+  if (S.custom) {
+    const c = S.custom; Object.assign(st, { papers: [c.paper, shade(c.paper, 0.05), shade(c.paper, -0.04), shade(c.paper, -0.08)], ink: c.ink, accent: c.accent, streaks: false });
+  }
+  st.dark = lum(st.papers[0]) < 0.42;
+  if (S.custom || way.papers) {
+    st.board = shade(st.papers[0], st.dark ? -0.45 : -0.07);
+    st.seam = st.dark ? 'rgba(0,0,0,.45)' : 'rgba(30,25,15,.22)';
+  }
+  return st;
+}
+
+const WORDS = ['FORM 12', 'SIDE B', 'NO. 7', 'REEL', 'PROOF', 'DEPT.', 'LOT 31', 'PLATE', 'SHEET 4', 'TAKE 2', 'HOLD', 'REF. 9', 'GAIN', 'OUT', 'LINE 6', 'A/B', 'CUT', 'SET'];
+
+const S = { style: 'press', seed: 2203, mix: 1, tap: 'turn', way: 0, custom: null, ...STOCKS.press.d };
+let ST = null;                                  // the coloured stock the current sheet was built with
+
+/* ---------- invented letterforms ----------
+   Drawn in a unit box 1 wide and H tall. Thick verticals, thin horizontals, bracketed serifs,
+   ball terminals: the parts of display type, recombined so no glyph is a real letter. */
+const H = 1.4;
+function glyph(g, r) {
+  const W = 0.22 + r() * 0.16, t = 0.045 + r() * 0.06, serif = r() < 0.55;
+  const P = () => g.beginPath(), F = () => g.fill();
+  const rect = (x, y, w, h) => { P(); g.rect(x, y, w, h); F(); };
+  const serifAt = (x, y, d) => {
+    const sw = W * 0.55, br = t * 1.4;
+    P(); g.moveTo(x - sw, y); g.lineTo(x + W + sw, y); g.lineTo(x + W + sw, y + d * t);
+    g.quadraticCurveTo(x + W, y + d * t, x + W, y + d * (t + br)); g.lineTo(x, y + d * (t + br));
+    g.quadraticCurveTo(x, y + d * t, x - sw, y + d * t); g.closePath(); F();
+  };
+  const stem = (x, y0 = 0, y1 = H, top = true, bot = true) => { rect(x, y0, W, y1 - y0); if (serif) { if (top) serifAt(x, y0, 1); if (bot) serifAt(x, y1, -1); } };
+  const bowl = (xs, y0, y1, dir) => {             // half ring, flat side at xs, bulging toward dir
+    const ry = (y1 - y0) / 2, cy = y0 + ry, rx = dir > 0 ? 1 - xs : xs, ccw = dir < 0;
+    P(); g.moveTo(xs, y0); g.ellipse(xs, cy, rx, ry, 0, -Math.PI / 2, Math.PI / 2, ccw);
+    g.lineTo(xs, y1 - t); g.ellipse(xs, cy, Math.max(.01, rx - W), Math.max(.01, ry - t), 0, Math.PI / 2, -Math.PI / 2, !ccw); g.closePath(); F();
+  };
+  const arch = (x0, x1, depth) => {
+    const rx = (x1 - x0) / 2, cx = x0 + rx;
+    P(); g.moveTo(x0, depth); g.ellipse(cx, depth, rx, depth, 0, Math.PI, 2 * Math.PI);
+    g.lineTo(x1 - W, depth); g.ellipse(cx, depth, Math.max(.01, rx - W), Math.max(.01, depth - t), 0, 2 * Math.PI, Math.PI, true); g.closePath(); F();
+  };
+  const ring = (a0, a1) => {
+    P(); g.ellipse(.5, H / 2, .5, H / 2, 0, a0, a1); g.ellipse(.5, H / 2, .5 - W, H / 2 - t, 0, a1, a0, true); g.closePath(); F();
+  };
+  const quad = (pts) => { P(); g.moveTo(pts[0], pts[1]); for (let i = 2; i < pts.length; i += 2) g.lineTo(pts[i], pts[i + 1]); g.closePath(); F(); };
+  const ball = (x, y, rr) => { P(); g.arc(x, y, rr, 0, Math.PI * 2); F(); };
+
+  switch (Math.floor(r() * 8)) {
+    case 0: { // stem with a bowl, then a second bowl or a leg
+      stem(0); const mid = H * (0.42 + r() * 0.16); bowl(W, 0, mid + t / 2, 1);
+      if (r() < 0.5) bowl(W, mid - t / 2, H, 1); else quad([W * 1.4, mid - t, W * 1.4 + W * .9, mid - t, 1, H, 1 - W * .9, H]);
+      break; }
+    case 1: { // arch on legs, sometimes a middle leg
+      const d = 0.4 + r() * 0.25; arch(0, 1, d); stem(0, d, H, false, true); stem(1 - W, d, H, false, true);
+      if (r() < 0.4) stem(0.5 - W / 2, d * 0.9, H, false, true);
+      break; }
+    case 2: { // thick and thin diagonals meeting low
+      const m = 0.5 - W / 2 + (r() - .5) * .2;
+      quad([0, 0, W, 0, m + W, H, m, H]); quad([1 - t, 0, 1, 0, m + W, H, m + W - t, H]);
+      if (serif) { serifAt(0, 0, 1); serifAt(1 - W * .6, 0, 1); }
+      break; }
+    case 3: { // stem with a bar, ball ends
+      const x = 0.5 - W / 2; stem(x, r() < .5 ? 0 : 0.18, H, false, true);
+      const y = r() < 0.6 ? 0 : H * 0.3, th = r() < 0.5 ? W * .8 : t * 1.5; rect(0, y, 1, th);
+      if (r() < 0.7) { ball(0.06, y + th / 2, W * 0.6); } if (r() < 0.5) ball(0.94, y + th / 2, W * 0.6);
+      break; }
+    case 4: { // open ring with ball terminals
+      const open = 0.22 + r() * 0.25, a0 = open * Math.PI, a1 = (2 - open) * Math.PI;
+      ring(a0, a1); const er = W * 0.62;
+      if (r() < 0.75) { ball(.5 + Math.cos(a0) * (.5 - W / 2), H / 2 + Math.sin(a0) * (H / 2 - t), er); ball(.5 + Math.cos(a1) * (.5 - W / 2), H / 2 + Math.sin(a1) * (H / 2 - t), er); }
+      if (r() < 0.35) rect(0.45, H / 2 - t / 2, 0.55, t);
+      break; }
+    case 5: { // reversed bowls stacked: an S-like spine
+      const m = H / 2; bowl(0.62, 0, m + t / 2, -1); bowl(0.38, m - t / 2, H, 1);
+      rect(0.62, 0, 0.3, t); rect(0.08, H - t, 0.3, t);
+      if (r() < .7) { ball(0.9, t + W * .45, W * .55); ball(0.1, H - t - W * .45, W * .55); }
+      break; }
+    case 6: { // stem with bars and a quarter disc
+      stem(0, 0, H, true, true); const thick = r() < 0.5;
+      rect(W, 0, 1 - W, thick ? W * .9 : t * 1.6); rect(W, H * (0.42 + r() * .12), 0.62, t);
+      if (r() < 0.6) { P(); g.moveTo(1, thick ? W * .9 : t * 1.6); g.arc(1, thick ? W * .9 : t * 1.6, 0.34, Math.PI / 2, Math.PI); g.closePath(); F(); }
+      if (r() < 0.5) rect(W, H - t * 1.6, 1 - W, t * 1.6);
+      break; }
+    default: { // stem with a thick arm and a hairline leg
+      stem(0); const y = H * (0.45 + r() * .1);
+      quad([W, y, 1 - W * 1.05, 0, 1, 0, W, y + W * 1.25]);
+      quad([W + 0.06, y - 0.02, W + 0.06 + t * 1.4, y - 0.02, 1, H, 1 - t * 1.8, H]);
+      if (serif) serifAt(1 - W * 0.9, 0, 1);
+      break; }
+  }
+  if (r() < 0.25) ball(r() < .5 ? 0.1 : 0.9, r() < .5 ? 0.12 : H - 0.12, W * 0.5);
+}
+
+/* ---------- the printed sheet ---------- */
+let sheet = document.createElement('canvas'), dims = { cols: 0, rows: 0 };
+
+function wearMask(w, h, amt, r) {               // clumpy holes where ink did not take
+  const m = document.createElement('canvas'); m.width = w; m.height = h; const g = m.getContext('2d');
+  // smooth low-res noise, upscaled, then thresholded so the worn patches have hard edges
+  const sw = Math.ceil(w / 36), sh = Math.ceil(h / 36), small = document.createElement('canvas'); small.width = sw; small.height = sh;
+  const sg = small.getContext('2d'), sd = sg.createImageData(sw, sh);
+  for (let i = 0; i < sw * sh; i++) sd.data[i * 4 + 3] = r() * 255;
+  sg.putImageData(sd, 0, 0);
+  const mw = Math.ceil(w / 3), mh = Math.ceil(h / 3), mid = document.createElement('canvas'); mid.width = mw; mid.height = mh;
+  const mg = mid.getContext('2d'); mg.imageSmoothingEnabled = true; mg.drawImage(small, 0, 0, mw, mh);
+  const md = mg.getImageData(0, 0, mw, mh), cut = 255 * (1 - amt * 0.16);
+  for (let i = 3; i < md.data.length; i += 4) md.data[i] = md.data[i] > cut ? 255 : 0;
+  mg.putImageData(md, 0, 0); g.imageSmoothingEnabled = true; g.drawImage(mid, 0, 0, w, h);
+  const fw = Math.ceil(w / 2), fh = Math.ceil(h / 2), fine = document.createElement('canvas'); fine.width = fw; fine.height = fh;
+  const fg = fine.getContext('2d'), fd = fg.createImageData(fw, fh), p = amt * 0.07;
+  for (let i = 0; i < fw * fh; i++) if (r() < p) fd.data[i * 4 + 3] = 255;
+  fg.putImageData(fd, 0, 0); g.imageSmoothingEnabled = false; g.drawImage(fine, 0, 0, w, h);
+  return m;
+}
+
+function buildSheet() {
+  const st = ST = stock(), cols = S.cols, rows = S.rows, w = cols * C, h = rows * C, r = rng(S.seed * 9973 + S.style.length), pr = rng(S.seed * 31 + 7);
+  sheet.width = w; sheet.height = h; const g = sheet.getContext('2d');
+  // tile papers, each cell its own scrap
+  for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) {
+    g.fillStyle = pick(pr, st.papers); g.fillRect(x * C, y * C, C, C);
+    if (st.streaks) {                           // rust streaks
+      for (let k = 0; k < 7; k++) { g.fillStyle = `rgba(${pr() < .5 ? '60,20,5' : '210,120,60'},${0.08 + pr() * .12})`; g.fillRect(x * C + pr() * C, y * C + pr() * C, 2 + pr() * 40, 1 + pr() * 4); }
+    }
+    if (st.speckle) {                           // asphalt aggregate
+      for (let k = 0; k < 160; k++) { g.fillStyle = pr() < .5 ? `rgba(255,255,255,${.05 + pr() * .1})` : `rgba(0,0,0,${.1 + pr() * .15})`; g.fillRect(x * C + pr() * C, y * C + pr() * C, 1 + pr() * 3, 1 + pr() * 3); }
+    }
+  }
+  const ink = document.createElement('canvas'); ink.width = w; ink.height = h; const ig = ink.getContext('2d');
+  ig.fillStyle = st.ink;
+  st.paint(ig, r, cols, rows, st, w, h);
+  if (S.grain > 0) { ig.globalCompositeOperation = 'destination-out'; ig.drawImage(wearMask(w, h, S.grain / 100, r), 0, 0); ig.globalCompositeOperation = 'source-over'; }
+  g.globalAlpha = st.dark ? 0.96 : 0.94; g.drawImage(ink, 0, 0); g.globalAlpha = 1;
+  // paper tooth over everything
+  const tooth = wearMask(w, h, 0.25, rng(S.seed + 5)); if (!st.dark) { g.globalAlpha = 0.06; g.globalCompositeOperation = 'multiply'; g.drawImage(tooth, 0, 0); } g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1;
+  dims = { cols, rows };
+}
+
+function letters(ig, r, cols, rows, st, w, h) {
+  const n = S.count;
+  for (let i = 0; i < n; i++) {
+    const hpx = C * (1.4 + r() * 2.2) * S.size, s = hpx / H;
+    const cx = (-0.05 + r() * 1.1) * w, cy = (-0.05 + r() * 1.1) * h;
+    const rot = r() < 0.3 ? Math.floor(r() * 4) * Math.PI / 2 : 0, flip = r() < 0.2 ? -1 : 1;
+    const knock = S.style === 'press' && r() < 0.1;
+    ig.save(); ig.translate(cx, cy); ig.rotate(rot); ig.scale(s * flip, s); ig.translate(-0.5, -H / 2);
+    if (knock) { ig.fillRect(-0.12, -0.08, 1.24, H + 0.16); ig.globalCompositeOperation = 'destination-out'; }
+    const gr = rng(Math.floor(r() * 1e9)); glyph(ig, gr);
+    ig.globalCompositeOperation = 'source-over';
+    if (S.style === 'stencil') {                // stencil bridges
+      ig.globalCompositeOperation = 'destination-out';
+      ig.fillRect(-0.2, H * (0.3 + r() * 0.4), 1.4, 0.045);
+      if (r() < 0.5) ig.fillRect(0.3 + r() * 0.4, -0.2, 0.04, H + 0.4);
+      ig.globalCompositeOperation = 'source-over';
+    }
+    ig.restore();
+  }
+  // small print on a few scraps
+  if (S.style === 'press') {
+    const k = Math.round(cols * rows * 0.12);
+    for (let i = 0; i < k; i++) {
+      const x = Math.floor(r() * cols) * C, y = Math.floor(r() * rows) * C, fs = C * (0.06 + r() * 0.05);
+      ig.save(); ig.translate(x + C * (0.08 + r() * 0.5), y + C * (0.12 + r() * 0.76));
+      if (r() < 0.3) ig.rotate(Math.PI); ig.font = `700 ${fs}px "Archivo Narrow", "Arial Narrow", sans-serif`;
+      ig.fillText(pick(r, WORDS), 0, 0); ig.restore();
+      if (r() < 0.4) ig.fillRect(x + C * 0.08, y + C * (0.2 + r() * 0.6), C * (0.4 + r() * 0.5), 1.5);
+    }
+  }
+}
+
+function wedges(ig, r, cols, rows, st) {
+  // one or two modules repeated on every tile; turning the tiles makes the pattern
+  const mod = () => {
+    switch (Math.floor(r() * 3)) {
+      case 0: { const a = r() * 0.5, b = 0.2 + r() * 0.6; return [a, 0, 1, 0, 1, 1, b, 1]; }
+      case 1: { const x = 0.25 + r() * 0.75; return [0, 0, 1, 0, x, 1]; }
+      default: { const y = r() * 0.4, x = 0.4 + r() * 0.5; return [0, y, 1, 0, 1, 1, x, 1]; }
+    }
+  };
+  const mods = [mod(), mod()];
+  for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) {
+    const m = r() < 0.72 ? mods[0] : mods[1], ox = x * C, oy = y * C;
+    ig.save(); ig.translate(ox, oy); ig.scale(C, C);
+    ig.beginPath(); ig.moveTo(m[0], m[1]); for (let i = 2; i < m.length; i += 2) ig.lineTo(m[i], m[i + 1]); ig.closePath();
+    ig.fillStyle = st.ink; ig.fill();
+    if (r() < 0.12) { ig.save(); ig.clip(); ig.fillStyle = st.accent; const hx = r() < .5; ig.fillRect(hx ? 0.5 : 0, hx ? 0 : 0.5, hx ? 0.5 : 1, hx ? 1 : 0.5); ig.restore(); }
+    ig.restore();
+    if (r() < 0.45) {                           // a word printed in a corner, in the ground colour
+      ig.save(); ig.fillStyle = st.papers[0]; const fs = C * 0.075;
+      ig.font = `700 ${fs}px "Archivo Narrow", "Arial Narrow", sans-serif`;
+      ig.translate(ox + C * 0.06, oy + C * 0.06); const vert = r() < .5; if (vert) { ig.rotate(Math.PI / 2); ig.translate(0, -fs * 1.2); }
+      ig.fillText(pick(r, WORDS), 0, fs); ig.restore();
+    }
+  }
+}
+
+
+/* ---------- more stocks: each paints the ink layer for a whole sheet ---------- */
+const turnQ = (r) => Math.floor(r() * 4) * Math.PI / 2;
+const hexRgb = (hx) => [1, 3, 5].map((i) => parseInt(hx.slice(i, i + 2), 16));
+
+function hatch(ig, r, cols, rows, st, w, h) {   // big shapes filled with ruled lines; turning a tile turns its lines
+  for (let i = 0; i < S.count; i++) {
+    const size = C * (1.6 + r() * 2.4) * S.size, kind = Math.floor(r() * 5), solid = r() < 0.15;
+    const pitch = C * (0.06 + r() * 0.06), lw = pitch * (0.32 + r() * 0.3), ang = Math.floor(r() * 4) * Math.PI / 4;
+    ig.save(); ig.translate(r() * w, r() * h); ig.rotate(turnQ(r));
+    ig.beginPath();
+    if (kind === 0) ig.arc(0, 0, size / 2, 0, Math.PI * 2);
+    else if (kind === 1) { ig.moveTo(size / 2, 0); ig.arc(0, 0, size / 2, 0, Math.PI, true); ig.closePath(); }
+    else if (kind === 2) ig.rect(-size / 2, -size * 0.3, size, size * 0.6);
+    else if (kind === 3) { ig.moveTo(-size / 2, size / 2); ig.lineTo(size / 2, size / 2); ig.lineTo(-size / 2, -size / 2); ig.closePath(); }
+    else { ig.arc(0, 0, size / 2, 0, Math.PI * 2); ig.moveTo(size * 0.26, 0); ig.arc(0, 0, size * 0.26, 0, Math.PI * 2, true); }
+    ig.save(); ig.clip(); ig.rotate(ang);
+    ig.globalCompositeOperation = 'destination-out'; ig.fillRect(-size, -size, size * 2, size * 2); ig.globalCompositeOperation = 'source-over';
+    ig.fillStyle = st.ink;
+    if (solid) ig.fillRect(-size, -size, size * 2, size * 2);
+    else for (let y = -size; y < size; y += pitch) ig.fillRect(-size, y, size * 2, lw);
+    ig.restore();
+    if (!solid && r() < 0.35) { ig.lineWidth = Math.max(3, lw); ig.strokeStyle = st.ink; ig.stroke(); }
+    ig.restore();
+  }
+}
+
+function bands(ig, r, cols, rows, st, w, h) {   // concentric hairpins that pass over and under each other
+  const n = Math.max(1, Math.round(S.count * 0.9));
+  for (let i = 0; i < n; i++) {
+    const pitch = C * (0.1 + r() * 0.06) * S.size, rings = 3 + Math.floor(r() * 5), R0 = pitch * (0.5 + r() * 2.5);
+    const len = C * (0.8 + r() * 4) * S.size, len2 = r() < 0.5 ? len : C * (0.5 + r() * 3) * S.size;
+    const Rm = R0 + (rings - 1) * pitch / 2, col = st.accent && r() < 0.2 ? st.accent : st.ink;
+    ig.save(); ig.translate(r() * w, r() * h); ig.rotate(turnQ(r));
+    const path = (rad) => { ig.beginPath(); ig.moveTo(-rad, len); ig.lineTo(-rad, 0); ig.arc(0, 0, rad, Math.PI, 0); ig.lineTo(rad, len2); };
+    ig.globalCompositeOperation = 'destination-out'; ig.lineWidth = rings * pitch + pitch * 0.5; path(Rm); ig.stroke();
+    ig.globalCompositeOperation = 'source-over'; ig.strokeStyle = col; ig.lineWidth = pitch * 0.5;
+    for (let k = 0; k < rings; k++) { path(R0 + k * pitch); ig.stroke(); }
+    ig.restore();
+  }
+}
+
+function halftone(ig, r, cols, rows, st, w, h) { // invented letters and soft blobs, screened into dots
+  const k = 24, fw = Math.ceil(w / k), fh = Math.ceil(h / k);
+  const field = (paint) => {
+    const c = document.createElement('canvas'); c.width = fw; c.height = fh; const g = c.getContext('2d'); g.fillStyle = '#000'; paint(g);
+    const a = g.getImageData(0, 0, fw, fh).data; let v = new Float32Array(fw * fh);
+    for (let i = 0; i < fw * fh; i++) v[i] = a[i * 4 + 3] / 255;
+    for (let pass = 0; pass < 3; pass++) {
+      const o = new Float32Array(fw * fh);
+      for (let y = 0; y < fh; y++) for (let x = 0; x < fw; x++) {
+        let sum = 0; for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) sum += v[Math.min(fh - 1, Math.max(0, y + dy)) * fw + Math.min(fw - 1, Math.max(0, x + dx))];
+        o[y * fw + x] = sum / 9;
+      }
+      v = o;
+    }
+    return v;
+  };
+  const sample = (v, x, y) => {
+    const fx = Math.min(fw - 1.001, Math.max(0, x / k - 0.5)), fy = Math.min(fh - 1.001, Math.max(0, y / k - 0.5)), ix = fx | 0, iy = fy | 0, tx = fx - ix, ty = fy - iy, i = iy * fw + ix;
+    return (v[i] * (1 - tx) + v[i + 1] * tx) * (1 - ty) + (v[i + fw] * (1 - tx) + v[i + fw + 1] * tx) * ty;
+  };
+  const black = field((g) => {
+    for (let i = 0; i < S.count; i++) {
+      const s = C * (1.6 + r() * 1.8) * S.size / k / H;
+      g.save(); g.translate(r() * fw, r() * fh); if (r() < 0.3) g.rotate(turnQ(r)); g.scale(s, s); g.translate(-0.5, -H / 2); glyph(g, rng(Math.floor(r() * 1e9))); g.restore();
+    }
+  });
+  const red = field((g) => {
+    for (let i = 0; i < 2 + S.count; i++) {
+      const x = r() * fw, y = r() * fh, rad = C * (0.8 + r() * 2) * S.size / k, gr = g.createRadialGradient(x, y, 0, x, y, rad);
+      gr.addColorStop(0, 'rgba(0,0,0,0.95)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(0, 0, fw, fh);
+    }
+  });
+  const screen = (v, ang, pitch, color, gain) => {
+    ig.fillStyle = color; const ca = Math.cos(ang), sa = Math.sin(ang), M = Math.ceil((w + h) / pitch);
+    for (let a = -M; a <= M; a++) for (let b = -M; b <= M; b++) {
+      const x = w / 2 + (a * ca - b * sa) * pitch, y = h / 2 + (a * sa + b * ca) * pitch;
+      if (x < -pitch || y < -pitch || x > w + pitch || y > h + pitch) continue;
+      const rad = pitch * 0.6 * Math.sqrt(Math.min(1, sample(v, x, y) * gain));
+      if (rad > 0.9) { ig.beginPath(); ig.arc(x, y, rad, 0, Math.PI * 2); ig.fill(); }
+    }
+  };
+  screen(red, Math.PI / 12, C / 7, st.accent, 1);
+  screen(black, Math.PI / 4, C / 9, st.ink, 0.92);
+}
+
+function contour(ig, r, cols, rows, st, w, h) {  // survey-map contour lines with lakes and spot heights
+  const k = 3, gw = Math.ceil(w / k), gh = Math.ceil(h / k);
+  const oct = [[C * 2.4 * S.size / k, 1], [C * 1.1 * S.size / k, 0.42], [C * 0.5 * S.size / k, 0.16]];
+  const grids = oct.map(([sp]) => { const nx = Math.ceil(gw / sp) + 2, ny = Math.ceil(gh / sp) + 2, a = new Float32Array(nx * ny); for (let i = 0; i < a.length; i++) a[i] = r(); return { nx, a }; });
+  const noise = (x, y) => {
+    let v = 0, tot = 0;
+    for (let o = 0; o < oct.length; o++) {
+      const sp = oct[o][0], amp = oct[o][1], G = grids[o], fx = x / sp, fy = y / sp, ix = fx | 0, iy = fy | 0;
+      const tx = fx - ix, ty = fy - iy, sx = tx * tx * (3 - 2 * tx), sy = ty * ty * (3 - 2 * ty), A = G.a, i0 = iy * G.nx + ix;
+      const a0 = A[i0] + (A[i0 + 1] - A[i0]) * sx, a1 = A[i0 + G.nx] + (A[i0 + G.nx + 1] - A[i0 + G.nx]) * sx;
+      v += (a0 + (a1 - a0) * sy) * amp; tot += amp;
+    }
+    return (v / tot - 0.5) * 2.3 + 0.5;
+  };
+  const c = document.createElement('canvas'); c.width = gw; c.height = gh; const g = c.getContext('2d'), img = g.createImageData(gw, gh), d = img.data;
+  const ink = hexRgb(st.ink), water = hexRgb(st.accent), levels = 16;
+  let prev = new Float32Array(gw), cur = new Float32Array(gw);
+  for (let y = 0; y < gh; y++) {
+    for (let x = 0; x < gw; x++) cur[x] = noise(x, y);
+    for (let x = 0; x < gw; x++) {
+      const v = cur[x], gx = x ? v - cur[x - 1] : cur[1] - v, gy = y ? v - prev[x] : 0, grad = Math.max(0.05, Math.hypot(gx, gy) * levels);
+      const t = v * levels, li = Math.round(t), dist = Math.abs(t - li) / grad, thick = li % 4 === 0 ? 1.25 : 0.6, i = (y * gw + x) * 4;
+      if (dist < thick) { d[i] = ink[0]; d[i + 1] = ink[1]; d[i + 2] = ink[2]; d[i + 3] = 255 * Math.min(1, (thick - dist) * 1.6); }
+      else if (v < 0.17) { d[i] = water[0]; d[i + 1] = water[1]; d[i + 2] = water[2]; d[i + 3] = 255; }
+    }
+    [prev, cur] = [cur, prev];
+  }
+  g.putImageData(img, 0, 0); ig.imageSmoothingEnabled = true; ig.drawImage(c, 0, 0, w, h);
+  ig.fillStyle = st.ink; ig.font = `600 ${C * 0.06}px "Archivo Narrow", "Arial Narrow", sans-serif`;
+  for (let i = 0; i < cols * rows * 0.15; i++) {
+    const x = r() * w, y = r() * h; ig.beginPath(); ig.moveTo(x, y - C * 0.03); ig.lineTo(x + C * 0.03, y + C * 0.02); ig.lineTo(x - C * 0.03, y + C * 0.02); ig.closePath(); ig.fill();
+    ig.fillText(String(Math.round(noise(x / k, y / k) * 900 + 100)), x + C * 0.05, y + C * 0.025);
+  }
+}
+
+function score(ig, r, cols, rows, st, w, h) {    // staves of notes, with a few giant notes laid over them
+  const sp = C * 0.085 * S.size, lw = Math.max(2, sp * 0.1);
+  ig.fillStyle = st.ink;
+  const head = (x, y, s, filled) => {
+    ig.save(); ig.translate(x, y); ig.rotate(-0.38); ig.beginPath(); ig.ellipse(0, 0, s * 0.66, s * 0.46, 0, 0, Math.PI * 2);
+    if (!filled) ig.ellipse(0, 0, s * 0.48, s * 0.2, 0.35, Math.PI * 2, 0, true);
+    ig.fill(); ig.restore();
+  };
+  const note = (x, y, s, filled, up, len) => {
+    head(x, y, s, filled); const sx = up ? x + s * 0.56 : x - s * 0.56, sw = Math.max(2, s * 0.12);
+    ig.fillRect(sx - sw / 2, up ? y - len : y, sw, len); return { x: sx, y: up ? y - len : y + len, sw };
+  };
+  const beam = (a, b, t, up) => { const d = up ? 1 : -1; ig.beginPath(); ig.moveTo(a.x - a.sw / 2, a.y); ig.lineTo(b.x + b.sw / 2, b.y); ig.lineTo(b.x + b.sw / 2, b.y + d * t); ig.lineTo(a.x - a.sw / 2, a.y + d * t); ig.closePath(); ig.fill(); };
+  let y0 = C * (0.2 + r() * 0.6);
+  while (y0 < h) {
+    for (let k = 0; k < 5; k++) ig.fillRect(0, y0 + k * sp, w, lw);
+    let x = C * (0.2 + r() * 0.5), pend = null;
+    while (x < w + sp) {
+      if (r() < 0.12) { ig.fillRect(x, y0, lw * 1.6, sp * 4 + lw); x += sp * 2; pend = null; continue; }
+      const pos = Math.floor(r() * 13) - 2, y = y0 + pos * sp / 2 + lw / 2, up = pos > 4;
+      for (let q = -2; q >= pos; q -= 2) ig.fillRect(x - sp, y0 + q * sp / 2, sp * 2, lw);
+      for (let q = 10; q <= pos; q += 2) ig.fillRect(x - sp, y0 + q * sp / 2, sp * 2, lw);
+      const end = note(x, y, sp, r() < 0.75, up, sp * 3.5);
+      if (pend && pend.up === up && r() < 0.6) { beam(pend.end, end, sp * 0.5, up); pend = null; } else pend = { end, up };
+      x += sp * (2.5 + r() * 3);
+    }
+    y0 += sp * 4 + C * (0.5 + r() * 1.1);
+  }
+  for (let i = 0; i < S.count; i++) {
+    const s = sp * (5 + r() * 6), up = r() < 0.5, x = r() * w, y = r() * h;
+    if (r() < 0.4) { const a = note(x, y, s, r() < 0.6, up, s * 4), b = note(x + s * 2.6, y + (r() - 0.5) * s, s, true, up, s * 4); beam(a, b, s * 0.5, up); }
+    else note(x, y, s, r() < 0.6, up, s * 4);
+  }
+}
+
+function road(ig, r, cols, rows, st, w, h) {     // road paint: lane lines, arrows, zebra bars, chevrons, numbers
+  const vertical = r() < 0.5, lw = C * 0.07;
+  for (let i = 0, n = 2 + Math.floor(r() * 2); i < n; i++) {
+    const pos = r() * (vertical ? w : h), dashed = r() < 0.5, dbl = !dashed && r() < 0.6, L = vertical ? h : w;
+    ig.fillStyle = dbl ? st.accent : st.ink;
+    for (let s0 = 0; s0 < L; s0 += dashed ? C * 1.2 : L) {
+      const len = dashed ? C * 0.7 : L;
+      for (const o of dbl ? [0, lw * 1.8] : [0]) vertical ? ig.fillRect(pos + o, s0, lw, len) : ig.fillRect(s0, pos + o, len, lw);
+    }
+  }
+  for (let i = 0; i < S.count; i++) {
+    const kind = Math.floor(r() * 5), s = C * (1.4 + r() * 2.2) * S.size, sw = s * 0.16;
+    ig.save(); ig.translate(r() * w, r() * h); ig.rotate(turnQ(r)); ig.fillStyle = r() < 0.2 ? st.accent : st.ink;
+    if (kind === 0) {
+      ig.fillRect(-sw / 2, -s * 0.2, sw, s * 1.4);
+      ig.beginPath(); ig.moveTo(-s * 0.32, -s * 0.2); ig.lineTo(0, -s * 0.8); ig.lineTo(s * 0.32, -s * 0.2); ig.closePath(); ig.fill();
+    } else if (kind === 1) {
+      const R = s * 0.35; ig.fillRect(-sw / 2, 0, sw, s * 1.1);
+      ig.beginPath(); ig.arc(R, 0, R + sw / 2, Math.PI, 1.5 * Math.PI); ig.arc(R, 0, R - sw / 2, 1.5 * Math.PI, Math.PI, true); ig.closePath(); ig.fill();
+      ig.beginPath(); ig.moveTo(R, -R - s * 0.3); ig.lineTo(R + s * 0.45, -R); ig.lineTo(R, -R + s * 0.3); ig.closePath(); ig.fill();
+    } else if (kind === 2) {
+      for (let j = 0; j < 6; j++) ig.fillRect(-s / 2 + j * s * 0.2, -s * 0.6, s * 0.11, s * 1.2);
+    } else if (kind === 3) {
+      for (let j = 0; j < 4; j++) {
+        const y = j * s * 0.3; ig.beginPath(); ig.moveTo(-s / 2, y); ig.lineTo(0, y - s * 0.3); ig.lineTo(s / 2, y);
+        ig.lineTo(s / 2, y + s * 0.12); ig.lineTo(0, y - s * 0.18); ig.lineTo(-s / 2, y + s * 0.12); ig.closePath(); ig.fill();
+      }
+    } else {
+      ig.font = `${s * 0.5}px "Archivo Black", "Arial Black", sans-serif`; ig.textAlign = 'center'; ig.scale(1, 2.4);
+      ig.fillText(String(10 * (2 + Math.floor(r() * 7))), 0, 0);
+    }
+    ig.restore();
+  }
+}
+
+/* ---------- tiles ---------- */
+let tiles = [], L = {}, drag = null, raf = 0;
+
+function layoutBoard() {
+  const gp = S.gap * 2, m = S.gap > 0 ? gp * 2 + 10 : 0;
+  L = { g: gp, m, w: m * 2 + S.cols * C + (S.cols - 1) * gp, h: m * 2 + S.rows * C + (S.rows - 1) * gp };
+  cv.width = L.w; cv.height = L.h;
+}
+const cellXY = (i) => [L.m + (i % S.cols) * (C + L.g), L.m + Math.floor(i / S.cols) * (C + L.g)];
+
+function makeTiles() {
+  tiles = [];
+  for (let i = 0; i < S.cols * S.rows; i++) { const [x, y] = cellXY(i); tiles.push({ home: i, at: i, rot: 0, flip: false, a: 0, f: 1, x, y }); }
+}
+
+function arrange() {                             // same mix seed -> sliders only move thresholds
+  const r = rng(S.mix * 7919 + 13), sw = [];
+  tiles.forEach((t, i) => {
+    const uT = r(), uR = r(), uF = r(), uS = r();
+    const want = uT < S.turn / 100 ? 1 + Math.floor(uR * 3) : 0;
+    t.rot = want + 4 * Math.round((t.rot - want) / 4);
+    t.flip = S.style !== 'wedge' && uF < (S.turn / 100) * 0.18;
+    t.at = i; if (uS < S.swap / 100) sw.push(i);
+  });
+  const pos = sw.slice();
+  for (let i = pos.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [pos[i], pos[j]] = [pos[j], pos[i]]; }
+  sw.forEach((ti, k) => { tiles[ti].at = pos[k]; });
+  kick();
+}
+
+function drawTile(t, x, y, lift) {
+  const st = ST, sx = (t.home % dims.cols) * C, sy = Math.floor(t.home / dims.cols) * C;
+  ctx.save(); ctx.translate(x + C / 2, y + C / 2);
+  if (lift) { ctx.scale(1.07, 1.07); ctx.fillStyle = 'rgba(0,0,0,.28)'; ctx.fillRect(-C / 2 + 6, -C / 2 + 10, C, C); }
+  else if (L.g > 0) { ctx.fillStyle = 'rgba(0,0,0,.16)'; ctx.fillRect(-C / 2 + 2, -C / 2 + 3, C, C); }
+  ctx.rotate(t.a); ctx.scale(t.f, 1);
+  ctx.drawImage(sheet, sx, sy, C, C, -C / 2, -C / 2, C, C);
+  if (L.g <= 4) { ctx.strokeStyle = st.seam; ctx.lineWidth = 1.5; ctx.strokeRect(-C / 2 + .75, -C / 2 + .75, C - 1.5, C - 1.5); }
+  ctx.restore();
+}
+
+function draw() {
+  ctx.fillStyle = ST.board; ctx.fillRect(0, 0, L.w, L.h);
+  for (const t of tiles) if (!drag || drag.t !== t || !drag.moved) drawTile(t, t.x, t.y, false);
+  if (drag && drag.moved) drawTile(drag.t, drag.p.x - drag.off.x, drag.p.y - drag.off.y, true);
+}
+
+function step() {
+  raf = 0; let busy = false; const k = reduce ? 1 : 0.24;
+  for (const t of tiles) {
+    if (drag && drag.t === t && drag.moved) continue;
+    const [tx, ty] = cellXY(t.at), ta = t.rot * Math.PI / 2, tf = t.flip ? -1 : 1;
+    t.x += (tx - t.x) * k; t.y += (ty - t.y) * k; t.a += (ta - t.a) * k; t.f += (tf - t.f) * k;
+    if (Math.abs(tx - t.x) + Math.abs(ty - t.y) > 0.5 || Math.abs(ta - t.a) > 0.002 || Math.abs(tf - t.f) > 0.002) busy = true;
+    else { t.x = tx; t.y = ty; t.a = ta; t.f = tf; }
+  }
+  draw(); if (busy) raf = requestAnimationFrame(step);
+}
+const kick = () => { if (!raf) raf = requestAnimationFrame(step); };
+
+/* ---------- pointer: tap turns, drag swaps ---------- */
+function pt(e) { const b = cv.getBoundingClientRect(), s = cv.width / b.width; return { x: (e.clientX - b.left) * s, y: (e.clientY - b.top) * s, s }; }
+function cellAt(p) {
+  const c = Math.floor((p.x - L.m) / (C + L.g)), r = Math.floor((p.y - L.m) / (C + L.g));
+  if (c < 0 || r < 0 || c >= S.cols || r >= S.rows) return -1;
+  return r * S.cols + c;
+}
+cv.addEventListener('pointerdown', (e) => {
+  const p = pt(e), cell = cellAt(p); if (cell < 0) return;
+  const t = tiles.find((o) => o.at === cell); const [x, y] = cellXY(cell);
+  drag = { t, p, start: p, off: { x: p.x - x, y: p.y - y }, moved: false };
+  cv.setPointerCapture(e.pointerId);
+});
+cv.addEventListener('pointermove', (e) => {
+  if (!drag) return; drag.p = pt(e);
+  if (!drag.moved && Math.hypot(drag.p.x - drag.start.x, drag.p.y - drag.start.y) > 10 * drag.p.s) { drag.moved = true; cv.classList.add('dragging'); }
+  if (drag.moved) { if (!raf) draw(); }
+});
+const endDrag = (e, cancel) => {
+  if (!drag) return; const { t } = drag;
+  if (!drag.moved) {
+    if (!cancel) { if (S.tap === 'flip' || e.shiftKey) t.flip = !t.flip; else t.rot += 1; }
+  } else {
+    t.x = drag.p.x - drag.off.x; t.y = drag.p.y - drag.off.y;
+    const cell = cancel ? -1 : cellAt(drag.p);
+    if (cell >= 0 && cell !== t.at) { const o = tiles.find((q) => q.at === cell); o.at = t.at; t.at = cell; }
+  }
+  drag = null; cv.classList.remove('dragging'); kick();
+};
+cv.addEventListener('pointerup', (e) => endDrag(e, false));
+cv.addEventListener('pointercancel', (e) => endDrag(e, true));
+
+/* ---------- controls ---------- */
+const SL = ['cols', 'rows', 'turn', 'swap', 'size', 'count', 'gap', 'grain'];
+const fmt = { cols: (v) => v, rows: (v) => v, turn: (v) => v + '%', swap: (v) => v + '%', size: (v) => (+v).toFixed(2) + '×', count: (v) => v, gap: (v) => v, grain: (v) => v + '%' };
+function syncUI() {
+  SL.forEach((k) => { $('s-' + k).value = S[k]; $('o-' + k).textContent = fmt[k](S[k]); });
+  document.querySelectorAll('#styles button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.style === S.style)));
+  document.querySelectorAll('#taps button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.tap === S.tap)));
+  ['size', 'count'].forEach((k) => { $('s-' + k).closest('.row').hidden = !STOCKS[S.style].uses.includes(k); });
+  syncWays();
+  $('no').textContent = 'Sheet ' + String(S.seed).padStart(4, '0');
+  $('dims').textContent = `${S.cols} × ${S.rows} tiles`;
+}
+function rebuild(keepPositions) {
+  buildSheet(); layoutBoard();
+  if (!keepPositions || tiles.length !== S.cols * S.rows) { makeTiles(); arrange(); tiles.forEach((t) => { const [x, y] = cellXY(t.at); t.x = x; t.y = y; t.a = t.rot * Math.PI / 2; t.f = t.flip ? -1 : 1; }); }
+  draw(); kick();
+}
+let pend = 0;
+SL.forEach((k) => $('s-' + k).addEventListener('input', (e) => {
+  S[k] = +e.target.value; $('o-' + k).textContent = fmt[k](S[k]);
+  if (k === 'turn' || k === 'swap') { arrange(); return; }
+  if (k === 'cols' || k === 'rows') $('dims').textContent = `${S.cols} × ${S.rows} tiles`;
+  cancelAnimationFrame(pend); pend = requestAnimationFrame(() => {
+    if (k === 'gap') { layoutBoard(); tiles.forEach((t) => { const [x, y] = cellXY(t.at); t.x = x; t.y = y; }); draw(); }
+    else rebuild(k !== 'cols' && k !== 'rows');
+  });
+}));
+Object.entries(STOCKS).forEach(([key, st]) => {
+  const b = document.createElement('button'); b.type = 'button'; b.dataset.style = key; b.textContent = st.name; $('styles').append(b);
+});
+document.querySelectorAll('#styles button').forEach((b) => b.addEventListener('click', () => {
+  if (S.style === b.dataset.style) return; S.style = b.dataset.style; S.way = 0; S.custom = null; Object.assign(S, STOCKS[S.style].d); syncUI(); rebuild(false);
+}));
+function syncWays() {
+  const box = $('ways'), base = STOCKS[S.style], st = stock(), hasAccent = !!st.accent;
+  box.replaceChildren(...WAYS[S.style].map((w, i) => {
+    const c = { ...base, ...w }, b = document.createElement('button'), chip = document.createElement('span'), nm = document.createElement('span');
+    b.type = 'button'; b.setAttribute('aria-pressed', String(!S.custom && S.way === i)); chip.className = 'chip'; nm.className = 'nm'; nm.textContent = w.name;
+    [c.papers[0], c.ink, c.accent || c.ink].forEach((col) => { const d = document.createElement('i'); d.style.background = col; chip.append(d); });
+    b.append(chip, nm); b.addEventListener('click', () => { S.way = i; S.custom = null; syncWays(); rebuild(true); }); return b;
+  }));
+  $('c-paper').value = st.papers[0]; $('c-ink').value = st.ink; if (hasAccent) $('c-accent').value = st.accent;
+  $('lab-accent').hidden = !hasAccent; $('custom').classList.toggle('on', !!S.custom);
+}
+let cpend = 0;
+['c-paper', 'c-ink', 'c-accent'].forEach((id) => $(id).addEventListener('input', () => {
+  S.custom = { paper: $('c-paper').value, ink: $('c-ink').value, accent: $('c-accent').value };
+  document.querySelectorAll('#ways button').forEach((b) => b.setAttribute('aria-pressed', 'false')); $('custom').classList.add('on');
+  cancelAnimationFrame(cpend); cpend = requestAnimationFrame(() => rebuild(true));
+}));
+document.querySelectorAll('#taps button').forEach((b) => b.addEventListener('click', () => { S.tap = b.dataset.tap; syncUI(); }));
+$('b-new').addEventListener('click', () => { S.seed = 1 + Math.floor(Math.random() * 9999); syncUI(); rebuild(true); });
+$('b-mix').addEventListener('click', () => { S.mix = 1 + Math.floor(Math.random() * 1e6); arrange(); });
+$('b-solve').addEventListener('click', () => { tiles.forEach((t) => { t.at = t.home; t.rot = 4 * Math.round(t.rot / 4); t.flip = false; }); kick(); });
+
+function toast(msg) { const el = $('toast'); el.textContent = msg; el.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => { el.hidden = true; }, 1800); }
+$('b-save').addEventListener('click', async () => {
+  const blob = await new Promise((res) => cv.toBlob(res, 'image/png'));
+  const name = `zwiebelfisch-${S.style}-${S.custom ? 'custom' : WAYS[S.style][S.way].name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${String(S.seed).padStart(4, '0')}.png`;
+  let dl = null; try { dl = await window.claude?.use?.('downloads'); } catch {}
+  if (dl) {
+    try { await dl.save({ filename: name, data: blob }); toast('Saved ' + name); return; }
+    catch (err) { if (err && (err.code === 'declined' || err.code === 'rate_limited')) return; }
+  }
+  if (!window.claude) {
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.append(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000); toast('Saved ' + name); return;
+  }
+  const img = $('sheet-img'); if (img.src) URL.revokeObjectURL(img.src); img.src = URL.createObjectURL(blob); $('sheet').hidden = false; $('sheet-close').focus();
+});
+$('sheet-close').addEventListener('click', () => { $('sheet').hidden = true; });
+
+syncUI(); rebuild(false);
+document.fonts && document.fonts.ready.then(() => rebuild(true));
+</script>
+
+</body>
+</html>

@@ -40,6 +40,7 @@ Contact: jontoews@gmail.com
 
 Experiments in emergence: simple rules and small systems that grow into instruments, worlds and language.
 
+- [Zwiebelfisch](https://jontoews.com/zwiebelfisch/): Printer’s slang for a letter set back in the wrong place. A printed sheet of invented letters, sheet music, road paint or contour lines, cut into tiles you turn and swap like a puzzle.
 - [FarField](https://farfield.jontoews.com): An audio adventure to explore and get lost in. It’s okay if you don’t know what you’re doing. Headphones recommended.
 - [Cadastre](https://jontoews.com/cadastre/): Generate a whole city from a seed — terrain, streets, parcels, parks, every place named. Pan, zoom, export it poster-size.
 - [Tex](https://jontoews.com/tex/): Generative textures in the browser: silk brushstrokes and twenty materials, from knit and rust to scales and amethyst. Tune one, then download it as a PNG.
